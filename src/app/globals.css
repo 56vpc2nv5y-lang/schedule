@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Geist", "Inter", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Cascadia Code", ui-monospace, SFMono-Regular, monospace;
+
+  --color-background: oklch(0.985 0.004 255);
+  --color-foreground: oklch(0.19 0.015 252);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.19 0.015 252);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.19 0.015 252);
+  --color-primary: oklch(0.52 0.13 175);
+  --color-primary-foreground: oklch(0.99 0.01 175);
+  --color-secondary: oklch(0.95 0.012 255);
+  --color-secondary-foreground: oklch(0.25 0.018 252);
+  --color-muted: oklch(0.94 0.008 255);
+  --color-muted-foreground: oklch(0.48 0.02 252);
+  --color-accent: oklch(0.93 0.025 182);
+  --color-accent-foreground: oklch(0.24 0.06 178);
+  --color-destructive: oklch(0.58 0.18 28);
+  --color-destructive-foreground: oklch(0.99 0.01 28);
+  --color-border: oklch(0.88 0.01 255);
+  --color-input: oklch(0.9 0.01 255);
+  --color-ring: oklch(0.55 0.14 175);
+  --radius: 0.5rem;
+
+  --color-status-planned: oklch(0.58 0.1 252);
+  --color-status-active: oklch(0.55 0.14 175);
+  --color-status-waiting: oklch(0.66 0.14 72);
+  --color-status-done: oklch(0.54 0.13 148);
+  --color-status-risk: oklch(0.57 0.18 28);
+  --color-priority-urgent: oklch(0.58 0.2 18);
+  --color-priority-high: oklch(0.66 0.15 62);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-background);
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(180deg, oklch(0.985 0.004 255), oklch(0.965 0.009 245)),
+    var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: oklch(0.83 0.07 175);
+  color: oklch(0.18 0.04 175);
+}
+
+.timeline-grid {
+  background-image:
+    linear-gradient(to right, oklch(0.9 0.008 255) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.94 0.006 255) 1px, transparent 1px);
+  background-size: 92px 100%, 100% 48px;
+}
