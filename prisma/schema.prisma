@@ -129,6 +129,7 @@ model Project {
   growthLogs     GrowthLog[]
   knowledgeNotes KnowledgeNote[]
   feedbackQuestions FeedbackQuestion[]
+  scheduleBlocks ScheduleBlock[]
 
   @@index([status])
   @@index([regionTagId])
@@ -498,14 +499,20 @@ model FeedbackQuestion {
 
 /// 周计划时间块：日期 × 小时的日程（date 为空 = 每天重复的例行安排）
 model ScheduleBlock {
-  id        String    @id @default(cuid())
-  title     String
-  date      DateTime? // 具体某天；null = 每日例行（起床/通勤/午休…）
-  startMin  Int       // 从 0:00 起的分钟数，如 7:30 = 450
-  endMin    Int
-  kind      String    @default("work") // routine 例行 / work 工作
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  title        String
+  date         DateTime? // 具体某天；null = 每日例行（起床/通勤/午休…）
+  startMin     Int       // 从 0:00 起的分钟数，如 7:30 = 450
+  endMin       Int
+  kind         String    @default("work") // routine 例行 / work 工作
+  location     String?   // 地点
+  participants String?   // 参与人（自由文本，逗号分隔）
+  note         String?   // 备注 / 我的任务
+  projectId    String?   // 可选关联项目
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([date])
 }
