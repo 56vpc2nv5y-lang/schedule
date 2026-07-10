@@ -1,5 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-
 export function PageHeader({
   eyebrow,
   title,
@@ -12,14 +10,15 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
         {eyebrow ? (
-          <Badge tone="active" className="mb-3">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
             {eyebrow}
-          </Badge>
+          </div>
         ) : null}
-        <h1 className="text-2xl font-semibold tracking-normal text-foreground">
+        <h1 className="text-2xl font-semibold text-foreground sm:text-[1.7rem]">
           {title}
         </h1>
         {description ? (
@@ -28,7 +27,9 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {action ? <div className="flex shrink-0 gap-2">{action}</div> : null}
+      {action ? (
+        <div className="flex shrink-0 flex-wrap gap-2">{action}</div>
+      ) : null}
     </div>
   );
 }

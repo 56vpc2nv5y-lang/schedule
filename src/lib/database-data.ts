@@ -3,12 +3,19 @@ import { getPrisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-status";
 import {
   contacts as seedContacts,
+  feedbackQuestions as seedFeedbackQuestions,
   files as seedFiles,
+  growthLogs as seedGrowthLogs,
+  knowledgeNotes as seedKnowledgeNotes,
+  moneyRecords as seedMoneyRecords,
+  scheduleBlocks as seedScheduleBlocks,
   getProjectFiles as getSeedProjectFiles,
   getProjectTasks as getSeedProjectTasks,
   getProjectTimeline as getSeedProjectTimeline,
+  meetingReviews as seedMeetingReviews,
   projects as seedProjects,
   receptions as seedReceptions,
+  resources as seedResources,
   stages as seedStages,
   tasks as seedTasks,
   timelineEvents as seedTimelineEvents,
@@ -136,7 +143,7 @@ export const getTasksForView = cache(async () => {
 
   return tasks.map((task) => ({
     id: task.id,
-    projectId: task.projectId,
+    projectId: task.projectId ?? "",
     stageId: task.stageId ?? undefined,
     title: task.title,
     type: task.typeTag?.name ?? "商务沟通",
@@ -166,6 +173,7 @@ export const getFilesForView = cache(async () => {
     type: file.fileType?.name ?? "文件",
     version: file.version ?? "",
     status: file.status,
+    url: file.url ?? "",
     updatedAt: toDateText(file.updatedAt),
   }));
 });
@@ -205,10 +213,234 @@ export const getReceptionsForView = cache(async () => {
     type: reception.type,
     title: reception.title,
     location: reception.location ?? "",
+    purpose: reception.purpose ?? "",
     startAt: toDateTimeText(reception.startAt),
     endAt: toDateTimeText(reception.endAt),
     status: reception.status,
     visitorIds: reception.visitors.map((visitor) => visitor.contactId),
+  }));
+});
+
+export const getKnowledgeNotesForView = cache(async () => {
+  if (!isDatabaseConfigured()) {
+    return seedKnowledgeNotes.map((note) => ({
+      id: note.id,
+      topic: note.topic,
+      title: note.title,
+      content: note.content,
+      url: note.url,
+      projectId: note.projectId,
+      updatedAt: "",
+    }));
+  }
+
+  const notes = await getPrisma().knowledgeNote.findMany({
+    orderBy: [{ topic: "asc" }, { updatedAt: "desc" }],
+  });
+  return notes.map((note) => ({
+    id: note.id,
+    topic: note.topic,
+    title: note.title,
+    content: note.content,
+    url: note.url ?? "",
+    projectId: note.projectId ?? "",
+    updatedAt: toDateText(note.updatedAt),
+  }));
+});
+
+export const getFeedbackQuestionsForView = cache(async () => {
+  if (!isDatabaseConfigured()) {
+    return seedFeedbackQuestions.map((q) => ({ ...q, answer: q.answer ?? "", note: q.note ?? "" }));
+  }
+
+  const questions = await getPrisma().feedbackQuestion.findMany({
+    orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+  });
+  return questions.map((q) => ({
+    id: q.id,
+    projectId: q.projectId,
+    source: q.source,
+    question: q.question,
+    answer: q.answer ?? "",
+    note: q.note ?? "",
+    status: q.status as string,
+  }));
+});
+
+// 周计划时间块：date 为空字符串 = 每天例行
+export const getScheduleBlocksForView = cache(async () => {
+  if (!isDatabaseConfigured()) {
+    return seedScheduleBlocks.map((block) => ({ ...block }));
+  }
+
+  const blocks = await getPrisma().scheduleBlock.findMany({
+    orderBy: [{ startMin: "asc" }],
+  });
+  return blocks.map((block) => ({
+    id: block.id,
+    title: block.title,
+    date: toDateText(block.date),
+    startMin: block.startMin,
+    endMin: block.endMin,
+    kind: block.kind,
+  }));
+});
+
+export const getMoneyRecordsForView = cache(async () => {
+  if (!isDatabaseConfigured()) {
+    return seedMoneyRecords.map((record) => ({ ...record, note: record.note ?? "" }));
+  }
+
+  const records = await getPrisma().moneyRecord.findMany({
+    orderBy: { happenedAt: "desc" },
+  });
+  return records.map((record) => ({
+    id: record.id,
+    kind: record.kind as string,
+    amount: record.amount,
+    currency: record.currency,
+    happenedAt: toDateText(record.happenedAt),
+    note: record.note ?? "",
+  }));
+});
+
+// AI 助手的自定义提示词模板（存 TextTemplate 表）
+export const getPromptTemplatesForView = cache(async () => {
+  if (!isDatabaseConfigured()) return [];
+  const templates = await getPrisma().textTemplate.findMany({
+    where: { type: "EMAIL", enabled: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return templates.map((tpl) => ({
+    id: tpl.id,
+    name: tpl.name,
+    content: tpl.content,
+  }));
+});
+
+export const getGrowthLogsForView = cache(async () => {
+  if (!isDatabaseConfigured()) {
+    return seedGrowthLogs.map((log) => ({
+      id: log.id,
+      category: log.category,
+      title: log.title,
+      detail: log.detail,
+      projectId: log.projectId ?? "",
+      happenedAt: log.happenedAt,
+    }));
+  }
+
+  const logs = await getPrisma().growthLog.findMany({
+    orderBy: { happenedAt: "desc" },
+  });
+
+  return logs.map((log) => ({
+    id: log.id,
+    category: log.category,
+    title: log.title,
+    detail: log.detail ?? "",
+    projectId: log.projectId ?? "",
+    happenedAt: toDateText(log.happenedAt),
+  }));
+});
+
+export const getResourcesForView = cache(async () => {
+  if (!isDatabaseConfigured()) {
+    return seedResources;
+  }
+
+  const resources = await getPrisma().resource.findMany({
+    orderBy: [{ important: "desc" }, { updatedAt: "desc" }],
+  });
+
+  return resources.map((resource) => ({
+    id: resource.id,
+    name: resource.name,
+    category: resource.category,
+    url: resource.url ?? "",
+    note: resource.note ?? "",
+    important: resource.important,
+    updatedAt: toDateText(resource.updatedAt),
+  }));
+});
+
+// ── 设置页：标签/文件类型/角色/阶段模板（带 id，供增删改）──
+
+export const getTagsForView = cache(async () => {
+  if (!isDatabaseConfigured()) return [];
+  const tags = await getPrisma().tag.findMany({
+    orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+  });
+  return tags.map((tag) => ({ id: tag.id, type: tag.type, name: tag.name }));
+});
+
+export const getFileTypesForView = cache(async () => {
+  if (!isDatabaseConfigured()) return [];
+  const types = await getPrisma().fileType.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+  return types.map((type) => ({ id: type.id, name: type.name }));
+});
+
+export const getContactRolesForView = cache(async () => {
+  if (!isDatabaseConfigured()) return [];
+  const roles = await getPrisma().contactRole.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+  return roles.map((role) => ({ id: role.id, name: role.name }));
+});
+
+export const getStageTemplateItemsForView = cache(async () => {
+  if (!isDatabaseConfigured()) return [];
+  const items = await getPrisma().stageTemplateItem.findMany({
+    orderBy: { sortOrder: "asc" },
+  });
+  return items.map((item) => ({
+    id: item.id,
+    name: item.name,
+    sortOrder: item.sortOrder,
+    description: item.description ?? "",
+  }));
+});
+
+export const getMeetingReviewsForView = cache(async () => {
+  if (!isDatabaseConfigured()) {
+    return seedMeetingReviews.map((review) => ({
+      id: review.id,
+      projectId: review.projectId,
+      title: review.title,
+      status: review.status,
+      finalFileId: "",
+      rounds: review.rounds.map((round) => ({
+        roundNo: round.roundNo,
+        senderId: round.senderId,
+        receiverId: round.receiverId,
+        sentAt: round.sentAt,
+        feedback: round.feedback,
+        status: round.status,
+      })),
+    }));
+  }
+
+  const reviews = await getPrisma().meetingReview.findMany({
+    include: { rounds: { orderBy: { roundNo: "asc" } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return reviews.map((review) => ({
+    id: review.id,
+    projectId: review.projectId,
+    title: review.title,
+    status: review.status,
+    finalFileId: review.finalFileId ?? "",
+    rounds: review.rounds.map((round) => ({
+      roundNo: round.roundNo,
+      senderId: round.senderContactId ?? "",
+      receiverId: round.receiverContactId ?? "",
+      sentAt: toDateText(round.sentAt),
+      feedback: round.feedback ?? "",
+      status: round.status,
+    })),
   }));
 });
 

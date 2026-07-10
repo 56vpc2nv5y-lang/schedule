@@ -1,87 +1,150 @@
-import { CalendarDays } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { addDays, addMonths, format, parse, startOfMonth, startOfWeek } from "date-fns";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { isDatabaseConfigured } from "@/lib/db-status";
+import { getT } from "@/lib/locale";
+import { receptionTypeMeta } from "@/lib/default-data";
 import {
   getProjectsForView,
   getReceptionsForView,
   getTasksForView,
 } from "@/lib/database-data";
+import { CalendarBoard, type CalendarEvent } from "./calendar-board";
 
 export const dynamic = "force-dynamic";
 
-type BadgeTone = "active" | "waiting" | "risk";
+function ymToDate(ym: string | undefined): Date | null {
+  if (ym && /^\d{4}-\d{2}$/.test(ym)) {
+    return startOfMonth(parse(ym, "yyyy-MM", new Date()));
+  }
+  return null;
+}
 
-export default async function CalendarPage() {
-  const [tasks, receptions, projects] = await Promise.all([
+function receptionColor(type: string) {
+  if (type === "BUSINESS_TRIP") return "bg-amber-500";
+  if (type === "EXHIBITION_INVITE") return "bg-violet-500";
+  return "bg-emerald-500"; // VISIT 接待
+}
+
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ym?: string }>;
+}) {
+  const [{ ym }, { t }, tasks, receptions, projects] = await Promise.all([
+    searchParams,
+    getT(),
     getTasksForView(),
     getReceptionsForView(),
     getProjectsForView(),
   ]);
   const projectMap = new Map(projects.map((project) => [project.id, project]));
-  const calendarItems = [
-    ...tasks.map((task) => ({
-      id: task.id,
-      date: task.dueDate,
-      title: task.title,
-      type: "任务",
-      projectId: task.projectId,
-      tone: (task.status === "OVERDUE" ? "risk" : "active") as BadgeTone,
-    })),
-    ...receptions.map((reception) => ({
-      id: reception.id,
-      date: reception.startAt.slice(0, 10),
-      title: reception.title,
-      type: "接待",
-      projectId: reception.projectId,
-      tone: "waiting" as BadgeTone,
-    })),
-  ].sort((a, b) => a.date.localeCompare(b.date));
+
+  const events: CalendarEvent[] = [
+    ...tasks
+      .filter((task) => task.dueDate)
+      .map((task) => ({
+        id: `task-${task.id}`,
+        rawId: task.id,
+        kind: "task" as const,
+        title: task.title,
+        start: task.dueDate,
+        end: task.dueDate,
+        color: task.status === "OVERDUE" ? "bg-red-500" : "bg-sky-500",
+        tag: t.calendar.legendTask,
+        projectName: task.projectId
+          ? projectMap.get(task.projectId)?.nameZh
+          : undefined,
+      })),
+    ...receptions
+      .filter((reception) => reception.startAt)
+      .map((reception) => {
+        const start = reception.startAt.slice(0, 10);
+        const end = reception.endAt ? reception.endAt.slice(0, 10) : start;
+        return {
+          id: `reception-${reception.id}`,
+          rawId: reception.id,
+          kind: "reception" as const,
+          title: reception.title,
+          start,
+          end,
+          color: receptionColor(reception.type),
+          tag:
+            receptionTypeMeta[reception.type as keyof typeof receptionTypeMeta]
+              ?.short ?? "接待",
+          projectName: reception.projectId
+            ? projectMap.get(reception.projectId)?.nameZh
+            : undefined,
+        };
+      }),
+  ];
+
+  // 连接数据库后默认显示当前月；演示模式落在离今天最近的安排所在月，避免打开是空月
+  const today = new Date();
+  const todayIso = format(today, "yyyy-MM-dd");
+  const requested = ymToDate(ym);
+  const nearest = events
+    .map((event) => event.start)
+    .sort(
+      (a, b) =>
+        Math.abs(+new Date(a) - +today) - Math.abs(+new Date(b) - +today),
+    )[0];
+  const monthStart =
+    requested ??
+    (isDatabaseConfigured()
+      ? startOfMonth(today)
+      : startOfMonth(nearest ? new Date(nearest) : today));
+
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const days = Array.from({ length: 42 }, (_, i) =>
+    format(addDays(gridStart, i), "yyyy-MM-dd"),
+  );
+
+  const prevYm = format(addMonths(monthStart, -1), "yyyy-MM");
+  const nextYm = format(addMonths(monthStart, 1), "yyyy-MM");
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow="日历视图"
-        title="把任务截止和接待安排放到同一张表"
-        description="日历用于观察近期承诺，后续可切换为月视图、周视图或同步外部日历。"
+        eyebrow={t.calendar.eyebrow}
+        title={t.calendar.title}
+        description={t.calendar.desc}
+        action={
+          <div className="flex items-center gap-2">
+            <Link href={`/calendar?ym=${prevYm}`}>
+              <Button variant="outline" size="icon" title={t.calendar.prev}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/calendar">
+              <Button variant="outline" size="sm">
+                <CalendarDays className="h-4 w-4" />
+                {t.calendar.backToday}
+              </Button>
+            </Link>
+            <Link href={`/calendar?ym=${nextYm}`}>
+              <Button variant="outline" size="icon" title={t.calendar.next}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        }
       />
 
-      <Card>
-        <CardHeader className="border-b border-border">
-          <CardTitle className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-primary" />
-            即将发生
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="grid gap-3">
-            {calendarItems.map((item) => {
-              const project = item.projectId ? projectMap.get(item.projectId) : undefined;
-
-              return (
-                <div
-                  key={`${item.type}-${item.id}`}
-                  className="grid gap-3 rounded-md border border-border p-4 sm:grid-cols-[120px_minmax(0,1fr)_96px]"
-                >
-                  <div className="font-mono text-sm text-muted-foreground">
-                    {item.date}
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">{item.title}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {project?.nameZh}
-                    </div>
-                  </div>
-                  <div className="sm:text-right">
-                    <Badge tone={item.tone}>{item.type}</Badge>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      <CalendarBoard
+        days={days}
+        events={events}
+        currentMonth={monthStart.getMonth()}
+        todayIso={todayIso}
+        monthLabel={t.calendar.monthLabel(
+          monthStart.getFullYear(),
+          monthStart.getMonth() + 1,
+        )}
+        dbConnected={isDatabaseConfigured()}
+      />
     </AppShell>
   );
 }

@@ -1,29 +1,32 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useDict } from "@/components/layout/locale-provider";
 
-const stageStatusMap = {
-  NOT_STARTED: { label: "未开始", tone: "neutral" },
-  IN_PROGRESS: { label: "进行中", tone: "active" },
-  COMPLETED: { label: "已完成", tone: "done" },
-  DELAYED: { label: "已延期", tone: "risk" },
+const stageTones = {
+  NOT_STARTED: "neutral",
+  IN_PROGRESS: "active",
+  COMPLETED: "done",
+  DELAYED: "risk",
 } as const;
 
-const taskStatusMap = {
-  TODO: { label: "待处理", tone: "neutral" },
-  IN_PROGRESS: { label: "进行中", tone: "active" },
-  WAITING: { label: "等待反馈", tone: "waiting" },
-  DONE: { label: "已完成", tone: "done" },
-  OVERDUE: { label: "已逾期", tone: "risk" },
+const taskTones = {
+  TODO: "neutral",
+  IN_PROGRESS: "active",
+  WAITING: "waiting",
+  DONE: "done",
+  OVERDUE: "risk",
 } as const;
 
-type StageStatus = keyof typeof stageStatusMap;
-type TaskStatus = keyof typeof taskStatusMap;
+type StageStatus = keyof typeof stageTones;
+type TaskStatus = keyof typeof taskTones;
 
 export function StageStatusPill({ status }: { status: StageStatus }) {
-  const item = stageStatusMap[status];
-  return <Badge tone={item.tone}>{item.label}</Badge>;
+  const t = useDict();
+  return <Badge tone={stageTones[status]}>{t.statuses.stage[status]}</Badge>;
 }
 
 export function TaskStatusPill({ status }: { status: TaskStatus }) {
-  const item = taskStatusMap[status];
-  return <Badge tone={item.tone}>{item.label}</Badge>;
+  const t = useDict();
+  return <Badge tone={taskTones[status]}>{t.statuses.task[status]}</Badge>;
 }

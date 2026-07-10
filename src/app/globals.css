@@ -1,37 +1,40 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: "Geist", "Inter", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono", "Cascadia Code", ui-monospace, SFMono-Regular, monospace;
+@theme {
+  --font-sans: "Segoe UI", system-ui, "Microsoft YaHei", "PingFang SC",
+    "Hiragino Sans GB", "Noto Sans CJK SC", ui-sans-serif, sans-serif;
+  --font-mono: "Cascadia Code", "SFMono-Regular", ui-monospace, Consolas, monospace;
 
-  --color-background: oklch(0.985 0.004 255);
-  --color-foreground: oklch(0.19 0.015 252);
+  --color-background: oklch(0.972 0.004 250);
+  --color-foreground: oklch(0.21 0.015 252);
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.19 0.015 252);
+  --color-card-foreground: oklch(0.21 0.015 252);
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.19 0.015 252);
-  --color-primary: oklch(0.52 0.13 175);
-  --color-primary-foreground: oklch(0.99 0.01 175);
-  --color-secondary: oklch(0.95 0.012 255);
-  --color-secondary-foreground: oklch(0.25 0.018 252);
-  --color-muted: oklch(0.94 0.008 255);
-  --color-muted-foreground: oklch(0.48 0.02 252);
-  --color-accent: oklch(0.93 0.025 182);
-  --color-accent-foreground: oklch(0.24 0.06 178);
+  --color-popover-foreground: oklch(0.21 0.015 252);
+  --color-primary: oklch(0.55 0.19 274);
+  --color-primary-foreground: oklch(0.99 0.01 274);
+  --color-secondary: oklch(0.958 0.01 286);
+  --color-secondary-foreground: oklch(0.28 0.03 282);
+  --color-muted: oklch(0.948 0.01 286);
+  --color-muted-foreground: oklch(0.5 0.015 282);
+  --color-accent: oklch(0.94 0.035 286);
+  --color-accent-foreground: oklch(0.33 0.11 282);
   --color-destructive: oklch(0.58 0.18 28);
   --color-destructive-foreground: oklch(0.99 0.01 28);
-  --color-border: oklch(0.88 0.01 255);
-  --color-input: oklch(0.9 0.01 255);
-  --color-ring: oklch(0.55 0.14 175);
-  --radius: 0.5rem;
+  --color-border: oklch(0.905 0.008 286);
+  --color-input: oklch(0.885 0.01 286);
+  --color-ring: oklch(0.58 0.19 274);
+  --radius: 0.625rem;
 
   --color-status-planned: oklch(0.58 0.1 252);
-  --color-status-active: oklch(0.55 0.14 175);
+  --color-status-active: oklch(0.55 0.19 274);
   --color-status-waiting: oklch(0.66 0.14 72);
   --color-status-done: oklch(0.54 0.13 148);
   --color-status-risk: oklch(0.57 0.18 28);
   --color-priority-urgent: oklch(0.58 0.2 18);
   --color-priority-high: oklch(0.66 0.15 62);
+
+  --shadow-card: 0 1px 2px oklch(0.3 0.02 250 / 0.05), 0 1px 1px oklch(0.3 0.02 250 / 0.03);
 }
 
 * {
@@ -42,31 +45,199 @@ html {
   background: var(--color-background);
 }
 
+/* 默认皮肤「活泼」：靛蓝紫主色 + 柔和光晕背景 */
 body {
   margin: 0;
+  min-height: 100vh;
   background:
-    linear-gradient(180deg, oklch(0.985 0.004 255), oklch(0.965 0.009 245)),
+    radial-gradient(1000px 520px at 100% -10%, oklch(0.9 0.09 300 / 0.55), transparent 60%),
+    radial-gradient(820px 480px at -5% 0%, oklch(0.92 0.07 250 / 0.5), transparent 55%),
+    linear-gradient(180deg, oklch(0.99 0.006 285), oklch(0.965 0.014 282)),
     var(--color-background);
+  background-attachment: fixed;
   color: var(--color-foreground);
   font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 {
   letter-spacing: 0;
 }
 
-button,
-input,
-select,
-textarea {
+button, input, select, textarea {
   font: inherit;
 }
 
-::selection {
-  background: oklch(0.83 0.07 175);
-  color: oklch(0.18 0.04 175);
+button:not(:disabled) {
+  cursor: pointer;
 }
 
-.timeline-grid {
-  background-image:
-    linear-gradient(to right, oklch(0.9 0.008 255) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.94 0.006 255) 1px, transparent 1px);
-  background-size: 92px 100%, 100% 48px;
+::selection {
+  background: oklch(0.86 0.09 285);
+  color: oklch(0.24 0.08 282);
+}
+
+/* ── 统一表单控件：所有 input/select 用同一套外观 ───────── */
+.field {
+  height: 2.25rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-input);
+  background: var(--color-card);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field::placeholder {
+  color: oklch(0.62 0.01 252);
+}
+.field:focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px oklch(from var(--color-ring) l c h / 0.18);
+}
+.field-sm {
+  height: 2rem;
+  font-size: 0.75rem;
+  padding: 0 0.5rem;
+}
+textarea.field {
+  height: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+/* 表单标签统一样式 */
+.flabel {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+}
+
+/* 数字/日期等宽显示 */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 更细、更克制的滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.82 0.01 255) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: oklch(0.85 0.01 255);
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.78 0.012 255);
+  background-clip: content-box;
+}
+
+/* 出差足迹地图：点亮城市的脉冲光圈 */
+@keyframes map-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+.map-pulse {
+  animation: map-pulse 2.4s ease-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* 夜光世界地图：点阵闪烁 / 城市脉冲环 / 航线流动 / 背景光斑 */
+@keyframes dot-twinkle {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.2; }
+}
+.dot-twinkle {
+  animation: dot-twinkle 3.2s ease-in-out infinite;
+}
+@keyframes ring-pulse {
+  0% { opacity: 0.9; transform: scale(0.6); }
+  75% { opacity: 0; transform: scale(2.1); }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+.ring-pulse {
+  animation: ring-pulse 2.2s ease-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+@keyframes arc-flow {
+  to { stroke-dashoffset: -26; }
+}
+.arc-flow {
+  animation: arc-flow 1.2s linear infinite;
+}
+@keyframes hero-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -18px) scale(1.15); }
+  66% { transform: translate(-22px, 14px) scale(0.92); }
+}
+.hero-blob {
+  animation: hero-blob 14s ease-in-out infinite;
+}
+
+/* ── 皮肤「落日」：暖橙珊瑚 + 蜜桃底 ──────────────────── */
+html[data-skin="sunset"] {
+  --color-background: oklch(0.975 0.012 65);
+  --color-foreground: oklch(0.25 0.03 40);
+  --color-card: oklch(0.995 0.005 75);
+  --color-card-foreground: oklch(0.25 0.03 40);
+  --color-popover: oklch(0.995 0.005 75);
+  --color-popover-foreground: oklch(0.25 0.03 40);
+  --color-primary: oklch(0.62 0.19 35);
+  --color-primary-foreground: oklch(0.99 0.012 35);
+  --color-secondary: oklch(0.952 0.022 65);
+  --color-secondary-foreground: oklch(0.32 0.05 40);
+  --color-muted: oklch(0.945 0.018 65);
+  --color-muted-foreground: oklch(0.51 0.04 45);
+  --color-accent: oklch(0.93 0.05 55);
+  --color-accent-foreground: oklch(0.4 0.12 35);
+  --color-border: oklch(0.9 0.024 60);
+  --color-input: oklch(0.88 0.03 60);
+  --color-ring: oklch(0.65 0.19 35);
+  --color-status-active: oklch(0.62 0.19 35);
+  --color-status-waiting: oklch(0.62 0.15 60);
+}
+html[data-skin="sunset"] body {
+  background:
+    radial-gradient(1100px 540px at 90% -12%, oklch(0.9 0.07 40 / 0.55), transparent 60%),
+    radial-gradient(820px 500px at -8% 8%, oklch(0.93 0.06 80 / 0.5), transparent 55%),
+    linear-gradient(180deg, oklch(0.99 0.008 70), oklch(0.965 0.02 60)),
+    var(--color-background);
+  background-attachment: fixed;
+}
+html[data-skin="sunset"] ::selection {
+  background: oklch(0.85 0.08 45);
+  color: oklch(0.3 0.08 35);
+}
+
+/* 折叠表单的 summary 去掉默认三角 */
+summary.no-marker {
+  list-style: none;
+}
+summary.no-marker::-webkit-details-marker {
+  display: none;
 }

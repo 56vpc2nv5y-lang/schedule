@@ -1,274 +1,440 @@
 import Link from "next/link";
-import { ArrowRight, Database, GitBranch, Plus, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CalendarDays,
+  Clock3,
+  Inbox,
+  ListChecks,
+  Plus,
+  Rocket,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskStatusPill } from "@/components/ui/status-pill";
-import { getDatabaseModeLabel } from "@/lib/db-status";
+import { isDatabaseConfigured } from "@/lib/db-status";
+import { receptionTypeMeta, type ReceptionType } from "@/lib/default-data";
+import { getT } from "@/lib/locale";
+import { projectDisplayName } from "@/lib/i18n";
 import {
-  getContactsForView,
   getProjectsForView,
+  getReceptionsForView,
   getStagesForView,
   getTasksForView,
   getTimelineForView,
 } from "@/lib/database-data";
-import { cn } from "@/lib/utils";
+import { GanttChart } from "./gantt-chart";
 
 export const dynamic = "force-dynamic";
 
-const ganttStart = new Date("2026-04-01").getTime();
-const ganttEnd = new Date("2026-12-01").getTime();
-const ganttSpan = ganttEnd - ganttStart;
-
-function percent(date: string) {
-  return Math.max(
-    0,
-    Math.min(100, ((new Date(date).getTime() - ganttStart) / ganttSpan) * 100),
-  );
+function isoToday() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 }
 
-function stageBarColor(status: string) {
-  if (status === "COMPLETED") return "bg-emerald-500";
-  if (status === "IN_PROGRESS") return "bg-primary";
-  if (status === "DELAYED") return "bg-red-500";
-  return "bg-slate-300";
+function addDaysIso(iso: string, days: number) {
+  const date = new Date(`${iso}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
 export default async function DashboardPage() {
-  const [projects, stages, tasks, timelineEvents, contacts] = await Promise.all([
-    getProjectsForView(),
-    getStagesForView(),
-    getTasksForView(),
-    getTimelineForView(),
-    getContactsForView(),
-  ]);
-  const contactMap = new Map(contacts.map((contact) => [contact.id, contact]));
-  const activeProjects = projects.filter((project) => project.status === "ACTIVE");
-  const riskTasks = tasks.filter((task) => task.status === "OVERDUE");
+  const [{ locale, t }, projects, stages, tasks, timelineEvents, receptions] =
+    await Promise.all([
+      getT(),
+      getProjectsForView(),
+      getStagesForView(),
+      getTasksForView(),
+      getTimelineForView(),
+      getReceptionsForView(),
+    ]);
+
+  const pname = (p: { nameZh: string; nameEn?: string }) =>
+    projectDisplayName(locale, p);
+
+  const today = isoToday();
+  const horizon = addDaysIso(today, 14);
+
+  const activeProjects = projects.filter((p) => p.status === "ACTIVE");
+  const regionCount = new Set(
+    activeProjects.map((p) => p.region).filter(Boolean),
+  ).size;
+  const openTasks = tasks.filter((task) => task.status !== "DONE");
   const waitingTasks = tasks.filter((task) => task.status === "WAITING");
+  const overdueTasks = tasks.filter(
+    (task) =>
+      task.status === "OVERDUE" ||
+      (task.status !== "DONE" && task.dueDate && task.dueDate < today),
+  );
+  const personalTasks = openTasks.filter((task) => !task.projectId);
+
+  // 未来 14 天日程：任务截止 + 出差/接待/展会开始
+  const upcoming = [
+    ...openTasks
+      .filter(
+        (task) =>
+          task.dueDate && task.dueDate >= today && task.dueDate <= horizon,
+      )
+      .map((task) => {
+        const project = projects.find((p) => p.id === task.projectId);
+        return {
+          key: `task-${task.id}`,
+          date: task.dueDate,
+          kind: task.projectId ? t.dashboard.kindTask : t.dashboard.kindChore,
+          chore: !task.projectId,
+          title: task.title,
+          sub: project ? pname(project) : t.common.personal,
+          href: "/tasks",
+        };
+      }),
+    ...receptions
+      .filter((reception) => {
+        const day = reception.startAt.slice(0, 10);
+        return reception.status !== "CANCELLED" && day >= today && day <= horizon;
+      })
+      .map((reception) => ({
+        key: `rec-${reception.id}`,
+        date: reception.startAt.slice(0, 10),
+        kind:
+          receptionTypeMeta[reception.type as ReceptionType]?.short ??
+          t.dashboard.kindTask,
+        chore: false,
+        title: reception.title,
+        sub: reception.location || "",
+        href: "/receptions",
+      })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+
+  const stats = [
+    {
+      label: t.dashboard.statActive,
+      value: activeProjects.length,
+      meta:
+        regionCount > 0
+          ? t.dashboard.statActiveMeta(regionCount)
+          : t.dashboard.statActiveEmpty,
+      Icon: Rocket,
+      tint: "bg-primary/10 text-primary",
+    },
+    {
+      label: t.dashboard.statOpen,
+      value: openTasks.length,
+      meta: t.dashboard.statOpenMeta(personalTasks.length),
+      Icon: ListChecks,
+      tint: "bg-blue-500/10 text-blue-600",
+    },
+    {
+      label: t.dashboard.statWaiting,
+      value: waitingTasks.length,
+      meta: t.dashboard.statWaitingMeta,
+      Icon: Clock3,
+      tint: "bg-amber-500/10 text-amber-600",
+    },
+    {
+      label: t.dashboard.statOverdue,
+      value: overdueTasks.length,
+      meta: overdueTasks.length
+        ? t.dashboard.statOverdueMeta
+        : t.dashboard.statOverdueEmpty,
+      Icon: AlertTriangle,
+      tint: "bg-red-500/10 text-red-600",
+    },
+  ];
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow="全生命周期甘特总览"
-        title="技术合作项目控制台"
-        description="从商机、供应商沟通、报价、方案、会议纪要，到合同、交付、验收和售后维护。页面使用种子数据展示结构，数据库 schema 已按引用关系准备。"
+        eyebrow={`${t.dashboard.todayIs} ${today}`}
+        title={t.dashboard.title}
+        description={t.dashboard.desc}
         action={
           <>
-            <Button variant="outline">
-              <GitBranch className="h-4 w-4" />
-              Git 就绪
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4" />
-              新建项目
-            </Button>
+            <Link href="/tasks?new=1#new">
+              <Button variant="outline">
+                <Plus className="h-4 w-4" />
+                {t.dashboard.newTask}
+              </Button>
+            </Link>
+            <Link href="/projects?new=1#new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                {t.dashboard.newProject}
+              </Button>
+            </Link>
           </>
         }
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: "进行中项目", value: activeProjects.length, meta: "跨 3 个地区" },
-          { label: "待处理任务", value: tasks.length, meta: `${riskTasks.length} 个逾期` },
-          { label: "等待反馈", value: waitingTasks.length, meta: "供应商/甲方回传" },
-          { label: "数据模型", value: "ID", meta: "联系人唯一数据源" },
-        ].map((item) => (
+        {stats.map((item) => (
           <Card key={item.label}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-muted-foreground">{item.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-semibold">{item.value}</div>
-              <div className="mt-2 text-xs text-muted-foreground">{item.meta}</div>
+            <CardContent className="flex items-center gap-4 p-5">
+              <span
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${item.tint}`}
+              >
+                <item.Icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="tnum text-2xl font-semibold leading-none">
+                    {item.value}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {item.meta}
+                  </span>
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {item.label}
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="overflow-hidden">
+      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        {/* 项目进展一览：每个项目走到哪一步 */}
+        <Card>
           <CardHeader className="border-b border-border">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>项目甘特图</CardTitle>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  用完整阶段模板铺开项目起点到终点，便于发现延期与空档。
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Badge tone="done">已完成</Badge>
-                <Badge tone="active">进行中</Badge>
-                <Badge tone="risk">延期</Badge>
-              </div>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>{t.dashboard.projectOverview}</CardTitle>
+              <Link
+                href="/projects"
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                {t.dashboard.toBoard}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="grid grid-cols-[220px_minmax(620px,1fr)] overflow-x-auto">
-              <div className="border-r border-border bg-secondary/70">
-                <div className="h-11 border-b border-border px-4 py-3 text-xs font-medium text-muted-foreground">
-                  项目 / 阶段
-                </div>
-                {projects.map((project) => (
-                  <div key={project.id} className="border-b border-border p-4">
-                    <Link
-                      href={`/projects/${project.id}`}
-                      className="line-clamp-1 text-sm font-medium hover:text-primary"
-                    >
-                      {project.nameZh}
-                    </Link>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {project.region} · {project.progress}%
+          <CardContent className="space-y-3 pt-4">
+            {projects.filter((p) => p.status !== "ARCHIVED").length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+                {t.dashboard.noProjects}
+              </div>
+            ) : null}
+            {projects
+              .filter((p) => p.status !== "ARCHIVED")
+              .map((project) => {
+                const projectStages = stages
+                  .filter((stage) => stage.projectId === project.id)
+                  .sort((a, b) => a.sortOrder - b.sortOrder);
+                const currentStage =
+                  projectStages.find((s) => s.status === "IN_PROGRESS") ??
+                  projectStages.find((s) => s.status === "DELAYED") ??
+                  projectStages.find((s) => s.status === "NOT_STARTED");
+                const projectOpenTasks = openTasks.filter(
+                  (task) => task.projectId === project.id,
+                );
+                const projectOverdue = overdueTasks.filter(
+                  (task) => task.projectId === project.id,
+                );
+
+                return (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className="block rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm font-semibold">
+                          {pname(project)}
+                        </span>
+                        {project.region ? (
+                          <Badge tone="neutral">{project.region}</Badge>
+                        ) : null}
+                        {project.status === "PAUSED" ? (
+                          <Badge tone="waiting">{t.dashboard.paused}</Badge>
+                        ) : null}
+                      </div>
+                      <span className="tnum text-xs text-muted-foreground">
+                        {project.progress}%
+                      </span>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="min-w-[720px]">
-                <div className="grid h-11 grid-cols-8 border-b border-border bg-secondary/70 text-xs text-muted-foreground">
-                  {["4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月"].map(
-                    (month) => (
-                      <div key={month} className="border-r border-border px-3 py-3">
-                        {month}
-                      </div>
-                    ),
-                  )}
-                </div>
-                <div className="timeline-grid">
-                  {projects.map((project) => {
-                    const projectStages = stages.filter(
-                      (stage) => stage.projectId === project.id,
-                    );
-
-                    return (
+                    <div className="mt-3 h-2 rounded-md bg-secondary">
                       <div
-                        key={project.id}
-                        className="relative h-[73px] border-b border-border px-3 py-4"
-                      >
-                        {projectStages.map((stage) => {
-                          const left = percent(stage.plannedStart);
-                          const width = Math.max(
-                            4,
-                            percent(stage.plannedEnd) - left,
-                          );
-
-                          return (
-                            <div
-                              key={stage.id}
-                              className={cn(
-                                "absolute top-5 h-7 rounded-md px-2 py-1 text-[11px] font-medium text-white shadow-sm",
-                                stageBarColor(stage.status),
-                              )}
-                              style={{ left: `${left}%`, width: `${width}%` }}
-                              title={stage.name}
-                            >
-                              <span className="block truncate">{stage.name}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+                        className="h-2 rounded-md bg-primary"
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>
+                        {t.dashboard.currentStage}
+                        <span className="font-medium text-foreground">
+                          {currentStage
+                            ? currentStage.name
+                            : projectStages.length
+                              ? t.dashboard.allStagesDone
+                              : t.dashboard.noStages}
+                        </span>
+                        {currentStage?.status === "DELAYED" ? (
+                          <span className="font-medium text-red-600">
+                            {t.dashboard.stageDelayed}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span>{t.dashboard.openTasksCount(projectOpenTasks.length)}</span>
+                      {projectOverdue.length ? (
+                        <span className="font-medium text-red-600">
+                          {t.dashboard.overdueCount(projectOverdue.length)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </Link>
+                );
+              })}
           </CardContent>
         </Card>
 
         <div className="space-y-5">
+          {/* 未来 14 天日程 */}
           <Card>
-            <CardHeader>
-              <CardTitle>联动提醒</CardTitle>
+            <CardHeader className="border-b border-border">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>{t.dashboard.next14}</CardTitle>
+                <Link
+                  href="/calendar"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  {t.dashboard.calendar}
+                </Link>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-                <div className="text-sm font-medium text-amber-900">
-                  会议纪要第二轮任务已逾期
+            <CardContent className="space-y-2 pt-4">
+              {upcoming.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  {t.dashboard.next14Empty}
                 </div>
-                <p className="mt-1 text-xs leading-5 text-amber-800">
-                  建议确认是否将对应阶段状态标记为已延期，而不是静默自动修改。
-                </p>
-              </div>
-              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
-                <div className="text-sm font-medium text-emerald-900">
-                  文件定稿后可入库
-                </div>
-                <p className="mt-1 text-xs leading-5 text-emerald-800">
-                  纪要终稿确认时显示确认弹窗，保存为项目文件版本。
-                </p>
-              </div>
+              ) : (
+                upcoming.slice(0, 8).map((item) => (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    className="flex items-center gap-3 rounded-lg border border-border p-2.5 transition-colors hover:bg-secondary/50"
+                  >
+                    <span className="tnum w-12 shrink-0 font-mono text-xs text-muted-foreground">
+                      {item.date.slice(5)}
+                    </span>
+                    <Badge tone={item.chore ? "neutral" : "info"}>
+                      {item.kind}
+                    </Badge>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">
+                        {item.title}
+                      </div>
+                      {item.sub ? (
+                        <div className="truncate text-xs text-muted-foreground">
+                          {item.sub}
+                        </div>
+                      ) : null}
+                    </div>
+                  </Link>
+                ))
+              )}
             </CardContent>
           </Card>
 
+          {/* 逾期与杂事提醒 */}
           <Card>
-            <CardHeader>
-              <CardTitle>近期任务</CardTitle>
+            <CardHeader className="border-b border-border">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>{t.dashboard.reminders}</CardTitle>
+                <Link
+                  href="/tasks"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                >
+                  <Inbox className="h-4 w-4" />
+                  {t.dashboard.taskList}
+                </Link>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {tasks.slice(0, 3).map((task) => {
-                  const assignee = contactMap.get(task.assigneeId);
-
-                return (
-                  <div key={task.id} className="rounded-md border border-border p-3">
-                    <div className="flex items-start justify-between gap-3">
+            <CardContent className="space-y-2 pt-4">
+              {[
+                ...overdueTasks,
+                ...personalTasks.filter((task) => !overdueTasks.includes(task)),
+              ]
+                .slice(0, 6)
+                .map((task) => {
+                  const project = projects.find((p) => p.id === task.projectId);
+                  return (
+                    <div
+                      key={task.id}
+                      className="flex items-start justify-between gap-3 rounded-lg border border-border p-2.5"
+                    >
                       <div className="min-w-0">
-                        <div className="line-clamp-1 text-sm font-medium">
+                        <div className="truncate text-sm font-medium">
                           {task.title}
                         </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {assignee?.name} · {task.dueDate}
+                        <div className="mt-0.5 text-xs text-muted-foreground">
+                          {project ? pname(project) : t.common.personal}
+                          {task.dueDate
+                            ? ` · ${task.dueDate} ${t.dashboard.due}`
+                            : ""}
                         </div>
                       </div>
                       <TaskStatusPill status={task.status} />
                     </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>部署准备</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-start gap-3">
-                <Database className="mt-0.5 h-4 w-4 text-primary" />
-                <span>Prisma schema 已支持 Vercel Postgres/Supabase。</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
-                <span>{getDatabaseModeLabel()}，预留 APP_PASSWORD。</span>
-              </div>
-              <Link
-                href="/settings"
-                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-              >
-                查看设置模块
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+                  );
+                })}
+              {overdueTasks.length === 0 && personalTasks.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  {t.dashboard.remindersEmpty}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </div>
       </div>
 
+      <div className="mt-5">
+        <GanttChart
+          projects={projects.map((project) => ({
+            id: project.id,
+            nameZh: pname(project),
+            region: project.region,
+            progress: project.progress,
+          }))}
+          stages={stages.map((stage) => ({
+            id: stage.id,
+            projectId: stage.projectId,
+            name: stage.name,
+            plannedStart: stage.plannedStart,
+            plannedEnd: stage.plannedEnd,
+            status: stage.status,
+          }))}
+          dbConnected={isDatabaseConfigured()}
+        />
+      </div>
+
       <Card className="mt-5">
-        <CardHeader>
-          <CardTitle>项目动态时间线</CardTitle>
+        <CardHeader className="border-b border-border">
+          <CardTitle>{t.dashboard.timeline}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 lg:grid-cols-3">
-            {timelineEvents.map((event) => (
-              <div key={event.id} className="rounded-md border border-border p-3">
-                <Badge tone="info">{event.action}</Badge>
-                <p className="mt-3 text-sm leading-6">{event.message}</p>
-                <div className="mt-2 font-mono text-xs text-muted-foreground">
-                  {event.createdAt}
+        <CardContent className="pt-4">
+          {timelineEvents.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              {t.dashboard.timelineEmpty}
+            </div>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-3">
+              {timelineEvents.slice(0, 9).map((event) => (
+                <div key={event.id} className="rounded-lg border border-border p-3">
+                  <Badge tone="info">{event.action}</Badge>
+                  <p className="mt-3 text-sm leading-6">{event.message}</p>
+                  <div className="tnum mt-2 font-mono text-xs text-muted-foreground">
+                    {event.createdAt}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </AppShell>
