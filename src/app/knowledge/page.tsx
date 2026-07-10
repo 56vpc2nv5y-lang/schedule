@@ -3,7 +3,9 @@ import { BookOpenText, ExternalLink, Plus, Trash2 } from "lucide-react";
 import {
   createKnowledgeNoteAction,
   deleteKnowledgeNoteAction,
+  updateKnowledgeNoteAction,
 } from "@/app/actions";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -177,6 +179,73 @@ export default async function KnowledgePage({
                         {t.common.open}
                       </a>
                     ) : null}
+                    <div className="mt-2 border-t border-border/60 pt-2">
+                      <InlineEdit label={t.common.edit}>
+                        <form
+                          action={updateKnowledgeNoteAction}
+                          className="grid gap-2"
+                        >
+                          <input type="hidden" name="id" value={note.id} />
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <label>
+                              <span className="flabel">{t.knowledge.fTopic}</span>
+                              <input
+                                name="topic"
+                                defaultValue={note.topic}
+                                list="topic-options"
+                                className="field field-sm"
+                              />
+                            </label>
+                            <label>
+                              <span className="flabel">{t.knowledge.fProject}</span>
+                              <select
+                                name="projectId"
+                                defaultValue={note.projectId}
+                                className="field field-sm"
+                              >
+                                <option value="">{t.common.notSelected}</option>
+                                {projects.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {pname(p)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                          <label>
+                            <span className="flabel">{t.knowledge.fTitle}</span>
+                            <input
+                              name="title"
+                              defaultValue={note.title}
+                              className="field field-sm"
+                            />
+                          </label>
+                          <label>
+                            <span className="flabel">{t.knowledge.fContent}</span>
+                            <textarea
+                              name="content"
+                              defaultValue={note.content}
+                              rows={3}
+                              className="field field-sm"
+                            />
+                          </label>
+                          <label>
+                            <span className="flabel">{t.knowledge.fUrl}</span>
+                            <input
+                              name="url"
+                              defaultValue={note.url}
+                              placeholder="https://"
+                              className="field field-sm"
+                            />
+                          </label>
+                          <div className="flex justify-end">
+                            <Button type="submit" size="sm">
+                              {t.common.save}
+                            </Button>
+                          </div>
+                        </form>
+                      </InlineEdit>
+                    </div>
                   </div>
                 );
               })}

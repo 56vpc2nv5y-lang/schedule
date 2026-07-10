@@ -212,13 +212,19 @@ export function CalendarBoard({
                         setDragId(null);
                         setOverIso(null);
                       }}
+                      onClick={() => {
+                        // 点击（非拖动）跳转到对应页面
+                        router.push(
+                          event.kind === "task" ? "/tasks" : "/receptions",
+                        );
+                      }}
                       onContextMenu={(e) => openMenu(e, event)}
                       title={`${event.tag} · ${event.title}${
                         event.projectName ? ` · ${event.projectName}` : ""
-                      }`}
+                      } — ${t.calendar.clickToOpen}`}
                       className={`flex items-center gap-1 rounded px-1 py-0.5 text-[11px] leading-4 ${
                         isStart
-                          ? "cursor-grab bg-secondary/70 hover:bg-secondary active:cursor-grabbing"
+                          ? "cursor-pointer bg-secondary/70 hover:bg-secondary active:cursor-grabbing"
                           : "opacity-60"
                       }`}
                     >

@@ -2,10 +2,13 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { MapPin, Users, X } from "lucide-react";
 import {
   deleteScheduleBlockAction,
   moveScheduleBlockAction,
+  updateScheduleBlockAction,
 } from "@/app/actions";
+import { Button } from "@/components/ui/button";
 import { ContextMenu, type MenuItem } from "@/components/ui/context-menu";
 import { useDict } from "@/components/layout/locale-provider";
 import { cn } from "@/lib/utils";
@@ -17,6 +20,10 @@ export type WeekBlock = {
   startMin: number;
   endMin: number;
   kind: string; // routine | work
+  location: string;
+  participants: string;
+  note: string;
+  projectId: string;
 };
 
 export type TripSegment = {
@@ -36,24 +43,30 @@ const RANGE_MIN = (END_HOUR - START_HOUR) * 60;
 function minToTop(min: number) {
   return ((min - START_HOUR * 60) / 60) * HOUR_PX;
 }
-
 function fmt(min: number) {
   const h = Math.floor(min / 60);
   const m = min % 60;
   return `${h}:${String(m).padStart(2, "0")}`;
+}
+function fmtHM(min: number) {
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(
+    min % 60,
+  ).padStart(2, "0")}`;
 }
 
 export function WeekBoard({
   days,
   blocks,
   trips,
+  projects,
   todayIso,
   nowMin,
   dbConnected,
 }: {
-  days: string[]; // 7 个 ISO 日期，周一开始
+  days: string[];
   blocks: WeekBlock[];
   trips: TripSegment[];
+  projects: { id: string; name: string }[];
   todayIso: string;
   nowMin: number;
   dbConnected: boolean;
@@ -62,18 +75,31 @@ export function WeekBoard({
   const [items, setItems] = useState<WeekBlock[]>(blocks);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<WeekBlock | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
   const router = useRouter();
 
   const weekdayNames = useMemo(() => {
-    const names = t.calendar.weekdays; // 周日开头
-    // days 从周一开始：Mon..Sun
+    const names = t.calendar.weekdays;
     return days.map((iso) => {
       const dow = new Date(`${iso}T00:00:00`).getDay();
       return `${t.calendar.weekdayPrefix}${names[dow]}`;
     });
   }, [days, t]);
+
+  // 顶部全天条：接待/出差按天分组，去重（避免和小时块叠字）
+  const tripsByDay = useMemo(() => {
+    const map = new Map<string, { key: string; title: string }[]>();
+    for (const trip of trips) {
+      const base = trip.id.replace(/-\d{4}-\d{2}-\d{2}$/, "");
+      const list = map.get(trip.date) ?? [];
+      if (!list.some((x) => x.key === base)) list.push({ key: base, title: trip.title });
+      map.set(trip.date, list);
+    }
+    return map;
+  }, [trips]);
+  const hasTrips = trips.length > 0;
 
   function blocksForDay(iso: string) {
     return items.filter((b) => b.date === "" || b.date === iso);
@@ -107,11 +133,14 @@ export function WeekBoard({
     const colWidth = rect.width / 7;
     const startY = e.clientY;
     const startX = e.clientX;
-    const origin = { ...block, currentDay: block.date === "" ? "" : dayIso };
+    const origin = { ...block };
     setActiveId(block.id);
     const latest = { ...origin };
+    let moved = false;
 
     function onMove(ev: PointerEvent) {
+      if (Math.abs(ev.clientY - startY) > 3 || Math.abs(ev.clientX - startX) > 3)
+        moved = true;
       const deltaMin =
         Math.round((ev.clientY - startY) / ((HOUR_PX / 60) * SNAP)) * SNAP;
       let startMin = origin.startMin;
@@ -125,7 +154,6 @@ export function WeekBoard({
           Math.min(origin.startMin + deltaMin, END_HOUR * 60 - len),
         );
         endMin = startMin + len;
-        // 只有具体日期的块可以横向换天
         if (origin.date !== "") {
           const colDelta = Math.round((ev.clientX - startX) / colWidth);
           const originIdx = days.indexOf(origin.date);
@@ -138,7 +166,6 @@ export function WeekBoard({
           Math.min(origin.endMin + deltaMin, END_HOUR * 60),
         );
       }
-
       latest.startMin = startMin;
       latest.endMin = endMin;
       latest.date = date;
@@ -153,6 +180,11 @@ export function WeekBoard({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       setActiveId(null);
+      if (!moved) {
+        // 没拖动 = 点击 → 打开编辑框
+        setEditing(block);
+        return;
+      }
       if (
         latest.startMin !== origin.startMin ||
         latest.endMin !== origin.endMin ||
@@ -173,6 +205,10 @@ export function WeekBoard({
       x: e.clientX,
       y: e.clientY,
       items: [
+        {
+          label: t.week.edit,
+          onClick: () => setEditing(block),
+        },
         {
           label: t.week.delete,
           danger: true,
@@ -198,7 +234,7 @@ export function WeekBoard({
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="border-b border-border bg-secondary/40 px-4 py-2 text-xs text-muted-foreground">
-        {dbConnected ? t.week.liveTip : t.week.demoTip}
+        {dbConnected ? t.week.liveTip : t.week.demoTip} · {t.week.clickToEdit}
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[860px]">
@@ -226,13 +262,31 @@ export function WeekBoard({
             ))}
           </div>
 
+          {/* 全天条：接待/出差（避免压住小时块） */}
+          {hasTrips ? (
+            <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-border">
+              <div className="flex items-center justify-end pr-2 text-[10px] text-muted-foreground">
+                {t.week.allDay}
+              </div>
+              {days.map((iso) => (
+                <div key={iso} className="min-h-[26px] space-y-0.5 border-l border-border p-0.5">
+                  {(tripsByDay.get(iso) ?? []).map((trip) => (
+                    <div
+                      key={trip.key}
+                      title={trip.title}
+                      className="truncate rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-700"
+                    >
+                      {trip.title}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {/* 主体：时间轴 + 7 列 */}
           <div className="grid grid-cols-[56px_repeat(7,1fr)]">
-            {/* 小时标签列 */}
-            <div
-              className="relative"
-              style={{ height: (RANGE_MIN / 60) * HOUR_PX }}
-            >
+            <div className="relative" style={{ height: (RANGE_MIN / 60) * HOUR_PX }}>
               {hours.map((h) => (
                 <div
                   key={h}
@@ -245,7 +299,6 @@ export function WeekBoard({
             </div>
 
             <div ref={gridRef} className="relative col-span-7 grid grid-cols-7">
-              {/* 小时横线 */}
               {hours.map((h) => (
                 <div
                   key={h}
@@ -253,7 +306,6 @@ export function WeekBoard({
                   style={{ top: minToTop(h * 60) }}
                 />
               ))}
-              {/* 现在时刻线 */}
               {days.includes(todayIso) &&
               nowMin >= START_HOUR * 60 &&
               nowMin <= END_HOUR * 60 ? (
@@ -269,93 +321,188 @@ export function WeekBoard({
                 </div>
               ) : null}
 
-              {days.map((iso) => {
-                const dayTrips = trips.filter((trip) => trip.date === iso);
-                return (
-                  <div
-                    key={iso}
-                    className={cn(
-                      "relative touch-none border-l border-border",
-                      iso === todayIso && "bg-primary/[0.04]",
-                    )}
-                    style={{ height: (RANGE_MIN / 60) * HOUR_PX }}
-                  >
-                    {/* 出差/接待：只读叠加 */}
-                    {dayTrips.map((trip) => (
+              {days.map((iso) => (
+                <div
+                  key={iso}
+                  className={cn(
+                    "relative touch-none border-l border-border",
+                    iso === todayIso && "bg-primary/[0.04]",
+                  )}
+                  style={{ height: (RANGE_MIN / 60) * HOUR_PX }}
+                >
+                  {blocksForDay(iso).map((block) => {
+                    const routine = block.date === "";
+                    const top = minToTop(block.startMin);
+                    const height = Math.max(
+                      18,
+                      minToTop(block.endMin) - minToTop(block.startMin),
+                    );
+                    return (
                       <div
-                        key={trip.id}
-                        className="absolute inset-x-1 z-0 rounded-md border border-violet-300 bg-violet-100/70 p-1"
-                        style={{
-                          top: minToTop(Math.max(trip.startMin, START_HOUR * 60)),
-                          height: Math.max(
-                            20,
-                            minToTop(Math.min(trip.endMin, END_HOUR * 60)) -
-                              minToTop(Math.max(trip.startMin, START_HOUR * 60)),
-                          ),
-                        }}
-                        title={trip.title}
+                        key={`${iso}-${block.id}`}
+                        onPointerDown={(e) => beginDrag(e, block, "move", iso)}
+                        onContextMenu={(e) => openMenu(e, block)}
+                        className={cn(
+                          "group absolute inset-x-1 z-10 cursor-pointer overflow-hidden rounded-md border p-1 text-[11px] leading-4 shadow-sm transition-shadow hover:shadow active:cursor-grabbing",
+                          routine
+                            ? "border-border bg-secondary/90 text-muted-foreground"
+                            : "border-primary/30 bg-primary/15 text-foreground",
+                          activeId === block.id && "ring-2 ring-primary/60",
+                        )}
+                        style={{ top, height }}
+                        title={`${block.title} ${fmt(block.startMin)}–${fmt(block.endMin)}`}
                       >
-                        <span className="line-clamp-2 text-[10px] leading-4 text-violet-800">
-                          【{t.week.receptionTag}】{trip.title}
+                        <div className="line-clamp-2 font-medium">{block.title}</div>
+                        <div className="tnum text-[10px] opacity-70">
+                          {fmt(block.startMin)}–{fmt(block.endMin)}
+                          {routine ? ` · ${t.week.routine}` : ""}
+                        </div>
+                        {block.location && height > 42 ? (
+                          <div className="truncate text-[10px] opacity-70">
+                            📍{block.location}
+                          </div>
+                        ) : null}
+                        <span
+                          onPointerDown={(e) => beginDrag(e, block, "resize", iso)}
+                          className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100"
+                        >
+                          <span className="mx-auto mt-0.5 block h-1 w-8 rounded-full bg-foreground/20" />
                         </span>
                       </div>
-                    ))}
-
-                    {blocksForDay(iso).map((block) => {
-                      const routine = block.date === "";
-                      const top = minToTop(block.startMin);
-                      const height = Math.max(
-                        18,
-                        minToTop(block.endMin) - minToTop(block.startMin),
-                      );
-                      return (
-                        <div
-                          key={`${iso}-${block.id}`}
-                          onPointerDown={(e) => beginDrag(e, block, "move", iso)}
-                          onContextMenu={(e) => openMenu(e, block)}
-                          className={cn(
-                            "group absolute inset-x-1 z-10 cursor-grab overflow-hidden rounded-md border p-1 text-[11px] leading-4 shadow-sm transition-shadow hover:shadow active:cursor-grabbing",
-                            routine
-                              ? "border-border bg-secondary/90 text-muted-foreground"
-                              : "border-primary/30 bg-primary/15 text-foreground",
-                            activeId === block.id && "ring-2 ring-primary/60",
-                          )}
-                          style={{ top, height }}
-                          title={`${block.title} ${fmt(block.startMin)}–${fmt(block.endMin)}`}
-                        >
-                          <div className="line-clamp-2 font-medium">
-                            {block.title}
-                          </div>
-                          <div className="tnum text-[10px] opacity-70">
-                            {fmt(block.startMin)}–{fmt(block.endMin)}
-                            {routine ? ` · ${t.week.routine}` : ""}
-                          </div>
-                          <span
-                            onPointerDown={(e) =>
-                              beginDrag(e, block, "resize", iso)
-                            }
-                            className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100"
-                          >
-                            <span className="mx-auto mt-0.5 block h-1 w-8 rounded-full bg-foreground/20" />
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
       {menu ? (
-        <ContextMenu
-          x={menu.x}
-          y={menu.y}
-          items={menu.items}
-          onClose={() => setMenu(null)}
-        />
+        <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />
+      ) : null}
+
+      {/* 编辑弹框 */}
+      {editing ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setEditing(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-base font-semibold">{t.week.editTitle}</div>
+              <button
+                onClick={() => setEditing(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form
+              action={updateScheduleBlockAction}
+              className="grid gap-3 sm:grid-cols-2"
+            >
+              <input type="hidden" name="id" value={editing.id} />
+              <label className="sm:col-span-2">
+                <span className="flabel">{t.week.fTitle}</span>
+                <input
+                  name="title"
+                  defaultValue={editing.title}
+                  className="field"
+                />
+              </label>
+              <label>
+                <span className="flabel">{t.week.fDate}</span>
+                <input
+                  type="date"
+                  name="date"
+                  defaultValue={editing.date}
+                  className="field"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label>
+                  <span className="flabel">{t.week.fStart}</span>
+                  <input
+                    type="time"
+                    name="start"
+                    defaultValue={fmtHM(editing.startMin)}
+                    className="field"
+                  />
+                </label>
+                <label>
+                  <span className="flabel">{t.week.fEnd}</span>
+                  <input
+                    type="time"
+                    name="end"
+                    defaultValue={fmtHM(editing.endMin)}
+                    className="field"
+                  />
+                </label>
+              </div>
+              <label>
+                <span className="flabel">
+                  <MapPin className="mr-1 inline h-3 w-3" />
+                  {t.week.fLocation}
+                </span>
+                <input
+                  name="location"
+                  defaultValue={editing.location}
+                  className="field"
+                />
+              </label>
+              <label>
+                <span className="flabel">
+                  <Users className="mr-1 inline h-3 w-3" />
+                  {t.week.fParticipants}
+                </span>
+                <input
+                  name="participants"
+                  defaultValue={editing.participants}
+                  placeholder={t.week.fParticipantsPh}
+                  className="field"
+                />
+              </label>
+              <label className="sm:col-span-2">
+                <span className="flabel">{t.week.fNote}</span>
+                <input
+                  name="note"
+                  defaultValue={editing.note}
+                  placeholder={t.week.fNotePh}
+                  className="field"
+                />
+              </label>
+              <label className="sm:col-span-2">
+                <span className="flabel">{t.week.fProject}</span>
+                <select
+                  name="projectId"
+                  defaultValue={editing.projectId}
+                  className="field"
+                >
+                  <option value="">{t.week.fNoProject}</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex items-center justify-end gap-2 sm:col-span-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditing(null)}
+                >
+                  {t.common.cancel}
+                </Button>
+                <Button type="submit">{t.common.save}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
     </div>
   );

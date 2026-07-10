@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   createTaskAction,
   createWorkflowTasksAction,
   deleteTaskAction,
-  updateTaskStatusAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -22,6 +21,18 @@ import {
   getTasksForView,
 } from "@/lib/database-data";
 import { cn } from "@/lib/utils";
+import { StatusSelect } from "./status-select";
+
+// 优先级：颜色 + 权重（用于排序和左侧色条）
+const PRIORITY_META: Record<
+  string,
+  { tone: "risk" | "waiting" | "info" | "neutral"; bar: string; weight: number }
+> = {
+  URGENT: { tone: "risk", bar: "bg-red-500", weight: 3 },
+  HIGH: { tone: "waiting", bar: "bg-amber-500", weight: 2 },
+  MEDIUM: { tone: "info", bar: "bg-blue-400", weight: 1 },
+  LOW: { tone: "neutral", bar: "bg-slate-300", weight: 0 },
+};
 
 export const dynamic = "force-dynamic";
 
@@ -69,20 +80,28 @@ export default async function TasksPage({
     { key: "all", label: t.tasks.fAll },
   ];
 
-  const visibleTasks = tasks.filter((task) => {
-    switch (filter) {
-      case "personal":
-        return !task.projectId;
-      case "overdue":
-        return task.status === "OVERDUE";
-      case "done":
-        return task.status === "DONE";
-      case "all":
-        return true;
-      default:
-        return task.status !== "DONE";
-    }
-  });
+  const visibleTasks = tasks
+    .filter((task) => {
+      switch (filter) {
+        case "personal":
+          return !task.projectId;
+        case "overdue":
+          return task.status === "OVERDUE";
+        case "done":
+          return task.status === "DONE";
+        case "all":
+          return true;
+        default:
+          return task.status !== "DONE";
+      }
+    })
+    // 高优先级排前面，同级按截止日期
+    .sort((a, b) => {
+      const pa = PRIORITY_META[a.priority]?.weight ?? 1;
+      const pb = PRIORITY_META[b.priority]?.weight ?? 1;
+      if (pa !== pb) return pb - pa;
+      return (a.dueDate || "9999").localeCompare(b.dueDate || "9999");
+    });
 
   const formOpen = openForm === "1" || Boolean(created) || Boolean(error);
 
@@ -149,6 +168,7 @@ export default async function TasksPage({
             <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="border-b border-border bg-secondary/70 text-xs text-muted-foreground">
                 <tr>
+                  <th className="px-4 py-3 font-medium">{t.common.priority}</th>
                   <th className="px-4 py-3 font-medium">{t.tasks.colTask}</th>
                   <th className="px-4 py-3 font-medium">{t.tasks.colBelong}</th>
                   <th className="px-4 py-3 font-medium">{t.common.type}</th>
@@ -163,12 +183,26 @@ export default async function TasksPage({
                     ? projectMap.get(task.projectId)
                     : undefined;
                   const assignee = contactMap.get(task.assigneeId);
+                  const pmeta = PRIORITY_META[task.priority] ?? PRIORITY_META.MEDIUM;
 
                   return (
                     <tr
                       key={task.id}
                       className="bg-card transition-colors hover:bg-secondary/40"
                     >
+                      <td className="py-3 pl-0 pr-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn("h-8 w-1 rounded-full", pmeta.bar)}
+                            aria-hidden
+                          />
+                          <Badge tone={pmeta.tone}>
+                            {t.statuses.priority[
+                              task.priority as keyof typeof t.statuses.priority
+                            ] ?? task.priority}
+                          </Badge>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="font-medium">{task.title}</div>
                         {assignee ? (
@@ -200,32 +234,11 @@ export default async function TasksPage({
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <form
-                            action={updateTaskStatusAction}
-                            className="flex items-center gap-1.5"
-                          >
-                            <input type="hidden" name="taskId" value={task.id} />
-                            <select
-                              name="status"
-                              defaultValue={task.status}
-                              className="field field-sm w-auto"
-                            >
-                              {statusOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              type="submit"
-                              className="h-8 w-8"
-                              title={t.tasks.saveStatus}
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                            </Button>
-                          </form>
+                          <StatusSelect
+                            taskId={task.id}
+                            value={task.status}
+                            options={statusOptions}
+                          />
                           <form action={deleteTaskAction}>
                             <input type="hidden" name="taskId" value={task.id} />
                             <Button

@@ -9,9 +9,11 @@ import { CollapseCard } from "@/components/ui/collapse-card";
 import { isDatabaseConfigured } from "@/lib/db-status";
 import { getT } from "@/lib/locale";
 import {
+  getProjectsForView,
   getReceptionsForView,
   getScheduleBlocksForView,
 } from "@/lib/database-data";
+import { projectDisplayName } from "@/lib/i18n";
 import { WeekBoard, type TripSegment, type WeekBlock } from "./week-board";
 
 export const dynamic = "force-dynamic";
@@ -29,13 +31,18 @@ export default async function WeekPage({
 }: {
   searchParams: Promise<{ w?: string; created?: string; error?: string; new?: string }>;
 }) {
-  const [{ w, created, error, new: openForm }, { t }, blocks, receptions] =
+  const [{ w, created, error, new: openForm }, { locale, t }, blocks, receptions, projects] =
     await Promise.all([
       searchParams,
       getT(),
       getScheduleBlocksForView(),
       getReceptionsForView(),
+      getProjectsForView(),
     ]);
+  const projectOptions = projects.map((p) => ({
+    id: p.id,
+    name: projectDisplayName(locale, p),
+  }));
 
   const base =
     w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? parseISO(w) : new Date();
@@ -124,6 +131,7 @@ export default async function WeekPage({
         days={days}
         blocks={weekBlocks}
         trips={trips}
+        projects={projectOptions}
         todayIso={todayIso}
         nowMin={nowMin}
         dbConnected={isDatabaseConfigured()}

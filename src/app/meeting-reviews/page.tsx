@@ -53,6 +53,17 @@ export default async function MeetingReviewsPage({
     getFeedbackQuestionsForView(),
   ]);
   const openQuestions = questions.filter((q) => q.status !== "CONFIRMED");
+  const solvedCount = questions.filter((q) => q.status === "CONFIRMED").length;
+  const attentionCount = questions.filter(
+    (q) => q.status === "UNCLEAR" || q.status === "NEED_MEETING",
+  ).length;
+  // 按项目分组统计"解决进度"，给用户一个 overview
+  const questionsByProject = projects
+    .map((p) => ({
+      project: p,
+      qs: questions.filter((q) => q.projectId === p.id),
+    }))
+    .filter((x) => x.qs.length > 0);
   const projectMap = new Map(projects.map((p) => [p.id, p]));
   const contactMap = new Map(contacts.map((c) => [c.id, c]));
   const pname = (p: { nameZh: string; nameEn?: string }) =>
@@ -106,6 +117,63 @@ export default async function MeetingReviewsPage({
           </div>
         </CardHeader>
         <CardContent className="space-y-3 pt-4">
+          {questions.length > 0 ? (
+            <div className="rounded-lg border border-border bg-secondary/30 p-4">
+              {/* 总览：一眼看客户问题解决到什么程度 */}
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <div className="tnum text-2xl font-semibold">
+                    {questions.length}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {t.questions.statTotal}
+                  </div>
+                </div>
+                <div>
+                  <div className="tnum text-2xl font-semibold text-emerald-600">
+                    {solvedCount}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {t.questions.statSolved}
+                  </div>
+                </div>
+                <div>
+                  <div className="tnum text-2xl font-semibold text-red-600">
+                    {attentionCount}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {t.questions.statAttention}
+                  </div>
+                </div>
+              </div>
+              {/* 按项目的解决进度条 */}
+              <div className="mt-4 space-y-2">
+                {questionsByProject.map(({ project, qs }) => {
+                  const solved = qs.filter(
+                    (q) => q.status === "CONFIRMED",
+                  ).length;
+                  const pct = Math.round((solved / qs.length) * 100);
+                  return (
+                    <div key={project.id}>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium">{pname(project)}</span>
+                        <span className="tnum text-muted-foreground">
+                          {solved}/{qs.length}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-secondary">
+                        <div
+                          className="h-1.5 rounded-full bg-emerald-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           {questions.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               {t.questions.empty}

@@ -12,9 +12,12 @@ import {
 import {
   advanceStageAction,
   createFileLinkAction,
+  deleteFileAction,
+  updateFileAction,
   updateStageAction,
   uploadFileAction,
 } from "@/app/actions";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -365,30 +368,134 @@ export default async function ProjectDetailPage({
                   {files.map((file) => (
                     <div
                       key={file.id}
-                      className="flex items-start justify-between gap-3 rounded-md border border-border p-3"
+                      className="rounded-md border border-border p-3"
                     >
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium">{file.name}</div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <Badge tone="info">{file.type}</Badge>
-                          {file.version ? (
-                            <Badge tone="neutral">v{file.version}</Badge>
-                          ) : null}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium">{file.name}</div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Badge tone="info">{file.type}</Badge>
+                            {file.version ? (
+                              <Badge tone="neutral">v{file.version}</Badge>
+                            ) : null}
+                          </div>
+                          <div className="mt-2 font-mono text-xs text-muted-foreground">
+                            {file.updatedAt}
+                          </div>
                         </div>
-                        <div className="mt-2 font-mono text-xs text-muted-foreground">
-                          {file.updatedAt}
-                        </div>
+                        {file.url ? (
+                          <a
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            {t.common.open}
+                          </a>
+                        ) : null}
                       </div>
-                      {file.url ? (
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          打开
-                        </a>
+                      {dbReady ? (
+                        <div className="mt-2 flex items-center gap-3 border-t border-border/60 pt-2">
+                          <InlineEdit label={t.common.edit}>
+                            <form
+                              action={updateFileAction}
+                              className="grid gap-2 sm:grid-cols-2"
+                            >
+                              <input type="hidden" name="id" value={file.id} />
+                              <input
+                                type="hidden"
+                                name="projectId"
+                                value={project.id}
+                              />
+                              <label className="sm:col-span-2">
+                                <span className="flabel">文件名</span>
+                                <input
+                                  name="name"
+                                  defaultValue={file.name}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label>
+                                <span className="flabel">类型</span>
+                                <select
+                                  name="type"
+                                  defaultValue={file.type}
+                                  className="field field-sm"
+                                >
+                                  {fileTypes.map((ft) => (
+                                    <option key={ft}>{ft}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                <span className="flabel">版本</span>
+                                <input
+                                  name="version"
+                                  defaultValue={file.version}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label className="sm:col-span-2">
+                                <span className="flabel">链接</span>
+                                <input
+                                  name="url"
+                                  defaultValue={file.url}
+                                  placeholder="https://"
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label>
+                                <span className="flabel">状态</span>
+                                <select
+                                  name="status"
+                                  defaultValue={file.status}
+                                  className="field field-sm"
+                                >
+                                  {fileStatuses.map((s) => (
+                                    <option key={s.value} value={s.value}>
+                                      {s.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                <span className="flabel">关联阶段</span>
+                                <select
+                                  name="stageId"
+                                  defaultValue={file.stageId ?? ""}
+                                  className="field field-sm"
+                                >
+                                  <option value="">不关联阶段</option>
+                                  {stages.map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                      {s.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <div className="flex items-end justify-end sm:col-span-2">
+                                <Button type="submit" size="sm">
+                                  {t.common.save}
+                                </Button>
+                              </div>
+                            </form>
+                          </InlineEdit>
+                          <form action={deleteFileAction}>
+                            <input type="hidden" name="id" value={file.id} />
+                            <input
+                              type="hidden"
+                              name="projectId"
+                              value={project.id}
+                            />
+                            <button
+                              type="submit"
+                              className="text-xs font-medium text-muted-foreground hover:text-red-600"
+                            >
+                              {t.common.delete}
+                            </button>
+                          </form>
+                        </div>
                       ) : null}
                     </div>
                   ))}

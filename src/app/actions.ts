@@ -447,6 +447,39 @@ export async function createFileLinkAction(formData: FormData) {
   redirect(`/projects/${projectId}?created=file-link`);
 }
 
+export async function updateFileAction(formData: FormData) {
+  requireDatabase("/projects");
+  const id = getString(formData, "id");
+  const projectId = getString(formData, "projectId");
+  const name = getString(formData, "name");
+  if (!id || !name) redirect(`/projects/${projectId}?error=file-missing`);
+
+  const typeName = getString(formData, "type");
+  const fileType = typeName ? await ensureFileType(typeName) : null;
+  await getPrisma().projectFile.update({
+    where: { id },
+    data: {
+      name,
+      version: getString(formData, "version") || null,
+      status: parseFileStatus(getString(formData, "status")),
+      url: getString(formData, "url") || null,
+      stageId: getString(formData, "stageId") || null,
+      fileTypeId: fileType?.id ?? null,
+    },
+  });
+  revalidatePath(`/projects/${projectId}`);
+  redirect(`/projects/${projectId}?created=file-link`);
+}
+
+export async function deleteFileAction(formData: FormData) {
+  requireDatabase("/projects");
+  const id = getString(formData, "id");
+  const projectId = getString(formData, "projectId");
+  if (id) await getPrisma().projectFile.delete({ where: { id } }).catch(() => {});
+  revalidatePath(`/projects/${projectId}`);
+  redirect(`/projects/${projectId}`);
+}
+
 // 方式二：把文件本体上传到 Supabase Storage，自动生成访问链接后入库
 export async function uploadFileAction(formData: FormData) {
   requireDatabase("/projects");
@@ -625,6 +658,33 @@ export async function createResourceAction(formData: FormData) {
 
   revalidatePath("/resources");
   redirect("/resources?created=resource");
+}
+
+export async function updateResourceAction(formData: FormData) {
+  requireDatabase("/resources");
+  const id = getString(formData, "id");
+  const name = getString(formData, "name");
+  if (!id || !name) redirect("/resources?error=missing-required");
+  await getPrisma().resource.update({
+    where: { id },
+    data: {
+      name,
+      category: getString(formData, "category") || "其他",
+      url: getString(formData, "url") || null,
+      note: getString(formData, "note") || null,
+      important: getString(formData, "important") === "on",
+    },
+  });
+  revalidatePath("/resources");
+  redirect("/resources?created=resource");
+}
+
+export async function deleteResourceAction(formData: FormData) {
+  requireDatabase("/resources");
+  const id = getString(formData, "id");
+  if (id) await getPrisma().resource.delete({ where: { id } }).catch(() => {});
+  revalidatePath("/resources");
+  redirect("/resources");
 }
 
 // ── 拖动改期：甘特图阶段、日历任务/接待 ────────────────────────
@@ -862,6 +922,28 @@ export async function createKnowledgeNoteAction(formData: FormData) {
   redirect("/knowledge?created=note");
 }
 
+export async function updateKnowledgeNoteAction(formData: FormData) {
+  requireDatabase("/knowledge");
+  const id = getString(formData, "id");
+  const title = getString(formData, "title");
+  const content = getString(formData, "content");
+  if (!id || !title || !content) {
+    redirect("/knowledge?error=missing-required");
+  }
+  await getPrisma().knowledgeNote.update({
+    where: { id },
+    data: {
+      topic: getString(formData, "topic") || "其他",
+      title,
+      content,
+      url: getString(formData, "url") || null,
+      projectId: getString(formData, "projectId") || null,
+    },
+  });
+  revalidatePath("/knowledge");
+  redirect("/knowledge?created=note");
+}
+
 export async function deleteKnowledgeNoteAction(formData: FormData) {
   requireDatabase("/knowledge");
   const id = getString(formData, "id");
@@ -999,6 +1081,44 @@ export async function createScheduleBlockAction(formData: FormData) {
       startMin,
       endMin,
       kind: dateStr ? "work" : "routine",
+      location: getString(formData, "location") || null,
+      participants: getString(formData, "participants") || null,
+      note: getString(formData, "note") || null,
+      projectId: getString(formData, "projectId") || null,
+    },
+  });
+  revalidatePath("/week");
+  redirect("/week?created=block");
+}
+
+// 点击时间块 → 编辑全部字段（主题/日期/时间/地点/参与人/我的任务/项目）
+export async function updateScheduleBlockAction(formData: FormData) {
+  requireDatabase("/week");
+  const id = getString(formData, "id");
+  const title = getString(formData, "title");
+  const dateStr = getString(formData, "date");
+  const start = getString(formData, "start");
+  const end = getString(formData, "end");
+  if (!id || !title || !start || !end) {
+    redirect("/week?error=missing-required");
+  }
+  const toMin = (v: string) => {
+    const [h, m] = v.split(":").map(Number);
+    return h * 60 + (m || 0);
+  };
+  const startMin = toMin(start);
+  const endMin = Math.max(toMin(end), startMin + 15);
+  await getPrisma().scheduleBlock.update({
+    where: { id },
+    data: {
+      title,
+      date: dateStr ? new Date(`${dateStr}T00:00:00`) : null,
+      startMin,
+      endMin,
+      location: getString(formData, "location") || null,
+      participants: getString(formData, "participants") || null,
+      note: getString(formData, "note") || null,
+      projectId: getString(formData, "projectId") || null,
     },
   });
   revalidatePath("/week");
@@ -1434,6 +1554,105 @@ export async function finalizeReviewAction(formData: FormData) {
   revalidatePath("/meeting-reviews");
   revalidatePath(`/projects/${review!.projectId}`);
   redirect("/meeting-reviews?created=finalized");
+}
+
+// ── 浮动 AI 小助手：把口述的一天批量落库 ─────────────────
+
+export type DailyDraft = {
+  type: "task" | "growth" | "question" | "knowledge";
+  title: string;
+  project?: string;
+  date?: string;
+  detail?: string;
+  category?: string;
+  source?: string;
+};
+
+const GROWTH_LABEL_TO_ENUM: Record<string, GrowthCategory> = {
+  成果亮点: GrowthCategory.ACHIEVEMENT,
+  技能积累: GrowthCategory.SKILL,
+  复盘教训: GrowthCategory.LESSON,
+  证书培训: GrowthCategory.CERTIFICATE,
+  人脉资源: GrowthCategory.NETWORK,
+};
+
+export async function createDailyItemsAction(items: DailyDraft[]) {
+  if (!isDatabaseConfigured()) return { created: 0 };
+  const prisma = getPrisma();
+  const projects = await prisma.project.findMany({
+    select: { id: true, nameZh: true, nameEn: true },
+  });
+  const matchProject = (name?: string) => {
+    if (!name) return null;
+    const hit = projects.find(
+      (p) =>
+        p.nameZh.includes(name) ||
+        name.includes(p.nameZh) ||
+        (p.nameEn && p.nameEn.toLowerCase().includes(name.toLowerCase())),
+    );
+    return hit?.id ?? null;
+  };
+  const toDate = (s?: string) =>
+    s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T00:00:00`) : null;
+
+  let created = 0;
+  for (const item of items) {
+    const title = (item.title ?? "").trim();
+    if (!title) continue;
+    const projectId = matchProject(item.project);
+    try {
+      if (item.type === "growth") {
+        await prisma.growthLog.create({
+          data: {
+            title,
+            detail: item.detail || null,
+            category: GROWTH_LABEL_TO_ENUM[item.category ?? ""] ?? GrowthCategory.ACHIEVEMENT,
+            projectId,
+            happenedAt: toDate(item.date) ?? new Date(),
+          },
+        });
+      } else if (item.type === "question") {
+        if (!projectId) continue; // 问题必须挂项目
+        await prisma.feedbackQuestion.create({
+          data: {
+            projectId,
+            question: title,
+            source: item.source || "甲方",
+            note: item.detail || null,
+          },
+        });
+      } else if (item.type === "knowledge") {
+        await prisma.knowledgeNote.create({
+          data: {
+            topic: item.category || "其他",
+            title,
+            content: item.detail || title,
+            projectId,
+          },
+        });
+      } else {
+        // task
+        await prisma.task.create({
+          data: {
+            projectId,
+            title,
+            dueDate: toDate(item.date),
+            description: item.detail || null,
+          },
+        });
+      }
+      created += 1;
+    } catch {
+      // 单条失败不影响其他
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/tasks");
+  revalidatePath("/growth");
+  revalidatePath("/knowledge");
+  revalidatePath("/meeting-reviews");
+  return { created };
 }
 
 // ── 成长档案：为跳槽/职业发展积累素材 ─────────────────────

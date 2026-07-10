@@ -270,7 +270,13 @@ export const getFeedbackQuestionsForView = cache(async () => {
 // 周计划时间块：date 为空字符串 = 每天例行
 export const getScheduleBlocksForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedScheduleBlocks.map((block) => ({ ...block }));
+    return seedScheduleBlocks.map((block) => ({
+      ...block,
+      location: "",
+      participants: "",
+      note: "",
+      projectId: "",
+    }));
   }
 
   const blocks = await getPrisma().scheduleBlock.findMany({
@@ -283,6 +289,10 @@ export const getScheduleBlocksForView = cache(async () => {
     startMin: block.startMin,
     endMin: block.endMin,
     kind: block.kind,
+    location: block.location ?? "",
+    participants: block.participants ?? "",
+    note: block.note ?? "",
+    projectId: block.projectId ?? "",
   }));
 });
 
