@@ -1205,6 +1205,128 @@ export async function deleteMoneyRecordAction(formData: FormData) {
   revalidatePath("/money");
 }
 
+export async function updateMoneyRecordAction(formData: FormData) {
+  requireDatabase("/money");
+  const id = getString(formData, "id");
+  const amount = Number(getString(formData, "amount"));
+  if (!id || !Number.isFinite(amount) || amount <= 0) {
+    redirect("/money?error=missing-required");
+  }
+  await getPrisma().moneyRecord.update({
+    where: { id },
+    data: {
+      kind: parseMoneyKind(getString(formData, "kind")),
+      amount,
+      currency: getString(formData, "currency") || "CNY",
+      happenedAt: getDate(formData, "happenedAt") ?? new Date(),
+      note: getString(formData, "note") || null,
+    },
+  });
+  revalidatePath("/money");
+  redirect("/money?created=record");
+}
+
+// ── 编辑历史数据：成长档案 / 联系人 / 接待 ─────────────────
+
+export async function updateGrowthLogAction(formData: FormData) {
+  requireDatabase("/growth");
+  const id = getString(formData, "id");
+  const title = getString(formData, "title");
+  if (!id || !title) redirect("/growth?error=missing-required");
+  await getPrisma().growthLog.update({
+    where: { id },
+    data: {
+      title,
+      detail: getString(formData, "detail") || null,
+      category: parseGrowthCategory(getString(formData, "category")),
+      projectId: getString(formData, "projectId") || null,
+      happenedAt: getDate(formData, "happenedAt") ?? new Date(),
+    },
+  });
+  revalidatePath("/growth");
+  redirect("/growth?created=log");
+}
+
+export async function updateContactAction(formData: FormData) {
+  requireDatabase("/contacts");
+  const id = getString(formData, "id");
+  const name = getString(formData, "name");
+  const organization = getString(formData, "organization");
+  if (!id || !name || !organization) {
+    redirect("/contacts?error=missing-required");
+  }
+  const regionName = getString(formData, "region");
+  const regionTag = await ensureTag(TagType.REGION, regionName);
+  await getPrisma().contact.update({
+    where: { id },
+    data: {
+      name,
+      organization,
+      title: getString(formData, "title") || null,
+      email: getString(formData, "email") || null,
+      wechat: getString(formData, "wechat") || null,
+      regionTagId: regionTag?.id ?? null,
+    },
+  });
+  revalidatePath("/contacts");
+  revalidatePath("/");
+  redirect("/contacts?created=contact");
+}
+
+export async function deleteContactAction(formData: FormData) {
+  requireDatabase("/contacts");
+  const id = getString(formData, "id");
+  if (id) {
+    // 有引用时 onDelete: Restrict 会报错，catch 掉给出提示
+    try {
+      await getPrisma().contact.delete({ where: { id } });
+    } catch {
+      redirect("/contacts?error=contact-in-use");
+    }
+  }
+  revalidatePath("/contacts");
+  redirect("/contacts");
+}
+
+export async function updateReceptionAction(formData: FormData) {
+  requireDatabase("/receptions");
+  const id = getString(formData, "id");
+  const title = getString(formData, "title");
+  if (!id || !title) redirect("/receptions?error=missing-required");
+  const visitorIds = getStringList(formData, "visitorIds");
+  await getPrisma().reception.update({
+    where: { id },
+    data: {
+      type: parseReceptionType(getString(formData, "type")),
+      title,
+      location: getString(formData, "location") || null,
+      purpose: getString(formData, "purpose") || null,
+      projectId: getString(formData, "projectId") || null,
+      status: parseReceptionStatus(getString(formData, "status")),
+      startAt: getDateTime(formData, "startAt"),
+      endAt: getDateTime(formData, "endAt"),
+      visitors: {
+        deleteMany: {},
+        create: visitorIds.map((contactId) => ({ contactId })),
+      },
+    },
+  });
+  revalidatePath("/receptions");
+  revalidatePath("/calendar");
+  redirect("/receptions?created=reception");
+}
+
+export async function deleteReceptionFormAction(formData: FormData) {
+  requireDatabase("/receptions");
+  const id = getString(formData, "id");
+  if (id) {
+    await getPrisma().reception.delete({ where: { id } }).catch(() => {});
+  }
+  revalidatePath("/receptions");
+  revalidatePath("/calendar");
+  redirect("/receptions");
+}
+
 // ── AI 提示词模板（存 TextTemplate 表）─────────────────────
 
 export async function createPromptTemplateAction(formData: FormData) {

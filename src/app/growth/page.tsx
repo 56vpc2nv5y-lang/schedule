@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
-import { createGrowthLogAction, deleteGrowthLogAction } from "@/app/actions";
+import {
+  createGrowthLogAction,
+  deleteGrowthLogAction,
+  updateGrowthLogAction,
+} from "@/app/actions";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -143,12 +148,79 @@ export default async function GrowthPage({
                             {log.detail}
                           </p>
                         ) : null}
-                        <div className="mt-2">
+                        <div className="mt-2 flex items-center gap-4">
                           <PolishButton
                             title={log.title}
                             detail={log.detail}
                             configured={aiReady}
                           />
+                          <InlineEdit label={t.common.edit}>
+                            <form
+                              action={updateGrowthLogAction}
+                              className="grid gap-2 sm:grid-cols-2"
+                            >
+                              <input type="hidden" name="id" value={log.id} />
+                              <label className="sm:col-span-2">
+                                <span className="flabel">{t.growth.fTitle}</span>
+                                <input
+                                  name="title"
+                                  defaultValue={log.title}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label>
+                                <span className="flabel">{t.growth.fCategory}</span>
+                                <select
+                                  name="category"
+                                  defaultValue={log.category}
+                                  className="field field-sm"
+                                >
+                                  {categoryOrder.map((c) => (
+                                    <option key={c} value={c}>
+                                      {growthCategoryMeta[c].label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                <span className="flabel">{t.growth.fProject}</span>
+                                <select
+                                  name="projectId"
+                                  defaultValue={log.projectId}
+                                  className="field field-sm"
+                                >
+                                  <option value="">{t.growth.fNoProject}</option>
+                                  {projects.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {pname(p)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                <span className="flabel">{t.growth.fDate}</span>
+                                <input
+                                  type="date"
+                                  name="happenedAt"
+                                  defaultValue={log.happenedAt}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label className="sm:col-span-2">
+                                <span className="flabel">{t.growth.fDetail}</span>
+                                <input
+                                  name="detail"
+                                  defaultValue={log.detail}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <div className="flex items-end justify-end sm:col-span-2">
+                                <Button type="submit" size="sm">
+                                  {t.common.save}
+                                </Button>
+                              </div>
+                            </form>
+                          </InlineEdit>
                         </div>
                       </div>
                       <form action={deleteGrowthLogAction}>

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { MapPin, PlaneTakeoff, Plus, Users } from "lucide-react";
-import { createReceptionAction } from "@/app/actions";
+import {
+  createReceptionAction,
+  deleteReceptionFormAction,
+  updateReceptionAction,
+} from "@/app/actions";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -165,6 +170,132 @@ export default async function ReceptionsPage({
                       ) : null;
                     })}
                   </div>
+                </div>
+
+                <div className="flex items-center gap-4 border-t border-border/60 pt-3">
+                  <InlineEdit label={t.common.edit}>
+                    <form
+                      action={updateReceptionAction}
+                      className="grid gap-2 sm:grid-cols-2"
+                    >
+                      <input type="hidden" name="id" value={reception.id} />
+                      <label className="sm:col-span-2">
+                        <span className="flabel">{t.receptions.fTitle}</span>
+                        <input
+                          name="title"
+                          defaultValue={reception.title}
+                          className="field field-sm"
+                        />
+                      </label>
+                      <label>
+                        <span className="flabel">{t.common.type}</span>
+                        <select
+                          name="type"
+                          defaultValue={reception.type}
+                          className="field field-sm"
+                        >
+                          <option value="BUSINESS_TRIP">{t.receptions.fTypeTrip}</option>
+                          <option value="VISIT">{t.receptions.fTypeVisit}</option>
+                          <option value="EXHIBITION_INVITE">{t.receptions.fTypeExpo}</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span className="flabel">{t.receptions.fStatus}</span>
+                        <select
+                          name="status"
+                          defaultValue={reception.status}
+                          className="field field-sm"
+                        >
+                          {(["PLANNED", "CONFIRMED", "DONE", "CANCELLED"] as const).map(
+                            (v) => (
+                              <option key={v} value={v}>
+                                {t.statuses.reception[v]}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+                      <label>
+                        <span className="flabel">{t.receptions.fProject}</span>
+                        <select
+                          name="projectId"
+                          defaultValue={reception.projectId ?? ""}
+                          className="field field-sm"
+                        >
+                          <option value="">{t.receptions.fNoProject}</option>
+                          {projects.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {pname(p)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span className="flabel">{t.receptions.fLocation}</span>
+                        <input
+                          name="location"
+                          defaultValue={reception.location}
+                          className="field field-sm"
+                        />
+                      </label>
+                      <label>
+                        <span className="flabel">{t.receptions.fStart}</span>
+                        <input
+                          type="datetime-local"
+                          name="startAt"
+                          defaultValue={reception.startAt.replace(" ", "T")}
+                          className="field field-sm"
+                        />
+                      </label>
+                      <label>
+                        <span className="flabel">{t.receptions.fEnd}</span>
+                        <input
+                          type="datetime-local"
+                          name="endAt"
+                          defaultValue={reception.endAt.replace(" ", "T")}
+                          className="field field-sm"
+                        />
+                      </label>
+                      <label className="sm:col-span-2">
+                        <span className="flabel">{t.receptions.fPurpose}</span>
+                        <input
+                          name="purpose"
+                          defaultValue={reception.purpose}
+                          className="field field-sm"
+                        />
+                      </label>
+                      <label className="sm:col-span-2">
+                        <span className="flabel">{t.receptions.fPeople}</span>
+                        <select
+                          name="visitorIds"
+                          multiple
+                          size={3}
+                          defaultValue={reception.visitorIds}
+                          className="field field-sm h-auto py-1"
+                        >
+                          {contacts.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} · {c.organization}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="flex items-end justify-end sm:col-span-2">
+                        <Button type="submit" size="sm">
+                          {t.common.save}
+                        </Button>
+                      </div>
+                    </form>
+                  </InlineEdit>
+                  <form action={deleteReceptionFormAction}>
+                    <input type="hidden" name="id" value={reception.id} />
+                    <button
+                      type="submit"
+                      className="text-xs font-medium text-muted-foreground hover:text-red-600"
+                    >
+                      {t.common.delete}
+                    </button>
+                  </form>
                 </div>
               </CardContent>
             </Card>

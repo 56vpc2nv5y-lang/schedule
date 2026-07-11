@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { ContactRound, Plus } from "lucide-react";
-import { createContactAction } from "@/app/actions";
+import {
+  createContactAction,
+  deleteContactAction,
+  updateContactAction,
+} from "@/app/actions";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +86,7 @@ export default async function ContactsPage({
                   <th className="px-4 py-3 font-medium">{t.contacts.colContact}</th>
                   <th className="px-4 py-3 font-medium">{t.contacts.colRoles}</th>
                   <th className="px-4 py-3 font-medium">{t.contacts.colProjects}</th>
+                  <th className="px-4 py-3 font-medium">{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -125,6 +131,84 @@ export default async function ContactsPage({
                       </td>
                       <td className="tnum px-4 py-3.5 text-muted-foreground">
                         {relatedProjects.length}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <InlineEdit label={t.common.edit}>
+                            <form
+                              action={updateContactAction}
+                              className="grid w-[420px] max-w-[70vw] gap-2 sm:grid-cols-2"
+                            >
+                              <input type="hidden" name="id" value={contact.id} />
+                              <label>
+                                <span className="flabel">{t.contacts.fName}</span>
+                                <input
+                                  name="name"
+                                  defaultValue={contact.name}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label>
+                                <span className="flabel">{t.contacts.fOrg}</span>
+                                <input
+                                  name="organization"
+                                  defaultValue={contact.organization}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label>
+                                <span className="flabel">{t.contacts.fTitle}</span>
+                                <input
+                                  name="title"
+                                  defaultValue={contact.title}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label>
+                                <span className="flabel">{t.contacts.colRegion}</span>
+                                <select
+                                  name="region"
+                                  defaultValue={contact.region}
+                                  className="field field-sm"
+                                >
+                                  {regions.map((r) => (
+                                    <option key={r}>{r}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                <span className="flabel">{t.contacts.fEmail}</span>
+                                <input
+                                  name="email"
+                                  defaultValue={contact.email}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <label>
+                                <span className="flabel">{t.contacts.fWechat}</span>
+                                <input
+                                  name="wechat"
+                                  defaultValue={contact.wechat}
+                                  className="field field-sm"
+                                />
+                              </label>
+                              <div className="flex items-end justify-end sm:col-span-2">
+                                <Button type="submit" size="sm">
+                                  {t.common.save}
+                                </Button>
+                              </div>
+                            </form>
+                          </InlineEdit>
+                          <form action={deleteContactAction}>
+                            <input type="hidden" name="id" value={contact.id} />
+                            <button
+                              type="submit"
+                              className="text-xs font-medium text-muted-foreground hover:text-red-600"
+                            >
+                              {t.common.delete}
+                            </button>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   );
