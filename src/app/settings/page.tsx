@@ -2,7 +2,6 @@ import {
   DatabaseBackup,
   FileType2,
   KeyRound,
-  Languages,
   ListChecks,
   Sparkles,
   Tags,
@@ -23,7 +22,6 @@ import {
   renameStageTemplateItemAction,
   saveAppPasswordAction,
   saveDeepseekKeyAction,
-  setLocaleAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -68,7 +66,7 @@ export default async function SettingsPage({
 }) {
   const { setup, created, saved, imported, error } = await searchParams;
   const dbReady = isDatabaseConfigured();
-  const [{ locale, t }, aiReady, tags, dbFileTypes, dbRoles, stageItems] =
+  const [{ t }, aiReady, tags, dbFileTypes, dbRoles, stageItems] =
     await Promise.all([
       getT(),
       isAiConfigured(),
@@ -103,39 +101,8 @@ export default async function SettingsPage({
       ) : null}
       {error ? <Banner tone="warn">{t.common.required}</Banner> : null}
 
-      {/* 常用配置：语言 / 密码 / AI，放最前面 */}
-      <div className="mb-5 grid gap-5 lg:grid-cols-3">
-        <SettingCard
-          icon={<Languages className="h-4 w-4 text-primary" />}
-          title={t.settings.langCard}
-          description={t.settings.langHint}
-        >
-          <div className="grid grid-cols-2 gap-2">
-            <form action={setLocaleAction}>
-              <input type="hidden" name="locale" value="zh" />
-              <Button
-                type="submit"
-                size="sm"
-                variant={locale === "zh" ? "default" : "outline"}
-                className="w-full"
-              >
-                中文版
-              </Button>
-            </form>
-            <form action={setLocaleAction}>
-              <input type="hidden" name="locale" value="en" />
-              <Button
-                type="submit"
-                size="sm"
-                variant={locale === "en" ? "default" : "outline"}
-                className="w-full"
-              >
-                English
-              </Button>
-            </form>
-          </div>
-        </SettingCard>
-
+      {/* 常用配置：密码 / AI，放最前面 */}
+      <div className="mb-5 grid gap-5 lg:grid-cols-2">
         <SettingCard
           icon={<KeyRound className="h-4 w-4 text-primary" />}
           title={t.settings.security}

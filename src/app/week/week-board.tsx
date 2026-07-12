@@ -12,6 +12,16 @@ import { Button } from "@/components/ui/button";
 import { ContextMenu, type MenuItem } from "@/components/ui/context-menu";
 import { useDict } from "@/components/layout/locale-provider";
 import { cn } from "@/lib/utils";
+import {
+  START_HOUR,
+  END_HOUR,
+  HOUR_PX,
+  SNAP,
+  RANGE_MIN,
+  minToTop,
+  fmt,
+  fmtHM,
+} from "./timeline-shared";
 
 export type WeekBlock = {
   id: string;
@@ -33,26 +43,6 @@ export type TripSegment = {
   startMin: number;
   endMin: number;
 };
-
-const START_HOUR = 6;
-const END_HOUR = 23;
-const HOUR_PX = 44;
-const SNAP = 15;
-const RANGE_MIN = (END_HOUR - START_HOUR) * 60;
-
-function minToTop(min: number) {
-  return ((min - START_HOUR * 60) / 60) * HOUR_PX;
-}
-function fmt(min: number) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return `${h}:${String(m).padStart(2, "0")}`;
-}
-function fmtHM(min: number) {
-  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(
-    min % 60,
-  ).padStart(2, "0")}`;
-}
 
 export function WeekBoard({
   days,

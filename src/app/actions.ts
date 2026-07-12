@@ -32,11 +32,11 @@ import {
   passwordCookieValue,
   setDbSetting,
 } from "@/lib/app-settings";
-import { LOCALE_COOKIE } from "@/lib/i18n";
 import { isStorageConfigured, uploadToBucket } from "@/lib/storage";
 import {
   contactRoles,
   defaultStageTemplate,
+  defaultVisitChecklist,
   fileTypes,
   regions,
   taskTypes,
@@ -181,6 +181,7 @@ export async function createContactAction(formData: FormData) {
 
   revalidatePath("/contacts");
   revalidatePath("/");
+  revalidatePath("/today");
   redirect("/contacts?created=contact");
 }
 
@@ -272,6 +273,7 @@ export async function createProjectAction(formData: FormData) {
   });
 
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/projects");
   redirect(`/projects/${project.id}`);
 }
@@ -317,6 +319,7 @@ export async function createTaskAction(formData: FormData) {
   }
 
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/tasks");
   redirect("/tasks?created=task");
 }
@@ -359,6 +362,7 @@ export async function updateTaskStatusAction(formData: FormData) {
   }
 
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
   if (task.projectId) revalidatePath(`/projects/${task.projectId}`);
@@ -372,8 +376,45 @@ export async function deleteTaskAction(formData: FormData) {
     await getPrisma().task.delete({ where: { id: taskId } }).catch(() => {});
   }
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
+}
+
+// 编辑任务：标题 / 所属项目 / 类型 / 优先级 / 截止 / 负责人
+export async function updateTaskAction(formData: FormData) {
+  requireDatabase("/tasks");
+
+  const taskId = getString(formData, "taskId");
+  const title = getString(formData, "title");
+  if (!taskId) redirect("/tasks");
+  if (!title) redirect("/tasks?error=missing-required");
+
+  const projectId = getString(formData, "projectId");
+  const typeName = getString(formData, "type");
+  const assigneeId = getString(formData, "assigneeId");
+  const dueDate = getDate(formData, "dueDate");
+  const priority = parsePriority(getString(formData, "priority"));
+  const typeTag = await ensureTag(TagType.TASK_TYPE, typeName || "商务沟通");
+
+  await getPrisma().task.update({
+    where: { id: taskId },
+    data: {
+      projectId: projectId || null,
+      title,
+      dueDate: dueDate ?? null,
+      priority,
+      typeTagId: typeTag?.id ?? null,
+      assigneeId: assigneeId || null,
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/tasks");
+  revalidatePath("/calendar");
+  if (projectId) revalidatePath(`/projects/${projectId}`);
+  redirect("/tasks?created=task");
 }
 
 function parseFileStatus(value: string): FileStatus {
@@ -633,6 +674,74 @@ export async function createReceptionAction(formData: FormData) {
   );
 }
 
+// ── 接待清单（SOP） ───────────────────────────────────────
+
+function revalidateReception(receptionId: string) {
+  revalidatePath(`/receptions/${receptionId}`);
+  revalidatePath("/receptions");
+  revalidatePath("/today");
+}
+
+export async function toggleReceptionChecklistItemAction(
+  id: string,
+  done: boolean,
+  receptionId: string,
+) {
+  if (!isDatabaseConfigured()) return;
+  await getPrisma().receptionChecklistItem.update({
+    where: { id },
+    data: { done },
+  });
+  revalidateReception(receptionId);
+}
+
+export async function addReceptionChecklistItemAction(
+  receptionId: string,
+  phase: string,
+  title: string,
+) {
+  if (!isDatabaseConfigured()) return;
+  if (!title.trim()) return;
+  const count = await getPrisma().receptionChecklistItem.count({
+    where: { receptionId },
+  });
+  await getPrisma().receptionChecklistItem.create({
+    data: {
+      receptionId,
+      phase: phase || "行前准备",
+      title: title.trim(),
+      sortOrder: count,
+    },
+  });
+  revalidateReception(receptionId);
+}
+
+export async function deleteReceptionChecklistItemAction(
+  id: string,
+  receptionId: string,
+) {
+  if (!isDatabaseConfigured()) return;
+  await getPrisma().receptionChecklistItem.delete({ where: { id } });
+  revalidateReception(receptionId);
+}
+
+/** 一键套用内置「外方来访」模板：把模板 items 展开成该接待的清单 */
+export async function applyReceptionChecklistTemplateAction(receptionId: string) {
+  if (!isDatabaseConfigured()) return;
+  const existing = await getPrisma().receptionChecklistItem.count({
+    where: { receptionId },
+  });
+  await getPrisma().receptionChecklistItem.createMany({
+    data: defaultVisitChecklist.map((item, index) => ({
+      receptionId,
+      phase: item.phase,
+      title: item.title,
+      sortOrder: existing + index,
+    })),
+  });
+  revalidateReception(receptionId);
+}
+
 export async function createResourceAction(formData: FormData) {
   requireDatabase("/resources");
 
@@ -717,6 +826,7 @@ export async function updateStageScheduleAction(
   });
 
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath(`/projects/${stage.projectId}`);
 }
 
@@ -731,6 +841,7 @@ export async function moveTaskDueDateAction(taskId: string, dueISO: string) {
 
   revalidatePath("/calendar");
   revalidatePath("/");
+  revalidatePath("/today");
   if (task.projectId) revalidatePath(`/projects/${task.projectId}`);
 }
 
@@ -781,6 +892,7 @@ export async function setTaskStatusQuickAction(taskId: string, status: string) {
     });
   }
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
   if (task.projectId) revalidatePath(`/projects/${task.projectId}`);
@@ -790,6 +902,7 @@ export async function deleteTaskQuickAction(taskId: string) {
   if (!isDatabaseConfigured()) return;
   await getPrisma().task.delete({ where: { id: taskId } }).catch(() => {});
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
 }
@@ -840,6 +953,7 @@ export async function setStageStatusQuickAction(
     },
   });
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath(`/projects/${stage.projectId}`);
 }
 
@@ -893,6 +1007,7 @@ export async function advanceStageAction(formData: FormData) {
   });
 
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}?updated=advanced`);
 }
@@ -1026,6 +1141,7 @@ export async function updateProjectStatusQuickAction(
     },
   });
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
 }
@@ -1052,6 +1168,7 @@ export async function createWorkflowTasksAction(formData: FormData) {
 
   revalidatePath("/tasks");
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/calendar");
   redirect(`/tasks?created=workflow-${template!.items.length}`);
 }
@@ -1270,6 +1387,7 @@ export async function updateContactAction(formData: FormData) {
   });
   revalidatePath("/contacts");
   revalidatePath("/");
+  revalidatePath("/today");
   redirect("/contacts?created=contact");
 }
 
@@ -1358,7 +1476,7 @@ export async function loginAction(formData: FormData) {
   const expected = await getEffectivePassword();
   // 没设密码：不启用保护，直接进
   if (!expected) {
-    redirect("/");
+    redirect("/today");
   }
 
   const password = getString(formData, "password");
@@ -1374,22 +1492,7 @@ export async function loginAction(formData: FormData) {
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
-  redirect("/");
-}
-
-// ── 界面语言：中文版 / 英文版整体切换 ────────────────────
-
-export async function setLocaleAction(formData: FormData) {
-  const locale = getString(formData, "locale") === "en" ? "en" : "zh";
-  const store = await cookies();
-  store.set(LOCALE_COOKIE, locale, {
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-  });
-  const back = getString(formData, "back") || "/settings";
-  revalidatePath("/", "layout");
-  redirect(back);
+  redirect("/today");
 }
 
 // ── 运行时配置：登录密码 / AI Key 存数据库，免改 .env ─────
@@ -1470,6 +1573,7 @@ export async function updateStageAction(formData: FormData) {
   });
 
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath(`/projects/${stage.projectId}`);
   redirect(`/projects/${stage.projectId}?updated=stage`);
 }
@@ -1770,6 +1874,7 @@ export async function createDailyItemsAction(items: DailyDraft[]) {
   }
 
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/tasks");
   revalidatePath("/growth");
   revalidatePath("/knowledge");

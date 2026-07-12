@@ -15,6 +15,7 @@ import {
   meetingReviews as seedMeetingReviews,
   projects as seedProjects,
   receptions as seedReceptions,
+  receptionChecklistItems as seedReceptionChecklist,
   resources as seedResources,
   stages as seedStages,
   tasks as seedTasks,
@@ -199,11 +200,23 @@ export const getTimelineForView = cache(async () => {
 
 export const getReceptionsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedReceptions;
+    return seedReceptions.map((reception) => {
+      const items = seedReceptionChecklist.filter(
+        (item) => item.receptionId === reception.id,
+      );
+      return {
+        ...reception,
+        checklistTotal: items.length,
+        checklistDone: items.filter((item) => item.done).length,
+      };
+    });
   }
 
   const receptions = await getPrisma().reception.findMany({
-    include: { visitors: true },
+    include: {
+      visitors: true,
+      checklistItems: { select: { done: true } },
+    },
     orderBy: { startAt: "asc" },
   });
 
@@ -218,8 +231,68 @@ export const getReceptionsForView = cache(async () => {
     endAt: toDateTimeText(reception.endAt),
     status: reception.status,
     visitorIds: reception.visitors.map((visitor) => visitor.contactId),
+    checklistTotal: reception.checklistItems.length,
+    checklistDone: reception.checklistItems.filter((item) => item.done).length,
   }));
 });
+
+/** 单场接待详情 + 分阶段清单（演示模式读种子数据，只读） */
+export async function getReceptionDetailForView(id: string) {
+  if (!isDatabaseConfigured()) {
+    const reception = seedReceptions.find((item) => item.id === id);
+    if (!reception) return null;
+    const items = seedReceptionChecklist
+      .filter((item) => item.receptionId === id)
+      .map((item) => ({ ...item }));
+    return {
+      id: reception.id,
+      projectId: reception.projectId || "",
+      type: reception.type,
+      title: reception.title,
+      location: reception.location ?? "",
+      purpose: reception.purpose ?? "",
+      startAt: reception.startAt ?? "",
+      endAt: reception.endAt ?? "",
+      status: reception.status,
+      visitorIds: [...reception.visitorIds],
+      items,
+    };
+  }
+
+  const reception = await getPrisma().reception.findUnique({
+    where: { id },
+    include: {
+      visitors: true,
+      checklistItems: { orderBy: [{ phase: "asc" }, { sortOrder: "asc" }] },
+    },
+  });
+  if (!reception) return null;
+
+  return {
+    id: reception.id,
+    projectId: reception.projectId ?? "",
+    type: reception.type,
+    title: reception.title,
+    location: reception.location ?? "",
+    purpose: reception.purpose ?? "",
+    startAt: toDateTimeText(reception.startAt),
+    endAt: toDateTimeText(reception.endAt),
+    status: reception.status,
+    visitorIds: reception.visitors.map((visitor) => visitor.contactId),
+    items: reception.checklistItems.map((item) => ({
+      id: item.id,
+      receptionId: item.receptionId,
+      phase: item.phase,
+      title: item.title,
+      done: item.done,
+      ownerId: item.ownerId ?? "",
+      dueDate: item.dueDate ?? "",
+      note: item.note ?? "",
+      isMine: item.isMine,
+      sortOrder: item.sortOrder,
+    })),
+  };
+}
 
 export const getKnowledgeNotesForView = cache(async () => {
   if (!isDatabaseConfigured()) {

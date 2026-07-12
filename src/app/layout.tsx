@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
-import { normalizeLocale, LOCALE_COOKIE } from "@/lib/i18n";
 import { LocaleProvider } from "@/components/layout/locale-provider";
 import "./globals.css";
 
@@ -17,14 +15,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const store = await cookies();
-  const locale = normalizeLocale(store.get(LOCALE_COOKIE)?.value);
-
   return (
-    <html lang={locale === "en" ? "en" : "zh-CN"} suppressHydrationWarning>
+    <html lang="zh-CN" suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: skinScript }} />
-        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+        <LocaleProvider locale="zh">{children}</LocaleProvider>
       </body>
     </html>
   );

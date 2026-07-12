@@ -115,12 +115,14 @@ export default async function ReceptionsPage({
               <CardHeader className="border-b border-border">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <CardTitle className="flex items-center gap-2">
-                      <PlaneTakeoff
-                        className={`h-4 w-4 ${isTrip ? "text-amber-500" : "text-primary"}`}
-                      />
-                      {reception.title}
-                    </CardTitle>
+                    <Link href={`/receptions/${reception.id}`} className="group">
+                      <CardTitle className="flex items-center gap-2 group-hover:text-primary">
+                        <PlaneTakeoff
+                          className={`h-4 w-4 ${isTrip ? "text-amber-500" : "text-primary"}`}
+                        />
+                        {reception.title}
+                      </CardTitle>
+                    </Link>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <Badge tone={isTrip ? "waiting" : "info"}>{meta.label}</Badge>
                       {project ? (
@@ -130,7 +132,27 @@ export default async function ReceptionsPage({
                       ) : null}
                     </div>
                   </div>
-                  <Badge tone={statusTone(reception.status)}>{statusLabel}</Badge>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <Badge tone={statusTone(reception.status)}>{statusLabel}</Badge>
+                    {reception.checklistTotal > 0 ? (
+                      <Link
+                        href={`/receptions/${reception.id}`}
+                        className="tnum text-xs font-medium text-primary hover:underline"
+                      >
+                        {t.receptions.checklistProgress(
+                          reception.checklistDone,
+                          reception.checklistTotal,
+                        )}
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/receptions/${reception.id}`}
+                        className="text-xs text-muted-foreground hover:text-primary"
+                      >
+                        {t.receptions.openDetail}
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">

@@ -1171,6 +1171,53 @@ export const receptions = [
   },
 ] as const;
 
+// ── 接待清单（SOP） ───────────────────────────────────────
+/** 接待清单阶段固定顺序 */
+export const receptionPhases = ["行前准备", "抵达与现场", "送行"] as const;
+
+/** 内置「外方来访」模板：一键展开成该接待的清单条目 */
+export const defaultVisitChecklist: { phase: string; title: string }[] = [
+  { phase: "行前准备", title: "议程确认" },
+  { phase: "行前准备", title: "酒店预订" },
+  { phase: "行前准备", title: "餐厅预订" },
+  { phase: "行前准备", title: "车辆 / 路线安排" },
+  { phase: "行前准备", title: "桌牌制作" },
+  { phase: "行前准备", title: "伴手礼准备" },
+  { phase: "抵达与现场", title: "接机" },
+  { phase: "抵达与现场", title: "酒店 check-in" },
+  { phase: "抵达与现场", title: "平台讲解稿" },
+  { phase: "抵达与现场", title: "陪同参观" },
+  { phase: "送行", title: "送机" },
+];
+
+export type SeedChecklistItem = {
+  id: string;
+  receptionId: string;
+  phase: string;
+  title: string;
+  done: boolean;
+  ownerId: string;
+  dueDate: string;
+  note: string;
+  isMine: boolean;
+  sortOrder: number;
+};
+
+/** 演示数据：联合国人居署接待（r-un）的清单，对照设计稿 */
+export const receptionChecklistItems: SeedChecklistItem[] = [
+  { id: "cl-un-1", receptionId: "r-un", phase: "行前准备", title: "议程确认", done: true, ownerId: "", dueDate: "", note: "已定稿 · 三方通过", isMine: false, sortOrder: 0 },
+  { id: "cl-un-2", receptionId: "r-un", phase: "行前准备", title: "酒店预订", done: true, ownerId: "", dueDate: "", note: "合肥 · 2 间 · 07/12 入住", isMine: false, sortOrder: 1 },
+  { id: "cl-un-3", receptionId: "r-un", phase: "行前准备", title: "餐厅预订", done: true, ownerId: "", dueDate: "", note: "07/13 午宴 · 已订", isMine: false, sortOrder: 2 },
+  { id: "cl-un-4", receptionId: "r-un", phase: "行前准备", title: "车辆 / 路线安排", done: false, ownerId: "", dueDate: "2026-07-12", note: "对接合肥院同事", isMine: false, sortOrder: 3 },
+  { id: "cl-un-5", receptionId: "r-un", phase: "行前准备", title: "桌牌制作", done: false, ownerId: "", dueDate: "", note: "按最终参访名单", isMine: false, sortOrder: 4 },
+  { id: "cl-un-6", receptionId: "r-un", phase: "行前准备", title: "伴手礼准备", done: false, ownerId: "", dueDate: "", note: "按人数", isMine: false, sortOrder: 5 },
+  { id: "cl-un-7", receptionId: "r-un", phase: "抵达与现场", title: "接机（航班 / 时间待确认）", done: false, ownerId: "", dueDate: "2026-07-12", note: "", isMine: false, sortOrder: 6 },
+  { id: "cl-un-8", receptionId: "r-un", phase: "抵达与现场", title: "酒店 check-in", done: false, ownerId: "", dueDate: "2026-07-12", note: "抵达后", isMine: false, sortOrder: 7 },
+  { id: "cl-un-9", receptionId: "r-un", phase: "抵达与现场", title: "平台英文讲解稿（我负责 2 点位）", done: false, ownerId: "c-me", dueDate: "2026-07-13", note: "与玮郁、驿媛姐分工 · 有稿背诵 · 准备中", isMine: true, sortOrder: 8 },
+  { id: "cl-un-10", receptionId: "r-un", phase: "抵达与现场", title: "陪同参观 · 各平台点位", done: false, ownerId: "", dueDate: "2026-07-13", note: "", isMine: false, sortOrder: 9 },
+  { id: "cl-un-11", receptionId: "r-un", phase: "送行", title: "送机安排", done: false, ownerId: "", dueDate: "2026-07-14", note: "返京", isMine: false, sortOrder: 10 },
+];
+
 // ── 项目动态 ──────────────────────────────────────────────
 export const timelineEvents = [
   {

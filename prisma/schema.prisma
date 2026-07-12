@@ -378,8 +378,28 @@ model Reception {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  project  Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  visitors ReceptionVisitor[]
+  project       Project?                  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  visitors      ReceptionVisitor[]
+  checklistItems ReceptionChecklistItem[]
+}
+
+/// 接待清单条目：按阶段（行前准备/抵达与现场/送行）跟踪每一项准备工作
+model ReceptionChecklistItem {
+  id          String    @id @default(cuid())
+  receptionId String
+  reception   Reception @relation(fields: [receptionId], references: [id], onDelete: Cascade)
+  phase       String    // 行前准备 / 抵达与现场 / 送行
+  title       String
+  done        Boolean   @default(false)
+  ownerId     String?   // 引用 Contact id（松引用，可空）
+  dueDate     String?   // ISO yyyy-mm-dd
+  note        String?
+  isMine      Boolean   @default(false) // 「我的」高亮
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([receptionId])
 }
 
 model ReceptionVisitor {

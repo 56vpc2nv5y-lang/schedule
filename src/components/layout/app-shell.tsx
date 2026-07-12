@@ -18,6 +18,7 @@ import {
   PlaneTakeoff,
   Settings,
   Sparkles,
+  Sun,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -36,6 +37,7 @@ type NavItem = {
 const navGroups: { label?: (t: Dict) => string; items: NavItem[] }[] = [
   {
     items: [
+      { href: "/today", label: (t) => t.nav.today, icon: Sun },
       { href: "/", label: (t) => t.nav.dashboard, icon: LayoutDashboard },
     ],
   },

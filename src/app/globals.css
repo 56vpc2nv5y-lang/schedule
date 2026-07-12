@@ -241,3 +241,29 @@ summary.no-marker {
 summary.no-marker::-webkit-details-marker {
   display: none;
 }
+
+/* ── 骨架屏：切换页面时首屏秒出的灰块微光 ─────────────── */
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton {
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    oklch(0.93 0.006 286) 25%,
+    oklch(0.96 0.004 286) 37%,
+    oklch(0.93 0.006 286) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+html[data-skin="sunset"] .skeleton {
+  background: linear-gradient(
+    90deg,
+    oklch(0.93 0.02 60) 25%,
+    oklch(0.96 0.015 60) 37%,
+    oklch(0.93 0.02 60) 63%
+  );
+  background-size: 200% 100%;
+}
