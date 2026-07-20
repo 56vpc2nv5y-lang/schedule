@@ -98,7 +98,7 @@ export default async function ProjectDetailPage({
         title={projectDisplayName(locale, project)}
         description={[
           locale === "en" ? project.nameZh : project.nameEn,
-          `${project.clientName} · ${project.progress}%`,
+          `${project.clientName} · ${t.projects.progress} ${project.completedStageCount}/${project.totalStageCount}`,
         ]
           .filter(Boolean)
           .join(" — ")}

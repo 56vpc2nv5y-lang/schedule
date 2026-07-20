@@ -26,6 +26,7 @@ import {
 import { getPrisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-status";
 import { AUTH_COOKIE } from "@/lib/auth";
+import { parseDateKey, parseDateTimeInput } from "@/lib/date-time";
 import {
   SETTING_KEYS,
   getEffectivePassword,
@@ -49,13 +50,13 @@ function getString(formData: FormData, key: string) {
 
 function getDate(formData: FormData, key: string) {
   const value = getString(formData, key);
-  return value ? new Date(`${value}T00:00:00`) : undefined;
+  return value ? parseDateKey(value) : undefined;
 }
 
 // datetime-local 输入返回 "YYYY-MM-DDTHH:mm"，按本地时间解析
 function getDateTime(formData: FormData, key: string) {
   const value = getString(formData, key);
-  return value ? new Date(value) : undefined;
+  return value ? parseDateTimeInput(value) : undefined;
 }
 
 function getStringList(formData: FormData, key: string) {
@@ -284,6 +285,7 @@ export async function createTaskAction(formData: FormData) {
   // projectId 可为空：不挂项目的个人/行政事务（报销、入职手续等）
   const projectId = getString(formData, "projectId");
   const title = getString(formData, "title");
+  const description = getString(formData, "description");
   const typeName = getString(formData, "type");
   const assigneeId = getString(formData, "assigneeId");
   const dueDate = getDate(formData, "dueDate");
@@ -299,6 +301,7 @@ export async function createTaskAction(formData: FormData) {
     data: {
       projectId: projectId || null,
       title,
+      description: description || null,
       dueDate,
       priority,
       typeTagId: typeTag?.id,
@@ -321,6 +324,7 @@ export async function createTaskAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/today");
   revalidatePath("/tasks");
+  revalidatePath("/calendar");
   redirect("/tasks?created=task");
 }
 
@@ -387,6 +391,7 @@ export async function updateTaskAction(formData: FormData) {
 
   const taskId = getString(formData, "taskId");
   const title = getString(formData, "title");
+  const description = getString(formData, "description");
   if (!taskId) redirect("/tasks");
   if (!title) redirect("/tasks?error=missing-required");
 
@@ -397,11 +402,17 @@ export async function updateTaskAction(formData: FormData) {
   const priority = parsePriority(getString(formData, "priority"));
   const typeTag = await ensureTag(TagType.TASK_TYPE, typeName || "商务沟通");
 
+  const previous = await getPrisma().task.findUnique({
+    where: { id: taskId },
+    select: { projectId: true },
+  });
+
   await getPrisma().task.update({
     where: { id: taskId },
     data: {
       projectId: projectId || null,
       title,
+      description: description || null,
       dueDate: dueDate ?? null,
       priority,
       typeTagId: typeTag?.id ?? null,
@@ -413,6 +424,9 @@ export async function updateTaskAction(formData: FormData) {
   revalidatePath("/today");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
+  if (previous?.projectId && previous.projectId !== projectId) {
+    revalidatePath(`/projects/${previous.projectId}`);
+  }
   if (projectId) revalidatePath(`/projects/${projectId}`);
   redirect("/tasks?created=task");
 }
@@ -809,8 +823,8 @@ export async function updateStageScheduleAction(
   const stage = await getPrisma().projectStage.update({
     where: { id: stageId },
     data: {
-      plannedStart: startISO ? new Date(`${startISO}T00:00:00`) : null,
-      plannedEnd: endISO ? new Date(`${endISO}T00:00:00`) : null,
+      plannedStart: startISO ? parseDateKey(startISO) : null,
+      plannedEnd: endISO ? parseDateKey(endISO) : null,
     },
     select: { projectId: true, name: true },
   });
@@ -835,7 +849,7 @@ export async function moveTaskDueDateAction(taskId: string, dueISO: string) {
 
   const task = await getPrisma().task.update({
     where: { id: taskId },
-    data: { dueDate: dueISO ? new Date(`${dueISO}T00:00:00`) : null },
+    data: { dueDate: dueISO ? parseDateKey(dueISO) : null },
     select: { projectId: true },
   });
 
@@ -1194,7 +1208,7 @@ export async function createScheduleBlockAction(formData: FormData) {
   await getPrisma().scheduleBlock.create({
     data: {
       title,
-      date: dateStr ? new Date(`${dateStr}T00:00:00`) : null,
+      date: dateStr ? parseDateKey(dateStr) : null,
       startMin,
       endMin,
       kind: dateStr ? "work" : "routine",
@@ -1229,7 +1243,7 @@ export async function updateScheduleBlockAction(formData: FormData) {
     where: { id },
     data: {
       title,
-      date: dateStr ? new Date(`${dateStr}T00:00:00`) : null,
+      date: dateStr ? parseDateKey(dateStr) : null,
       startMin,
       endMin,
       location: getString(formData, "location") || null,
@@ -1259,7 +1273,7 @@ export async function moveScheduleBlockAction(
     where: { id: blockId },
     data: {
       // 例行块拖动只改时间不改日期；有日期的块可以换天
-      date: block.date ? new Date(`${dateStr}T00:00:00`) : null,
+      date: block.date ? parseDateKey(dateStr) : null,
       startMin: Math.max(0, Math.min(startMin, 1425)),
       endMin: Math.max(startMin + 15, Math.min(endMin, 1440)),
     },
@@ -1819,7 +1833,7 @@ export async function createDailyItemsAction(items: DailyDraft[]) {
     return hit?.id ?? null;
   };
   const toDate = (s?: string) =>
-    s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T00:00:00`) : null;
+    s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? parseDateKey(s) : null;
 
   let created = 0;
   for (const item of items) {

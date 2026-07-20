@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
+import { CircleHelp } from "lucide-react";
 import {
   deleteReceptionQuickAction,
   deleteTaskQuickAction,
@@ -35,14 +36,12 @@ export function CalendarBoard({
   events,
   currentMonth,
   todayIso,
-  monthLabel,
   dbConnected,
 }: {
   days: string[];
   events: CalendarEvent[];
   currentMonth: number;
   todayIso: string;
-  monthLabel: string;
   dbConnected: boolean;
 }) {
   const t = useDict();
@@ -144,21 +143,23 @@ export function CalendarBoard({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3">
-        <div className="text-base font-semibold">{monthLabel}</div>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+    <div className="blueprint-calendar overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="calendar-toolbar flex flex-wrap items-center justify-end gap-3 border-b border-border px-5 py-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-3">
           <Legend color="bg-sky-500" label={t.calendar.legendTask} />
           <Legend color="bg-amber-500" label={t.calendar.legendTrip} />
           <Legend color="bg-emerald-500" label={t.calendar.legendVisit} />
           <Legend color="bg-violet-500" label={t.calendar.legendExpo} />
-          <span className="hidden border-l border-border pl-3 sm:inline">
-            {dbConnected ? t.calendar.dragTipLive : t.calendar.dragTipDemo}
+          <span
+            className="flex h-6 w-6 items-center justify-center border-l border-border pl-3"
+            title={dbConnected ? t.calendar.dragTipLive : t.calendar.dragTipDemo}
+          >
+            <CircleHelp className="h-4 w-4" />
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 border-b border-border bg-secondary/60 text-center text-xs font-medium text-muted-foreground">
+      <div className="calendar-weekdays grid grid-cols-7 border-b border-border bg-secondary/60 text-center text-xs font-medium text-muted-foreground">
         {t.calendar.weekdays.map((label) => (
           <div key={label} className="px-2 py-2">
             {t.calendar.weekdayPrefix}
@@ -182,8 +183,8 @@ export function CalendarBoard({
                 if (overIso !== iso) setOverIso(iso);
               }}
               onDrop={() => handleDrop(iso)}
-              className={`min-h-[112px] border-b border-r border-border p-1.5 transition-colors ${
-                inMonth ? "bg-card" : "bg-secondary/30"
+              className={`calendar-day min-h-[112px] border-b border-r border-border p-1.5 transition-colors ${
+                inMonth ? "bg-card" : "calendar-day-outside bg-secondary/30"
               } ${isOver ? "ring-2 ring-inset ring-primary/60" : ""}`}
             >
               <div className="mb-1 flex items-center justify-between px-1">
@@ -192,7 +193,7 @@ export function CalendarBoard({
                     inMonth ? "text-foreground" : "text-muted-foreground/60"
                   } ${
                     isToday
-                      ? "flex h-5 w-5 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground"
+                      ? "calendar-day-today flex h-5 w-5 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground"
                       : ""
                   }`}
                 >

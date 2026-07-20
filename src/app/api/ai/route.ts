@@ -30,9 +30,10 @@ export async function POST(request: Request) {
   if (!input) {
     return NextResponse.json({ error: "请输入内容。" }, { status: 400 });
   }
-  if (input.length > 8000) {
+  const maxInputLength = mode === "weekly" ? 16_000 : 8_000;
+  if (input.length > maxInputLength) {
     return NextResponse.json(
-      { error: "内容过长，请控制在 8000 字以内。" },
+      { error: `内容过长，请控制在 ${maxInputLength} 字以内。` },
       { status: 400 },
     );
   }

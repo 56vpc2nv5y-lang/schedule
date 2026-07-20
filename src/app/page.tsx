@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskStatusPill } from "@/components/ui/status-pill";
 import { isDatabaseConfigured } from "@/lib/db-status";
 import { receptionTypeMeta, type ReceptionType } from "@/lib/default-data";
+import { addDaysToDateKey, todayDateKey } from "@/lib/date-time";
 import { getT } from "@/lib/locale";
 import { projectDisplayName } from "@/lib/i18n";
 import {
@@ -26,22 +27,9 @@ import {
   getTasksForView,
   getTimelineForView,
 } from "@/lib/database-data";
-import { GanttChart } from "./gantt-chart";
+import { GanttChart } from "./gantt-chart-summary";
 
 export const dynamic = "force-dynamic";
-
-function isoToday() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
-}
-
-function addDaysIso(iso: string, days: number) {
-  const date = new Date(`${iso}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
-}
 
 export default async function DashboardPage() {
   const [{ locale, t }, projects, stages, tasks, timelineEvents, receptions] =
@@ -57,8 +45,8 @@ export default async function DashboardPage() {
   const pname = (p: { nameZh: string; nameEn?: string }) =>
     projectDisplayName(locale, p);
 
-  const today = isoToday();
-  const horizon = addDaysIso(today, 14);
+  const today = todayDateKey();
+  const horizon = addDaysToDateKey(today, 14);
 
   const activeProjects = projects.filter((p) => p.status === "ACTIVE");
   const regionCount = new Set(
@@ -212,14 +200,13 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 pt-4">
-            {projects.filter((p) => p.status !== "ARCHIVED").length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+          <CardContent className="p-0">
+            {activeProjects.length === 0 ? (
+              <div className="p-10 text-center text-sm text-muted-foreground">
                 {t.dashboard.noProjects}
               </div>
             ) : null}
-            {projects
-              .filter((p) => p.status !== "ARCHIVED")
+            {activeProjects
               .map((project) => {
                 const projectStages = stages
                   .filter((stage) => stage.projectId === project.id)
@@ -234,12 +221,27 @@ export default async function DashboardPage() {
                 const projectOverdue = overdueTasks.filter(
                   (task) => task.projectId === project.id,
                 );
+                const projectWaiting = projectOpenTasks.filter(
+                  (task) => task.status === "WAITING",
+                );
+                const taskStatusWeight: Record<string, number> = {
+                  IN_PROGRESS: 0,
+                  OVERDUE: 1,
+                  TODO: 2,
+                  WAITING: 3,
+                };
+                const focusTask = [...projectOpenTasks].sort((a, b) => {
+                  const statusDiff =
+                    (taskStatusWeight[a.status] ?? 4) -
+                    (taskStatusWeight[b.status] ?? 4);
+                  return statusDiff || (a.dueDate || "9999").localeCompare(b.dueDate || "9999");
+                })[0];
 
                 return (
                   <Link
                     key={project.id}
                     href={`/projects/${project.id}`}
-                    className="block rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-accent/40"
+                    className="block border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-secondary/45"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
@@ -253,20 +255,18 @@ export default async function DashboardPage() {
                           <Badge tone="waiting">{t.dashboard.paused}</Badge>
                         ) : null}
                       </div>
-                      <span className="tnum text-xs text-muted-foreground">
-                        {project.progress}%
-                      </span>
+                      {focusTask?.dueDate ? (
+                        <span className="tnum font-mono text-[11px] text-muted-foreground">
+                          {focusTask.dueDate}
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="mt-3 h-2 rounded-md bg-secondary">
-                      <div
-                        className="h-2 rounded-md bg-primary"
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span>
-                        {t.dashboard.currentStage}
-                        <span className="font-medium text-foreground">
+                    <div className="mt-2 grid gap-2 text-xs sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)]">
+                      <div className="min-w-0">
+                        <span className="text-muted-foreground">
+                          {t.dashboard.currentStage}
+                        </span>
+                        <span className="ml-1 font-medium text-foreground">
                           {currentStage
                             ? currentStage.name
                             : projectStages.length
@@ -274,12 +274,25 @@ export default async function DashboardPage() {
                               : t.dashboard.noStages}
                         </span>
                         {currentStage?.status === "DELAYED" ? (
-                          <span className="font-medium text-red-600">
+                          <span className="ml-1 font-medium text-red-600">
                             {t.dashboard.stageDelayed}
                           </span>
                         ) : null}
-                      </span>
+                      </div>
+                      <div className="min-w-0 truncate">
+                        <span className="text-muted-foreground">下一步：</span>
+                        <span className="font-medium text-foreground">
+                          {focusTask?.title ?? "暂无未完成任务"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                       <span>{t.dashboard.openTasksCount(projectOpenTasks.length)}</span>
+                      {projectWaiting.length ? (
+                        <span className="font-medium text-amber-700">
+                          {projectWaiting.length} 项等待外部反馈
+                        </span>
+                      ) : null}
                       {projectOverdue.length ? (
                         <span className="font-medium text-red-600">
                           {t.dashboard.overdueCount(projectOverdue.length)}
@@ -399,7 +412,10 @@ export default async function DashboardPage() {
             id: project.id,
             nameZh: pname(project),
             region: project.region,
-            progress: project.progress,
+            status: project.status,
+            completedStageCount: project.completedStageCount,
+            totalStageCount: project.totalStageCount,
+            currentStageName: project.currentStageName,
           }))}
           stages={stages.map((stage) => ({
             id: stage.id,

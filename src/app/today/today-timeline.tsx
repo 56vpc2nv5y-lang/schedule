@@ -155,7 +155,7 @@ export function TodayTimeline({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <div className="today-timeline min-w-0 w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="border-b border-border bg-secondary/40 px-4 py-2 text-xs text-muted-foreground">
         {dbConnected ? t.week.liveTip : t.week.demoTip} · {t.week.clickToEdit}
       </div>
@@ -225,7 +225,7 @@ export function TodayTimeline({
                 onPointerDown={(e) => beginDrag(e, block, "move")}
                 onContextMenu={(e) => openMenu(e, block)}
                 className={cn(
-                  "group absolute inset-x-2 z-10 cursor-pointer overflow-hidden rounded-md border p-1.5 text-[11px] leading-4 shadow-sm transition-shadow hover:shadow active:cursor-grabbing",
+                  "today-time-block group absolute inset-x-2 z-10 cursor-pointer overflow-hidden rounded-md border p-1.5 text-[11px] leading-4 shadow-sm transition-shadow hover:shadow active:cursor-grabbing",
                   routine
                     ? "border-border bg-secondary/90 text-muted-foreground"
                     : "border-primary/30 bg-primary/15 text-foreground",

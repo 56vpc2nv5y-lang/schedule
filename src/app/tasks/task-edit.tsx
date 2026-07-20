@@ -9,6 +9,7 @@ import { useDict } from "@/components/layout/locale-provider";
 type Task = {
   id: string;
   title: string;
+  description: string;
   projectId: string;
   type: string;
   priority: string;
@@ -55,7 +56,7 @@ export function TaskEditButton({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-base font-semibold">{t.tasks.newTask}</div>
+              <div className="text-base font-semibold">{t.tasks.editTask}</div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -69,6 +70,15 @@ export function TaskEditButton({
               <label className="sm:col-span-2">
                 <span className="flabel">{t.tasks.fTitle}</span>
                 <input name="title" defaultValue={task.title} className="field" />
+              </label>
+              <label className="sm:col-span-2">
+                <span className="flabel">{t.tasks.fDescription}</span>
+                <textarea
+                  name="description"
+                  defaultValue={task.description}
+                  className="field min-h-24 resize-y"
+                  placeholder={t.tasks.fDescriptionPh}
+                />
               </label>
               <label className="sm:col-span-2">
                 <span className="flabel">{t.tasks.fProject}</span>

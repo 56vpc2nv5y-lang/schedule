@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookmarkPlus, Check, Copy, Loader2, Sparkles, X } from "lucide-react";
+import {
+  BookmarkPlus,
+  CalendarRange,
+  Check,
+  Copy,
+  Loader2,
+  Sparkles,
+  X,
+} from "lucide-react";
 import {
   createPromptTemplateAction,
   deletePromptTemplateAction,
@@ -12,6 +20,21 @@ import { Button } from "@/components/ui/button";
 import { useDict } from "@/components/layout/locale-provider";
 
 type Template = { id: string; name: string; content: string };
+
+function formatDateInput(value: Date) {
+  const offset = value.getTimezoneOffset() * 60_000;
+  return new Date(value.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function currentWeekRange() {
+  const now = new Date();
+  const weekday = (now.getDay() + 6) % 7;
+  const start = new Date(now);
+  start.setDate(now.getDate() - weekday);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { start: formatDateInput(start), end: formatDateInput(end) };
+}
 
 export function AssistantPanel({
   configured,
@@ -23,10 +46,14 @@ export function AssistantPanel({
   dbReady: boolean;
 }) {
   const t = useDict();
+  const [initialWeek] = useState(currentWeekRange);
   const [mode, setMode] = useState<AiMode>("email");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingEvidence, setLoadingEvidence] = useState(false);
+  const [weekStart, setWeekStart] = useState(initialWeek.start);
+  const [weekEnd, setWeekEnd] = useState(initialWeek.end);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [showSave, setShowSave] = useState(false);
@@ -38,6 +65,31 @@ export function AssistantPanel({
     setInput(body);
     setOutput("");
     setError("");
+  }
+
+  async function loadWeeklyEvidence() {
+    if (!dbReady || loadingEvidence || !weekStart || !weekEnd) return;
+    setLoadingEvidence(true);
+    setError("");
+    setOutput("");
+    try {
+      const params = new URLSearchParams({
+        start: weekStart,
+        end: weekEnd,
+      });
+      const res = await fetch(`/api/weekly-report?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "读取周报数据失败");
+      } else {
+        setMode("weekly");
+        setInput(data.input ?? "");
+      }
+    } catch {
+      setError("读取周报数据失败，请重试。");
+    } finally {
+      setLoadingEvidence(false);
+    }
   }
 
   async function run() {
@@ -177,6 +229,43 @@ export function AssistantPanel({
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="mb-2 text-sm font-medium">{t.assistant.input}</div>
           <p className="mb-3 text-xs text-muted-foreground">{activeMode?.hint}</p>
+          {mode === "weekly" ? (
+            <div className="mb-3 grid gap-2 rounded-lg border border-border bg-secondary/30 p-3 sm:grid-cols-[1fr_1fr_auto]">
+              <label className="space-y-1">
+                <span className="text-xs text-muted-foreground">开始日期</span>
+                <input
+                  type="date"
+                  value={weekStart}
+                  onChange={(event) => setWeekStart(event.target.value)}
+                  className="field field-sm w-full"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs text-muted-foreground">结束日期</span>
+                <input
+                  type="date"
+                  value={weekEnd}
+                  onChange={(event) => setWeekEnd(event.target.value)}
+                  className="field field-sm w-full"
+                />
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={loadWeeklyEvidence}
+                disabled={!dbReady || loadingEvidence || !weekStart || !weekEnd}
+                className="self-end"
+              >
+                {loadingEvidence ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CalendarRange className="h-4 w-4" />
+                )}
+                {loadingEvidence ? "正在读取" : "载入看板记录"}
+              </Button>
+            </div>
+          ) : null}
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -187,7 +276,10 @@ export function AssistantPanel({
             <span className="text-xs text-muted-foreground">
               {input.length} {t.assistant.chars}
             </span>
-            <Button onClick={run} disabled={!configured || loading || !input.trim()}>
+            <Button
+              onClick={run}
+              disabled={!configured || loading || loadingEvidence || !input.trim()}
+            >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

@@ -14,7 +14,7 @@ import {
   getProjectsForView,
   getTasksForView,
 } from "@/lib/database-data";
-import { ProjectBoard } from "./project-board";
+import { ProjectBoard } from "./project-board-v2";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,13 @@ export default async function ProjectsPage({
     ]);
   const pname = (p: { nameZh: string; nameEn?: string }) =>
     projectDisplayName(locale, p);
+  const taskCounts = new Map<string, number>();
+  for (const task of tasks) {
+    if (!task.projectId) continue;
+    taskCounts.set(task.projectId, (taskCounts.get(task.projectId) ?? 0) + 1);
+  }
+  const activeCount = projects.filter((project) => project.status === "ACTIVE").length;
+  const pausedCount = projects.filter((project) => project.status === "PAUSED").length;
 
   const columns = [
     { label: t.projects.colActive, status: "ACTIVE", tone: "active" as const },
@@ -44,9 +51,9 @@ export default async function ProjectsPage({
   return (
     <AppShell>
       <PageHeader
-        eyebrow={t.projects.eyebrow}
+        eyebrow={t.projects.workspace}
         title={t.projects.title}
-        description={`${t.projects.desc} ${t.projects.dragHint}`}
+        description={t.projects.summary(activeCount, pausedCount, projects.length)}
         action={
           <Link href="/projects?new=1#new">
             <Button>
@@ -76,12 +83,13 @@ export default async function ProjectsPage({
           region: project.region,
           type: project.type,
           status: project.status,
-          progress: project.progress,
-          taskCount: tasks.filter((task) => task.projectId === project.id)
-            .length,
+          completedStageCount: project.completedStageCount,
+          totalStageCount: project.totalStageCount,
+          currentStageName: project.currentStageName,
+          taskCount: taskCounts.get(project.id) ?? 0,
         }))}
         columns={columns}
-        progressLabel={t.projects.progress}
+        stageLabel={t.projects.progress}
         taskCountLabel={t.projects.taskCountTpl}
         emptyLabel={t.projects.empty}
         moveLabel={t.projects.moveTo}

@@ -158,7 +158,7 @@ export function GanttChart({
     }
     return { winStart, winEnd, months };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(sched), stages.length, locale]);
+  }, [sched, stages, locale]);
 
   const spanMs = winEnd.getTime() - winStart.getTime();
   const totalDays = spanMs / DAY;

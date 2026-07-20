@@ -21,6 +21,7 @@ import {
   getScheduleBlocksForView,
   getTasksForView,
 } from "@/lib/database-data";
+import { TodayTaskCheck } from "./today-task-check";
 import { TodayTimeline } from "./today-timeline";
 import type { TripSegment, WeekBlock } from "../week/week-board";
 import { parseTimeToMin } from "../week/timeline-shared";
@@ -120,10 +121,10 @@ export default async function TodayPage() {
   return (
     <AppShell>
       {/* Hero */}
-      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="today-hero mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <div className="text-sm font-medium text-muted-foreground">{dateLabel}</div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[1.9rem]">
+          <div className="today-date text-sm font-medium text-muted-foreground">{dateLabel}</div>
+          <h1 className="today-title mt-1 text-2xl font-semibold tracking-tight sm:text-[1.9rem]">
             {t.today.greeting}
           </h1>
         </div>
@@ -144,7 +145,7 @@ export default async function TodayPage() {
       </div>
 
       {/* 摘要行 */}
-      <div className="mb-5 flex flex-wrap gap-2.5">
+      <div className="today-summary-row mb-5 flex flex-wrap gap-2.5">
         <SummaryTile
           dot="bg-red-500"
           strong={t.today.sumDueUnit(dueToday.length)}
@@ -167,7 +168,7 @@ export default async function TodayPage() {
       </div>
 
       {/* 本周条 */}
-      <div className="mb-5 grid grid-cols-7 gap-2">
+      <div className="today-week-strip mb-5 grid grid-cols-7 gap-2">
         {weekDays.map((iso, i) => {
           const isToday = iso === todayIso;
           const dow = new Date(`${iso}T00:00:00`).getDay();
@@ -175,9 +176,9 @@ export default async function TodayPage() {
             <div
               key={iso}
               className={
-                "rounded-xl border p-3 " +
+                "today-day rounded-xl border p-3 " +
                 (isToday
-                  ? "border-primary/30 bg-primary/10"
+                  ? "today-day-active border-primary/30 bg-primary/10"
                   : "border-border bg-card shadow-[var(--shadow-card)]")
               }
             >
@@ -212,9 +213,9 @@ export default async function TodayPage() {
       </div>
 
       {/* 两栏 */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      <div className="today-work-grid grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         {/* 左：今日时间轴 */}
-        <section>
+        <section className="min-w-0">
           <div className="mb-2.5 flex items-baseline justify-between">
             <div className="flex items-baseline gap-2">
               <h2 className="text-base font-semibold">{t.today.timelineTitle}</h2>
@@ -239,7 +240,7 @@ export default async function TodayPage() {
         </section>
 
         {/* 右：待办 / 接待 / 等回复 */}
-        <div className="flex flex-col gap-4">
+        <div className="min-w-0 flex flex-col gap-4">
           {/* 今日待办 */}
           <Panel title={t.today.todosTitle} count={t.today.countItems(todayTodos.length)}>
             {todayTodos.length ? (
@@ -247,27 +248,25 @@ export default async function TodayPage() {
                 {todayTodos.map((task) => {
                   const isOverdue = task.dueDate && task.dueDate < todayIso;
                   return (
-                    <Link
+                    <div
                       key={task.id}
-                      href="/tasks"
                       className="flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-secondary/60"
                     >
-                      <span
-                        className={
-                          "mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 " +
-                          (isOverdue ? "border-red-500" : "border-primary")
-                        }
+                      <TodayTaskCheck
+                        taskId={task.id}
+                        title={task.title}
+                        overdue={Boolean(isOverdue)}
                       />
-                      <div className="min-w-0 flex-1">
+                      <Link href="/tasks" className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium">{task.title}</div>
                         <div className="truncate text-xs text-muted-foreground">
                           {task.projectId
                             ? projectName.get(task.projectId) ?? t.common.personal
                             : t.common.personal}
                         </div>
-                      </div>
+                      </Link>
                       <TaskStatusPill status={isOverdue ? "OVERDUE" : task.status} />
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
@@ -340,7 +339,7 @@ function SummaryTile({
   text: string;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl bg-card px-4 py-2.5 shadow-[var(--shadow-card)]">
+    <div className="today-summary-tile flex items-center gap-2.5 rounded-xl bg-card px-4 py-2.5 shadow-[var(--shadow-card)]">
       <span className={"h-2 w-2 shrink-0 rounded-full " + dot} />
       <span className="text-sm text-muted-foreground">
         {strong ? <b className="font-semibold text-foreground">{strong}</b> : null}{" "}
@@ -360,7 +359,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
+    <section className="today-panel rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
       <div className="flex items-baseline justify-between px-4 pb-2 pt-4">
         <h3 className="text-base font-semibold">{title}</h3>
         {count ? <span className="text-xs text-muted-foreground">{count}</span> : null}

@@ -112,7 +112,6 @@ export function WeekBoard({
     e: React.PointerEvent,
     block: WeekBlock,
     mode: "move" | "resize",
-    dayIso: string,
   ) {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -229,7 +228,7 @@ export function WeekBoard({
       <div className="overflow-x-auto">
         <div className="min-w-[860px]">
           {/* 表头：星期 + 日期 */}
-          <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-border bg-secondary/40">
+          <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary/40">
             <div />
             {days.map((iso, i) => (
               <div
@@ -254,12 +253,12 @@ export function WeekBoard({
 
           {/* 全天条：接待/出差（避免压住小时块） */}
           {hasTrips ? (
-            <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-border">
+            <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border">
               <div className="flex items-center justify-end pr-2 text-[10px] text-muted-foreground">
                 {t.week.allDay}
               </div>
               {days.map((iso) => (
-                <div key={iso} className="min-h-[26px] space-y-0.5 border-l border-border p-0.5">
+                <div key={iso} className="min-w-0 min-h-[26px] space-y-0.5 border-l border-border p-0.5">
                   {(tripsByDay.get(iso) ?? []).map((trip) => (
                     <div
                       key={trip.key}
@@ -275,7 +274,7 @@ export function WeekBoard({
           ) : null}
 
           {/* 主体：时间轴 + 7 列 */}
-          <div className="grid grid-cols-[56px_repeat(7,1fr)]">
+          <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))]">
             <div className="relative" style={{ height: (RANGE_MIN / 60) * HOUR_PX }}>
               {hours.map((h) => (
                 <div
@@ -330,7 +329,7 @@ export function WeekBoard({
                     return (
                       <div
                         key={`${iso}-${block.id}`}
-                        onPointerDown={(e) => beginDrag(e, block, "move", iso)}
+                        onPointerDown={(e) => beginDrag(e, block, "move")}
                         onContextMenu={(e) => openMenu(e, block)}
                         className={cn(
                           "group absolute inset-x-1 z-10 cursor-pointer overflow-hidden rounded-md border p-1 text-[11px] leading-4 shadow-sm transition-shadow hover:shadow active:cursor-grabbing",
@@ -353,7 +352,7 @@ export function WeekBoard({
                           </div>
                         ) : null}
                         <span
-                          onPointerDown={(e) => beginDrag(e, block, "resize", iso)}
+                          onPointerDown={(e) => beginDrag(e, block, "resize")}
                           className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100"
                         >
                           <span className="mx-auto mt-0.5 block h-1 w-8 rounded-full bg-foreground/20" />

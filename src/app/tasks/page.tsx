@@ -15,13 +15,10 @@ import { TaskStatusPill } from "@/components/ui/status-pill";
 import { taskTypes, workflowTemplates } from "@/lib/default-data";
 import { getT } from "@/lib/locale";
 import { projectDisplayName } from "@/lib/i18n";
-import {
-  getContactsForView,
-  getProjectsForView,
-  getTasksForView,
-} from "@/lib/database-data";
+import { getTaskPageData } from "@/lib/database-data";
 import { cn } from "@/lib/utils";
 import { StatusSelect } from "./status-select";
+import { TaskEditButton } from "./task-edit";
 
 // 优先级：颜色 + 权重（用于排序和左侧色条）
 const PRIORITY_META: Record<
@@ -33,6 +30,13 @@ const PRIORITY_META: Record<
   MEDIUM: { tone: "info", bar: "bg-blue-400", weight: 1 },
   LOW: { tone: "neutral", bar: "bg-slate-300", weight: 0 },
 };
+
+function nonProjectScope(type: string) {
+  if (/行政|报销|入职|财务/.test(type)) return "行政事务";
+  if (/接待|展会/.test(type)) return "接待协作";
+  if (/内部|汇报|团队/.test(type)) return "内部工作";
+  return "未关联项目";
+}
 
 export const dynamic = "force-dynamic";
 
@@ -50,16 +54,13 @@ export default async function TasksPage({
   const [
     { setup, created, error, filter = "open", new: openForm },
     { locale, t },
-    projects,
-    tasks,
-    contacts,
+    taskPageData,
   ] = await Promise.all([
     searchParams,
     getT(),
-    getProjectsForView(),
-    getTasksForView(),
-    getContactsForView(),
+    getTaskPageData(),
   ]);
+  const { projects, tasks, contacts } = taskPageData;
   const projectMap = new Map(projects.map((project) => [project.id, project]));
   const contactMap = new Map(contacts.map((contact) => [contact.id, contact]));
   const pname = (p: { nameZh: string; nameEn?: string }) =>
@@ -104,13 +105,15 @@ export default async function TasksPage({
     });
 
   const formOpen = openForm === "1" || Boolean(created) || Boolean(error);
+  const openTaskCount = tasks.filter((task) => task.status !== "DONE").length;
+  const nonProjectCount = tasks.filter((task) => !task.projectId).length;
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow={t.tasks.eyebrow}
+        eyebrow={t.tasks.workspace}
         title={t.tasks.title}
-        description={t.tasks.desc}
+        description={t.tasks.summary(openTaskCount, nonProjectCount)}
         action={
           <Link href="/tasks?new=1#new">
             <Button>
@@ -220,7 +223,9 @@ export default async function TasksPage({
                             {pname(project)}
                           </Link>
                         ) : (
-                          <Badge tone="neutral">{t.common.personal}</Badge>
+                          <Badge tone="neutral">
+                            {nonProjectScope(task.type)}
+                          </Badge>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -238,6 +243,15 @@ export default async function TasksPage({
                             taskId={task.id}
                             value={task.status}
                             options={statusOptions}
+                          />
+                          <TaskEditButton
+                            task={task}
+                            projects={projects.map((project) => ({
+                              id: project.id,
+                              name: pname(project),
+                            }))}
+                            contacts={contacts}
+                            taskTypes={taskTypes}
                           />
                           <form action={deleteTaskAction}>
                             <input type="hidden" name="taskId" value={task.id} />
@@ -370,6 +384,14 @@ export default async function TasksPage({
                 </option>
               ))}
             </select>
+          </label>
+          <label className="lg:col-span-6">
+            <span className="flabel">{t.tasks.fDescription}</span>
+            <textarea
+              name="description"
+              className="field min-h-20 resize-y"
+              placeholder={t.tasks.fDescriptionPh}
+            />
           </label>
           <div className="flex items-end lg:col-start-6">
             <Button className="w-full" type="submit">

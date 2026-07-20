@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { addDays, addMonths, format, parse, startOfMonth, startOfWeek } from "date-fns";
+import { addDays, addMonths, endOfMonth, format, parse, startOfMonth, startOfWeek } from "date-fns";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -105,13 +105,22 @@ export default async function CalendarPage({
 
   const prevYm = format(addMonths(monthStart, -1), "yyyy-MM");
   const nextYm = format(addMonths(monthStart, 1), "yyyy-MM");
+  const monthStartIso = format(monthStart, "yyyy-MM-dd");
+  const monthEndIso = format(endOfMonth(monthStart), "yyyy-MM-dd");
+  const monthEventCount = events.filter(
+    (event) => event.start <= monthEndIso && event.end >= monthStartIso,
+  ).length;
+  const monthLabel = t.calendar.monthLabel(
+    monthStart.getFullYear(),
+    monthStart.getMonth() + 1,
+  );
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow={t.calendar.eyebrow}
-        title={t.calendar.title}
-        description={t.calendar.desc}
+        eyebrow={t.calendar.workspace}
+        title={monthLabel}
+        description={t.calendar.summary(monthEventCount)}
         action={
           <div className="flex items-center gap-2">
             <Link href={`/calendar?ym=${prevYm}`}>
@@ -139,10 +148,6 @@ export default async function CalendarPage({
         events={events}
         currentMonth={monthStart.getMonth()}
         todayIso={todayIso}
-        monthLabel={t.calendar.monthLabel(
-          monthStart.getFullYear(),
-          monthStart.getMonth() + 1,
-        )}
         dbConnected={isDatabaseConfigured()}
       />
     </AppShell>
