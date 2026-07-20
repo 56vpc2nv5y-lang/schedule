@@ -1,0 +1,15 @@
+diff --git a/src/app/week/week-board.tsx b/src/app/week/week-board.tsx
+--- a/src/app/week/week-board.tsx
++++ b/src/app/week/week-board.tsx
+@@ -229,1 +229,1 @@
+-          <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-border bg-secondary/40">
++          <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary/40">
+@@ -253,1 +253,1 @@
+-            <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-border">
++            <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border">
+@@ -258,1 +258,1 @@
+-                <div key={iso} className="min-h-[26px] space-y-0.5 border-l border-border p-0.5">
++                <div key={iso} className="min-w-0 min-h-[26px] space-y-0.5 border-l border-border p-0.5">
+@@ -276,1 +276,1 @@
+-          <div className="grid grid-cols-[56px_repeat(7,1fr)]">
++          <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))]">
