@@ -1,4 +1,5 @@
 import { getEffectiveDeepseekKey } from "@/lib/app-settings";
+import { SYSTEM_PROMPTS } from "@/lib/ai-prompts";
 
 // DeepSeek AI 封装。DeepSeek 提供 OpenAI 兼容接口，只需一个 API Key。
 // Key 优先读「设置」页保存的值（数据库 AppSetting），回退 .env 的 DEEPSEEK_API_KEY。
@@ -10,7 +11,8 @@ export type AiMode =
   | "invitation"
   | "summary"
   | "reception"
-  | "resume";
+  | "resume"
+  | "weekly";
 
 export const AI_MODES: { key: AiMode; label: string; hint: string }[] = [
   { key: "translate", label: "中英互译", hint: "粘贴中文或英文，自动翻成另一种语言" },
@@ -19,6 +21,7 @@ export const AI_MODES: { key: AiMode; label: string; hint: string }[] = [
   { key: "summary", label: "会议纪要总结", hint: "粘贴会议记录或长文，整理成结论/待办/待确认" },
   { key: "reception", label: "接待讲解词", hint: "给公司/项目/路线信息，生成中英双语讲解稿" },
   { key: "resume", label: "简历润色", hint: "把一条工作成果润色成可写进简历的中英文要点" },
+  { key: "weekly", label: "周报", hint: "从看板载入一周工作证据，按项目整理成周报" },
 ];
 
 // 场景预设：一键把「填空模板」放进输入框，不用自己想 prompt。
@@ -60,21 +63,6 @@ export const PROMPT_PRESETS: {
     body: "帮我写一封会前确认邮件（中英双语各一版）：\n会议：【主题】\n时间：【时间，注明时区】\n参会方：【甲方/供应商/我方谁参加】\n议程要点：【1… 2… 3…】\n结尾请对方确认时间并补充议题。",
   },
 ];
-
-const SYSTEM_PROMPTS: Record<AiMode, string> = {
-  translate:
-    "你是专业的中英双语翻译，服务于技术合作与商务场景。自动判断输入语言：中文则翻成地道、正式的英文；英文则翻成地道、正式的中文。只输出译文本身，不要解释。保持专业术语准确、语气得体。",
-  email:
-    "你是资深商务助理，帮用户起草或润色商务沟通内容（邮件、微信消息、汇报）。用户是技术合作项目的中间商，沟通对象包括境外甲方、高校供应商和自己的领导。若输入是要点，扩展为完整内容；若是草稿，润色使其更专业得体。默认用中文；若明确要求英文或对象是英文母语者则用英文。",
-  invitation:
-    "你是商务文书助理，根据用户提供的信息起草正式的展会或来访邀请函，包含称呼、背景、时间地点、诚挚邀请、落款占位。中文、英文各输出一版，用清晰的标题分隔。",
-  summary:
-    "你是会议助理，把用户提供的会议记录或长文整理成结构化要点，用以下三个小标题：【核心结论】【待办事项（标注责任方与时间）】【待确认问题】。简洁、条理清晰。",
-  reception:
-    "你是接待讲解撰稿人，根据用户提供的公司、项目或参观路线信息，撰写用于接待外方来访的讲解词，语气热情专业、条理清晰。中文、英文各输出一版。",
-  resume:
-    "你是资深简历教练。用户会给你一条工作中的成果或经历，把它改写成可直接写进简历的要点：动词开头、突出个人贡献、能量化就量化（缺数字时用【】提示用户补充）。输出格式：先给 1-2 条中文简历要点，再给对应的英文版本，最后用一句话点评还可以怎么加强。",
-};
 
 export async function isAiConfigured() {
   return Boolean(await getEffectiveDeepseekKey());

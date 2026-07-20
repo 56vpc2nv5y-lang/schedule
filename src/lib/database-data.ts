@@ -2,6 +2,10 @@ import { cache } from "react";
 import { getPrisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-status";
 import {
+  toDateKey,
+  toDateTimeText as formatDateTimeText,
+} from "@/lib/date-time";
+import {
   contacts as seedContacts,
   feedbackQuestions as seedFeedbackQuestions,
   files as seedFiles,
@@ -22,20 +26,35 @@ import {
   timelineEvents as seedTimelineEvents,
 } from "@/lib/default-data";
 
-type ProjectWithRelations = Awaited<ReturnType<typeof getDbProjectsRaw>>[number];
-
 function toDateText(value: Date | null | undefined) {
-  return value ? value.toISOString().slice(0, 10) : "";
+  return toDateKey(value);
 }
 
 function toDateTimeText(value: Date | null | undefined) {
-  return value ? value.toISOString().slice(0, 16).replace("T", " ") : "";
+  return formatDateTimeText(value);
 }
 
-function computeProgress(stages: ProjectWithRelations["stages"]) {
-  if (!stages.length) return 0;
-  const done = stages.filter((stage) => stage.status === "COMPLETED").length;
-  return Math.round((done / stages.length) * 100);
+function summarizeStages(
+  stages: { name: string; status: string; sortOrder: number }[],
+) {
+  const completedStageCount = stages.filter(
+    (stage) => stage.status === "COMPLETED",
+  ).length;
+  const currentStage =
+    stages.find((stage) => stage.status === "IN_PROGRESS") ??
+    stages.find((stage) => stage.status === "DELAYED") ??
+    stages.find((stage) => stage.status === "NOT_STARTED");
+  const totalStageCount = stages.length;
+
+  return {
+    completedStageCount,
+    totalStageCount,
+    currentStageName: currentStage?.name ?? "",
+    // Keep this field for older call sites, but expose the count-based meaning in UI.
+    progress: totalStageCount
+      ? Math.round((completedStageCount / totalStageCount) * 100)
+      : 0,
+  };
 }
 
 async function getDbContactsRaw() {
@@ -50,12 +69,23 @@ async function getDbContactsRaw() {
 
 async function getDbProjectsRaw() {
   return getPrisma().project.findMany({
-    include: {
-      regionTag: true,
-      projectTypeTag: true,
-      contacts: { include: { contact: true } },
-      stages: { orderBy: { sortOrder: "asc" } },
-      tasks: true,
+    select: {
+      id: true,
+      nameZh: true,
+      nameEn: true,
+      clientName: true,
+      status: true,
+      plannedStart: true,
+      plannedEnd: true,
+      regionTag: { select: { name: true } },
+      projectTypeTag: { select: { name: true } },
+      contacts: {
+        select: { contactId: true, side: true, isPrimary: true },
+      },
+      stages: {
+        select: { name: true, status: true, sortOrder: true },
+        orderBy: { sortOrder: "asc" },
+      },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -82,32 +112,41 @@ export const getContactsForView = cache(async () => {
 
 export const getProjectsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedProjects;
+    return seedProjects.map((project) => ({
+      ...project,
+      ...summarizeStages(
+        seedStages.filter((stage) => stage.projectId === project.id),
+      ),
+    }));
   }
 
   const projects = await getDbProjectsRaw();
 
-  return projects.map((project) => ({
-    id: project.id,
-    nameZh: project.nameZh,
-    nameEn: project.nameEn ?? "",
-    clientName: project.clientName,
-    region: project.regionTag?.name ?? "",
-    type: project.projectTypeTag?.name ?? "",
-    status: project.status,
-    plannedStart: toDateText(project.plannedStart),
-    plannedEnd: toDateText(project.plannedEnd),
-    ownerId:
-      project.contacts.find((link) => link.side === "OUR_TEAM" && link.isPrimary)
-        ?.contactId ?? "",
-    clientContactIds: project.contacts
-      .filter((link) => link.side === "CLIENT")
-      .map((link) => link.contactId),
-    supplierContactIds: project.contacts
-      .filter((link) => link.side === "SUPPLIER")
-      .map((link) => link.contactId),
-    progress: computeProgress(project.stages),
-  }));
+  return projects.map((project) => {
+    const stageSummary = summarizeStages(project.stages);
+    return {
+      id: project.id,
+      nameZh: project.nameZh,
+      nameEn: project.nameEn ?? "",
+      clientName: project.clientName,
+      region: project.regionTag?.name ?? "",
+      type: project.projectTypeTag?.name ?? "",
+      status: project.status,
+      plannedStart: toDateText(project.plannedStart),
+      plannedEnd: toDateText(project.plannedEnd),
+      ownerId:
+        project.contacts.find(
+          (link) => link.side === "OUR_TEAM" && link.isPrimary,
+        )?.contactId ?? "",
+      clientContactIds: project.contacts
+        .filter((link) => link.side === "CLIENT")
+        .map((link) => link.contactId),
+      supplierContactIds: project.contacts
+        .filter((link) => link.side === "SUPPLIER")
+        .map((link) => link.contactId),
+      ...stageSummary,
+    };
+  });
 });
 
 export const getStagesForView = cache(async () => {
@@ -138,7 +177,7 @@ export const getTasksForView = cache(async () => {
   }
 
   const tasks = await getPrisma().task.findMany({
-    include: { typeTag: true, contacts: true },
+    include: { typeTag: true },
     orderBy: [{ dueDate: "asc" }, { updatedAt: "desc" }],
   });
 
@@ -147,13 +186,81 @@ export const getTasksForView = cache(async () => {
     projectId: task.projectId ?? "",
     stageId: task.stageId ?? undefined,
     title: task.title,
+    description: task.description ?? "",
     type: task.typeTag?.name ?? "商务沟通",
     status: task.status,
     priority: task.priority,
     dueDate: toDateText(task.dueDate),
     assigneeId: task.assigneeId ?? "",
-    contactIds: task.contacts.map((contact) => contact.contactId),
   }));
+});
+
+export const getTaskPageData = cache(async () => {
+  if (!isDatabaseConfigured()) {
+    return {
+      projects: seedProjects.map(({ id, nameZh, nameEn }) => ({
+        id,
+        nameZh,
+        nameEn,
+      })),
+      tasks: seedTasks.map((task) => ({
+        ...task,
+        description: "",
+      })),
+      contacts: seedContacts.map(({ id, name, organization }) => ({
+        id,
+        name,
+        organization,
+      })),
+    };
+  }
+
+  const [projects, tasks, contacts] = await Promise.all([
+    getPrisma().project.findMany({
+      select: { id: true, nameZh: true, nameEn: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+    getPrisma().task.findMany({
+      select: {
+        id: true,
+        projectId: true,
+        stageId: true,
+        title: true,
+        description: true,
+        status: true,
+        priority: true,
+        dueDate: true,
+        assigneeId: true,
+        typeTag: { select: { name: true } },
+      },
+      orderBy: [{ dueDate: "asc" }, { updatedAt: "desc" }],
+    }),
+    getPrisma().contact.findMany({
+      select: { id: true, name: true, organization: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  return {
+    projects: projects.map((project) => ({
+      id: project.id,
+      nameZh: project.nameZh,
+      nameEn: project.nameEn ?? "",
+    })),
+    tasks: tasks.map((task) => ({
+      id: task.id,
+      projectId: task.projectId ?? "",
+      stageId: task.stageId ?? undefined,
+      title: task.title,
+      description: task.description ?? "",
+      type: task.typeTag?.name ?? "商务沟通",
+      status: task.status,
+      priority: task.priority,
+      dueDate: toDateText(task.dueDate),
+      assigneeId: task.assigneeId ?? "",
+    })),
+    contacts,
+  };
 });
 
 export const getFilesForView = cache(async () => {
