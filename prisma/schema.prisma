@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -116,24 +116,78 @@ model Project {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
-  regionTag      Tag?           @relation("ProjectRegion", fields: [regionTagId], references: [id], onDelete: SetNull)
-  projectTypeTag Tag?           @relation("ProjectType", fields: [projectTypeTagId], references: [id], onDelete: SetNull)
-  stageTemplate  StageTemplate? @relation("ProjectStageTemplate", fields: [stageTemplateId], references: [id], onDelete: SetNull)
-  contacts       ProjectContact[]
-  stages         ProjectStage[]
-  tasks          Task[]
-  files          ProjectFile[]
-  meetingReviews MeetingReview[]
-  timelineEvents TimelineEvent[]
-  receptions     Reception[]
-  growthLogs     GrowthLog[]
-  knowledgeNotes KnowledgeNote[]
+  regionTag         Tag?               @relation("ProjectRegion", fields: [regionTagId], references: [id], onDelete: SetNull)
+  projectTypeTag    Tag?               @relation("ProjectType", fields: [projectTypeTagId], references: [id], onDelete: SetNull)
+  stageTemplate     StageTemplate?     @relation("ProjectStageTemplate", fields: [stageTemplateId], references: [id], onDelete: SetNull)
+  contacts          ProjectContact[]
+  stages            ProjectStage[]
+  tasks             Task[]
+  files             ProjectFile[]
+  meetingReviews    MeetingReview[]
+  timelineEvents    TimelineEvent[]
+  receptions        Reception[]
+  growthLogs        GrowthLog[]
+  resumePoints      ResumePoint[]
+  knowledgeNotes    KnowledgeNote[]
   feedbackQuestions FeedbackQuestion[]
-  scheduleBlocks ScheduleBlock[]
+  scheduleBlocks    ScheduleBlock[]
+  trainingProfile   TrainingProfile?
 
   @@index([status])
   @@index([regionTagId])
   @@index([projectTypeTagId])
+}
+
+/// 培训项目专用台账：通用 Project 之外的业务字段
+model TrainingProfile {
+  id                     String   @id @default(cuid())
+  projectId              String   @unique
+  currentPhase           String   @default("课程大纲")
+  clientContactName      String?
+  clientContactInfo      String?
+  topicSource            String?
+  topicCount             Int?
+  participantCount       Int?
+  totalDays              Float?
+  dailyHours             Float?
+  location               String?
+  budget                 Float?
+  currency               String   @default("CNY")
+  costOwnership          String?
+  internalCostNote       String?
+  quoteRound             Int      @default(1)
+  internalContractStatus String?
+  clientContractStatus   String?
+  depositNote            String?
+  prepaymentPercent      Float?
+  paymentMilestones      String?
+  reportingStatus        String?
+  postponed              Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  project        Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  checklistItems TrainingChecklistItem[]
+
+  @@index([currentPhase])
+  @@index([postponed])
+}
+
+model TrainingChecklistItem {
+  id                String   @id @default(cuid())
+  trainingProfileId String
+  section           String
+  label             String
+  done              Boolean  @default(false)
+  note              String?
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  trainingProfile TrainingProfile @relation(fields: [trainingProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingProfileId, section, label])
+  @@index([trainingProfileId, section, sortOrder])
 }
 
 /// 联系人库：所有“人”的唯一数据源，别处只引用其 id
@@ -164,9 +218,9 @@ model Contact {
 }
 
 model ContactRole {
-  id        String @id @default(cuid())
-  name      String @unique
-  sortOrder Int    @default(0)
+  id        String  @id @default(cuid())
+  name      String  @unique
+  sortOrder Int     @default(0)
   enabled   Boolean @default(true)
 
   contacts ContactRoleMap[]
@@ -183,9 +237,9 @@ model ContactRoleMap {
 }
 
 model TeamMemberProfile {
-  id        String  @id @default(cuid())
-  contactId String  @unique
-  active    Boolean @default(true)
+  id           String  @id @default(cuid())
+  contactId    String  @unique
+  active       Boolean @default(true)
   capacityNote String?
 
   contact Contact @relation(fields: [contactId], references: [id], onDelete: Restrict)
@@ -221,13 +275,13 @@ model StageTemplate {
 }
 
 model StageTemplateItem {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   templateId  String
   name        String
   sortOrder   Int
   description String?
 
-  template      StageTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template      StageTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
   projectStages ProjectStage[]
 
   @@unique([templateId, sortOrder])
@@ -249,7 +303,7 @@ model ProjectStage {
   updatedAt            DateTime    @updatedAt
 
   project            Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sourceTemplateItem StageTemplateItem?  @relation(fields: [sourceTemplateItemId], references: [id], onDelete: SetNull)
+  sourceTemplateItem StageTemplateItem? @relation(fields: [sourceTemplateItemId], references: [id], onDelete: SetNull)
   tasks              Task[]
   files              ProjectFile[]
   contacts           StageContact[]
@@ -339,9 +393,9 @@ model MeetingReview {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
-  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  stage     ProjectStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
-  finalFile ProjectFile?  @relation("FinalMeetingFile", fields: [finalFileId], references: [id], onDelete: SetNull)
+  project   Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage     ProjectStage?        @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  finalFile ProjectFile?         @relation("FinalMeetingFile", fields: [finalFileId], references: [id], onDelete: SetNull)
   rounds    MeetingReviewRound[]
 }
 
@@ -378,8 +432,8 @@ model Reception {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  project       Project?                  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  visitors      ReceptionVisitor[]
+  project        Project?                 @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  visitors       ReceptionVisitor[]
   checklistItems ReceptionChecklistItem[]
 }
 
@@ -388,11 +442,11 @@ model ReceptionChecklistItem {
   id          String    @id @default(cuid())
   receptionId String
   reception   Reception @relation(fields: [receptionId], references: [id], onDelete: Cascade)
-  phase       String    // 行前准备 / 抵达与现场 / 送行
+  phase       String // 行前准备 / 抵达与现场 / 送行
   title       String
   done        Boolean   @default(false)
-  ownerId     String?   // 引用 Contact id（松引用，可空）
-  dueDate     String?   // ISO yyyy-mm-dd
+  ownerId     String? // 引用 Contact id（松引用，可空）
+  dueDate     String? // ISO yyyy-mm-dd
   note        String?
   isMine      Boolean   @default(false) // 「我的」高亮
   sortOrder   Int       @default(0)
@@ -478,10 +532,10 @@ model AppPreference {
 /// 知识库：按主题积累专业知识（中微子/太赫兹/荧光检测…），可关联项目
 model KnowledgeNote {
   id        String   @id @default(cuid())
-  topic     String   // 主题/领域，如「太赫兹」「电动汽车维保」
+  topic     String // 主题/领域，如「太赫兹」「电动汽车维保」
   title     String
-  content   String   // 知识正文/要点/术语对照
-  url       String?  // 外部资料链接
+  content   String // 知识正文/要点/术语对照
+  url       String? // 外部资料链接
   projectId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -492,12 +546,12 @@ model KnowledgeNote {
 }
 
 enum QuestionStatus {
-  OPEN           // 待整理/待发出
-  SENT           // 已发供应商，等回复
-  ANSWERED       // 已回复，待我判断
-  UNCLEAR        // 回复了但不清楚，需追问
-  NEED_MEETING   // 需要开会讲清楚
-  CONFIRMED      // 已确认关闭
+  OPEN // 待整理/待发出
+  SENT // 已发供应商，等回复
+  ANSWERED // 已回复，待我判断
+  UNCLEAR // 回复了但不清楚，需追问
+  NEED_MEETING // 需要开会讲清楚
+  CONFIRMED // 已确认关闭
 }
 
 /// 问题反馈清单：甲方提问→整理发供应商→判断回复→追问/开会→确认，逐条跟踪
@@ -507,7 +561,7 @@ model FeedbackQuestion {
   source    String         @default("甲方") // 甲方 / 供应商 / 我方
   question  String
   answer    String?
-  note      String?        // 追问点/待确认点
+  note      String? // 追问点/待确认点
   status    QuestionStatus @default(OPEN)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
@@ -522,13 +576,13 @@ model ScheduleBlock {
   id           String    @id @default(cuid())
   title        String
   date         DateTime? // 具体某天；null = 每日例行（起床/通勤/午休…）
-  startMin     Int       // 从 0:00 起的分钟数，如 7:30 = 450
+  startMin     Int // 从 0:00 起的分钟数，如 7:30 = 450
   endMin       Int
   kind         String    @default("work") // routine 例行 / work 工作
-  location     String?   // 地点
-  participants String?   // 参与人（自由文本，逗号分隔）
-  note         String?   // 备注 / 我的任务
-  projectId    String?   // 可选关联项目
+  location     String? // 地点
+  participants String? // 参与人（自由文本，逗号分隔）
+  note         String? // 备注 / 我的任务
+  projectId    String? // 可选关联项目
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -538,17 +592,17 @@ model ScheduleBlock {
 }
 
 enum MoneyKind {
-  SALARY     // 工资到账
-  ADVANCE    // 垫付（待报销）
+  SALARY // 工资到账
+  ADVANCE // 垫付（待报销）
   REIMBURSED // 报销到账
-  OTHER      // 其他收支
+  OTHER // 其他收支
 }
 
 /// 财务记录：工资、出差垫付、报销回款
 model MoneyRecord {
   id         String    @id @default(cuid())
   kind       MoneyKind @default(ADVANCE)
-  amount     Float     // 金额（正数），方向由 kind 决定
+  amount     Float // 金额（正数），方向由 kind 决定
   currency   String    @default("CNY")
   happenedAt DateTime  @default(now())
   note       String?
@@ -560,26 +614,43 @@ model MoneyRecord {
 
 enum GrowthCategory {
   ACHIEVEMENT // 成果亮点（可直接写进简历）
-  SKILL       // 技能积累
-  LESSON      // 复盘/教训
+  SKILL // 技能积累
+  LESSON // 复盘/教训
   CERTIFICATE // 证书/培训
-  NETWORK     // 人脉资源
+  NETWORK // 人脉资源
 }
 
 /// 成长档案：为职业发展/跳槽积累素材，可选关联项目
 model GrowthLog {
-  id        String         @id @default(cuid())
-  category  GrowthCategory @default(ACHIEVEMENT)
-  title     String
-  detail    String?
-  projectId String?
-  happenedAt DateTime      @default(now())
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id         String         @id @default(cuid())
+  category   GrowthCategory @default(ACHIEVEMENT)
+  title      String
+  detail     String?
+  projectId  String?
+  happenedAt DateTime       @default(now())
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 
   project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([category])
+}
+
+/// 已确认的中英文简历要点：由 AI 对话或手工整理后收藏，可关联项目复用。
+model ResumePoint {
+  id         String   @id @default(cuid())
+  title      String
+  chinese    String
+  english    String
+  sourceNote String?
+  projectId  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([updatedAt])
 }
 
 /// 通用资料库：公司模板、报销流程、接待讲解词等，不挂在具体项目下。
