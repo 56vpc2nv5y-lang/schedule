@@ -1,0 +1,262 @@
+diff --git a/src/components/layout/app-shell.tsx b/src/components/layout/app-shell.tsx
+--- a/src/components/layout/app-shell.tsx
++++ b/src/components/layout/app-shell.tsx
+@@ -16,7 +16,6 @@ import {
+   GanttChartSquare,
+   KanbanSquare,
+   LayoutDashboard,
+-  LogOut,
+   PlaneTakeoff,
+   Settings,
+   Sparkles,
+@@ -25,7 +24,6 @@ import {
+   Wallet,
+ } from "lucide-react";
+-import { logoutAction } from "@/app/actions";
+ import { SkinToggle } from "@/components/layout/skin-toggle";
+ import { useDict } from "@/components/layout/locale-provider";
+ import type { Dict } from "@/lib/i18n";
+@@ -95,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
+ 
+   return (
+     <div className="app-shell min-h-screen bg-background text-foreground">
+-      <aside className="app-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-border bg-card lg:block">
++      <aside className="app-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-border bg-card md:block">
+         <div className="flex h-full flex-col">
+@@ -150,16 +148,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
+           <div className="space-y-2 border-t border-border p-3">
+             <SkinToggle />
+-            <form action={logoutAction}>
+-              <button
+-                type="submit"
+-                className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+-              >
+-                <LogOut className="h-4 w-4" />
+-                {t.nav.logout}
+-              </button>
+-            </form>
+           </div>
+         </div>
+       </aside>
+ 
+-      <div className="app-frame lg:pl-60">
+-        <header className="mobile-app-header sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur lg:hidden">
++      <div className="app-frame md:pl-60">
++        <header className="mobile-app-header sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur md:hidden">
+           <div className="flex h-14 items-center gap-3 px-4">
+@@ -168,16 +156,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
+               <div className="text-sm font-semibold">{t.nav.appName}</div>
+             </div>
+-            <form action={logoutAction}>
+-              <button
+-                type="submit"
+-                title={t.nav.logout}
+-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
+-              >
+-                <LogOut className="h-4 w-4" />
+-              </button>
+-            </form>
+           </div>
+diff --git a/src/components/layout/skin-toggle.tsx b/src/components/layout/skin-toggle.tsx
+--- a/src/components/layout/skin-toggle.tsx
++++ b/src/components/layout/skin-toggle.tsx
+@@ -5,13 +5,12 @@ import { useDict } from "@/components/layout/locale-provider";
+ import { cn } from "@/lib/utils";
+ 
+-type Skin = "blueprint" | "vibrant" | "sunset";
+-const SKINS: Skin[] = ["blueprint", "vibrant", "sunset"];
++type Skin = "vibrant" | "sunset";
++const SKINS: Skin[] = ["vibrant", "sunset"];
+ const SKIN_CHANGE_EVENT = "schedule-skin-change";
+ 
+ // 每个皮肤按钮的小色卡，直观预览主色
+ const SWATCH: Record<Skin, string> = {
+-  blueprint: "oklch(0.515 0.17 252)",
+   vibrant: "oklch(0.55 0.19 274)",
+   sunset: "oklch(0.62 0.19 35)",
+ };
+@@ -19,7 +18,7 @@ const SWATCH: Record<Skin, string> = {
+ function readSkin(): Skin {
+   const skin = document.documentElement.getAttribute("data-skin");
+-  return skin === "vibrant" || skin === "sunset" ? skin : "blueprint";
++  return skin === "sunset" ? "sunset" : "vibrant";
+ }
+@@ -33,7 +32,6 @@ export function SkinToggle() {
+   const t = useDict();
+   const labels: Record<Skin, string> = {
+-    blueprint: t.nav.skinBlueprint,
+     vibrant: t.nav.skinVibrant,
+     sunset: t.nav.skinSunset,
+diff --git a/src/app/layout.tsx b/src/app/layout.tsx
+--- a/src/app/layout.tsx
++++ b/src/app/layout.tsx
+@@ -14,8 +14,8 @@ export const metadata: Metadata = {
+ 
+ // 在页面绘制前读取用户选择的皮肤，避免切换时闪一下默认色
+-// 只迁移一次到本轮已确认的蓝墨蓝图；之后继续尊重用户手动切换。
+-const skinScript = `try{var k='skin-vibrant-v2',s=localStorage.getItem('skin');if(localStorage.getItem(k)!=='1'){s='vibrant';localStorage.setItem('skin',s);localStorage.setItem(k,'1')}if(!['blueprint','vibrant','sunset'].includes(s))s='vibrant';document.documentElement.setAttribute('data-skin',s)}catch(e){document.documentElement.setAttribute('data-skin','vibrant')}`;
++// 删除旧蓝墨蓝图后，将遗留选择迁移到更柔和的默认皮肤。
++const skinScript = `try{var s=localStorage.getItem('skin');if(!['vibrant','sunset'].includes(s))s='vibrant';localStorage.setItem('skin',s);document.documentElement.setAttribute('data-skin',s)}catch(e){document.documentElement.setAttribute('data-skin','vibrant')}`;
+diff --git a/src/lib/auth.ts b/src/lib/auth.ts
+--- a/src/lib/auth.ts
++++ b/src/lib/auth.ts
+@@ -1,5 +1,6 @@
+ // 简单单人密码保护。只有设置了非占位的 APP_PASSWORD 才启用。
+ export const AUTH_COOKIE = "app_auth";
++export const PERSONAL_APP_PASSWORD = "sunny";
+@@ -10,6 +11,10 @@ export function getAppPassword() {
+   return value;
+ }
+ 
++export function isPersonalAutoLoginEnabled() {
++  return process.env.PERSONAL_AUTO_LOGIN !== "false";
++}
++
+ export function isAuthEnabled() {
+diff --git a/src/lib/app-settings.ts b/src/lib/app-settings.ts
+--- a/src/lib/app-settings.ts
++++ b/src/lib/app-settings.ts
+@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
+ import { getPrisma } from "@/lib/prisma";
+ import { isDatabaseConfigured } from "@/lib/db-status";
+-import { getAppPassword as getEnvPassword } from "@/lib/auth";
++import {
++  PERSONAL_APP_PASSWORD,
++  getAppPassword as getEnvPassword,
++  isPersonalAutoLoginEnabled,
++} from "@/lib/auth";
+@@ -58,8 +62,9 @@ export async function setDbSetting(key: string, value: string) {
+ /** 生效的登录密码：设置页里存的优先，其次 .env 的 APP_PASSWORD。空 = 不启用保护 */
+ export async function getEffectivePassword(): Promise<string> {
++  if (isPersonalAutoLoginEnabled()) return PERSONAL_APP_PASSWORD;
+   const fromDb = await getDbSetting(SETTING_KEYS.password);
+-  return fromDb ?? getEnvPassword();
++  return fromDb ?? getEnvPassword() ?? PERSONAL_APP_PASSWORD;
+ }
+diff --git a/src/proxy.ts b/src/proxy.ts
+--- a/src/proxy.ts
++++ b/src/proxy.ts
+@@ -1,7 +1,7 @@
+ import { NextResponse } from "next/server";
+ import type { NextRequest } from "next/server";
+-import { AUTH_COOKIE } from "@/lib/auth";
++import { AUTH_COOKIE, isPersonalAutoLoginEnabled } from "@/lib/auth";
+ import { getEffectivePassword, passwordCookieValue } from "@/lib/app-settings";
+@@ -9,12 +9,35 @@ import { getEffectivePassword, passwordCookieValue } from "@/lib/app-settings";
+ export async function proxy(req: NextRequest) {
+   const password = await getEffectivePassword();
++  const { pathname } = req.nextUrl;
++
++  if (isPersonalAutoLoginEnabled()) {
++    if (pathname === "/login") {
++      const url = req.nextUrl.clone();
++      url.pathname = "/today";
++      url.search = "";
++      const response = NextResponse.redirect(url);
++      response.cookies.set(AUTH_COOKIE, passwordCookieValue(password), {
++        httpOnly: true,
++        sameSite: "lax",
++        path: "/",
++        maxAge: 60 * 60 * 24 * 365,
++      });
++      return response;
++    }
++    const response = NextResponse.next();
++    response.cookies.set(AUTH_COOKIE, passwordCookieValue(password), {
++      httpOnly: true,
++      sameSite: "lax",
++      path: "/",
++      maxAge: 60 * 60 * 24 * 365,
++    });
++    return response;
++  }
+ 
+   // 未设置密码 => 不启用保护（本地/演示直接放行）
+   if (!password) return NextResponse.next();
+ 
+-  const { pathname } = req.nextUrl;
+diff --git a/src/app/actions.ts b/src/app/actions.ts
+--- a/src/app/actions.ts
++++ b/src/app/actions.ts
+@@ -295,7 +295,10 @@ export async function createTaskAction(formData: FormData) {
+     redirect("/tasks?error=missing-required");
+   }
+ 
+-  const typeTag = await ensureTag(TagType.TASK_TYPE, typeName || "商务沟通");
++  const typeTag = await ensureTag(
++    TagType.TASK_TYPE,
++    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "项目",
++  );
+@@ -1544,7 +1547,7 @@ export async function loginAction(formData: FormData) {
+       httpOnly: true,
+       sameSite: "lax",
+       path: "/",
+-      maxAge: 60 * 60 * 24 * 30,
++      maxAge: 60 * 60 * 24 * 365,
+diff --git a/src/lib/default-data.ts b/src/lib/default-data.ts
+--- a/src/lib/default-data.ts
++++ b/src/lib/default-data.ts
+@@ -27,26 +27,7 @@ export const regions = ["新加坡", "澳门", "越南", "国内", "其他"];
+ 
+-export const taskTypes = [
+-  "商务沟通",
+-  "甲方会议",
+-  "供应商会议",
+-  "甲方邮件问题",
+-  "供应商文件问题",
+-  "PPT制作翻译审查",
+-  "会议纪要循环校对",
+-  "合同跟进",
+-  "交付跟进",
+-  "验收跟进",
+-  "售后跟进",
+-  "接待安排",
+-  "展会邀请函",
+-  "文档翻译",
+-  "口译/交传",
+-  "背景资料搜集",
+-  "行政/报销",
+-  "内部流程",
+-];
++export const taskTypes = ["接待", "培训", "项目", "展会"] as const;
+diff --git a/src/lib/database-data.ts b/src/lib/database-data.ts
+--- a/src/lib/database-data.ts
++++ b/src/lib/database-data.ts
+@@ -187,7 +187,7 @@ export const getTasksForView = cache(async () => {
+     stageId: task.stageId ?? undefined,
+     title: task.title,
+     description: task.description ?? "",
+-    type: task.typeTag?.name ?? "商务沟通",
++    type: task.typeTag?.name ?? "项目",
+@@ -253,7 +253,7 @@ export const getTaskPageData = cache(async () => {
+       stageId: task.stageId ?? undefined,
+       title: task.title,
+       description: task.description ?? "",
+-      type: task.typeTag?.name ?? "商务沟通",
++      type: task.typeTag?.name ?? "项目",
+diff --git a/src/app/api/ai/task-intake/commit/route.ts b/src/app/api/ai/task-intake/commit/route.ts
+--- a/src/app/api/ai/task-intake/commit/route.ts
++++ b/src/app/api/ai/task-intake/commit/route.ts
+@@ -60,9 +60,16 @@ export async function POST(request: Request) {
+ 
+   const date = parseDateKey(dueDateText);
+   const projectId = String(body.projectId ?? "").trim() || null;
++  let taskTypeName = "项目";
+   if (projectId) {
+-    const project = await getPrisma().project.findUnique({ where: { id: projectId }, select: { id: true } });
++    const project = await getPrisma().project.findUnique({
++      where: { id: projectId },
++      select: { id: true, nameZh: true },
++    });
+     if (!project) return NextResponse.json({ error: "所选项目不存在。" }, { status: 400 });
++    if (/展会/.test(project.nameZh)) taskTypeName = "展会";
++    else if (/培训|课程/.test(project.nameZh)) taskTypeName = "培训";
++    else if (/接待|参访|来访|代表团/.test(project.nameZh)) taskTypeName = "接待";
+   }
+@@ -73,7 +80,7 @@ export async function POST(request: Request) {
+     }),
+     getPrisma().tag.findFirst({
+-      where: { type: TagType.TASK_TYPE, name: "商务沟通" },
++      where: { type: TagType.TASK_TYPE, name: taskTypeName },
+       select: { id: true },
+     }),
