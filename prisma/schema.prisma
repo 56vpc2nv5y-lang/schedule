@@ -339,11 +339,12 @@ model Task {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  project  Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  stage    ProjectStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
-  typeTag  Tag?          @relation("TaskType", fields: [typeTagId], references: [id], onDelete: SetNull)
-  assignee Contact?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  contacts TaskContact[]
+  project          Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage            ProjectStage?     @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  typeTag          Tag?              @relation("TaskType", fields: [typeTagId], references: [id], onDelete: SetNull)
+  assignee         Contact?          @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  contacts         TaskContact[]
+  feedbackFollowUp FeedbackQuestion? @relation("FeedbackFollowUp")
 
   @@index([projectId, status])
   @@index([stageId])
@@ -556,17 +557,19 @@ enum QuestionStatus {
 
 /// 问题反馈清单：甲方提问→整理发供应商→判断回复→追问/开会→确认，逐条跟踪
 model FeedbackQuestion {
-  id        String         @id @default(cuid())
-  projectId String
-  source    String         @default("甲方") // 甲方 / 供应商 / 我方
-  question  String
-  answer    String?
-  note      String? // 追问点/待确认点
-  status    QuestionStatus @default(OPEN)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id             String         @id @default(cuid())
+  projectId      String
+  source         String         @default("甲方") // 甲方 / 供应商 / 我方
+  question       String
+  answer         String?
+  note           String? // 追问点/待确认点
+  followUpTaskId String?        @unique
+  status         QuestionStatus @default(OPEN)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  followUpTask Task?   @relation("FeedbackFollowUp", fields: [followUpTaskId], references: [id], onDelete: SetNull)
 
   @@index([projectId, status])
 }
