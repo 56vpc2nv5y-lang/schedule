@@ -212,10 +212,11 @@ export const getTaskPageData = cache(async () => {
         name,
         organization,
       })),
+      trainingChecklistItems: [],
     };
   }
 
-  const [projects, tasks, contacts] = await Promise.all([
+  const [projects, tasks, contacts, trainingChecklistItems] = await Promise.all([
     getPrisma().project.findMany({
       select: { id: true, nameZh: true, nameEn: true },
       orderBy: { updatedAt: "desc" },
@@ -239,6 +240,23 @@ export const getTaskPageData = cache(async () => {
       select: { id: true, name: true, organization: true },
       orderBy: { name: "asc" },
     }),
+    getPrisma().trainingChecklistItem.findMany({
+      select: {
+        id: true,
+        section: true,
+        label: true,
+        done: true,
+        note: true,
+        sortOrder: true,
+        trainingProfile: {
+          select: {
+            projectId: true,
+            project: { select: { status: true } },
+          },
+        },
+      },
+      orderBy: [{ section: "asc" }, { sortOrder: "asc" }],
+    }),
   ]);
 
   return {
@@ -260,9 +278,17 @@ export const getTaskPageData = cache(async () => {
       assigneeId: task.assigneeId ?? "",
     })),
     contacts,
+    trainingChecklistItems: trainingChecklistItems.map((item) => ({
+      id: item.id,
+      projectId: item.trainingProfile.projectId,
+      projectStatus: item.trainingProfile.project.status,
+      section: item.section,
+      label: item.label,
+      note: item.note ?? "",
+      done: item.done,
+    })),
   };
 });
-
 export const getFilesForView = cache(async () => {
   if (!isDatabaseConfigured()) {
     return seedFiles;
@@ -430,10 +456,22 @@ export const getKnowledgeNotesForView = cache(async () => {
 
 export const getFeedbackQuestionsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedFeedbackQuestions.map((q) => ({ ...q, answer: q.answer ?? "", note: q.note ?? "" }));
+    return seedFeedbackQuestions.map((q) => ({
+      ...q,
+      answer: q.answer ?? "",
+      note: q.note ?? "",
+      followUpTaskId: "",
+      followUpTaskTitle: "",
+      followUpTaskStatus: "",
+    }));
   }
 
   const questions = await getPrisma().feedbackQuestion.findMany({
+    include: {
+      followUpTask: {
+        select: { id: true, title: true, status: true },
+      },
+    },
     orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
   });
   return questions.map((q) => ({
@@ -444,9 +482,11 @@ export const getFeedbackQuestionsForView = cache(async () => {
     answer: q.answer ?? "",
     note: q.note ?? "",
     status: q.status as string,
+    followUpTaskId: q.followUpTaskId ?? "",
+    followUpTaskTitle: q.followUpTask?.title ?? "",
+    followUpTaskStatus: q.followUpTask?.status ?? "",
   }));
 });
-
 // 周计划时间块：date 为空字符串 = 每天例行
 export const getScheduleBlocksForView = cache(async () => {
   if (!isDatabaseConfigured()) {
