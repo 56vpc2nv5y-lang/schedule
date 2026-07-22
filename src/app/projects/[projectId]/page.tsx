@@ -10,7 +10,6 @@ import {
   UsersRound,
 } from "lucide-react";
 import {
-  advanceStageAction,
   createFileLinkAction,
   deleteFileAction,
   updateFileAction,
@@ -18,6 +17,7 @@ import {
   uploadFileAction,
 } from "@/app/actions";
 import { InlineEdit } from "@/components/ui/inline-edit";
+import { TrainingProfilePanel } from "@/app/projects/[projectId]/training-profile";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +37,8 @@ import {
   getProjectStagesForView,
   getProjectTasksForView,
   getProjectTimelineForView,
+  getTrainingProfileForView,
 } from "@/lib/database-data";
-import { ChevronsRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -75,12 +75,13 @@ export default async function ProjectDetailPage({
   const storageReady = isStorageConfigured();
   const dbReady = isDatabaseConfigured();
 
-  const [stages, tasks, files, timeline, contacts] = await Promise.all([
+  const [stages, tasks, files, timeline, contacts, trainingProfile] = await Promise.all([
     getProjectStagesForView(project.id),
     getProjectTasksForView(project.id),
     getProjectFilesForView(project.id),
     getProjectTimelineForView(project.id),
     getContactsForView(),
+    getTrainingProfileForView(project.id),
   ]);
   const contactMap = new Map(contacts.map((contact) => [contact.id, contact]));
   const owner = contactMap.get(project.ownerId);
@@ -90,6 +91,9 @@ export default async function ProjectDetailPage({
   const supplierContacts = project.supplierContactIds
     .map((id) => contactMap.get(id))
     .filter(isContact);
+  const activeStages = stages.filter(
+    (stage) => stage.status === "IN_PROGRESS" || stage.status === "DELAYED",
+  );
 
   return (
     <AppShell>
@@ -98,7 +102,8 @@ export default async function ProjectDetailPage({
         title={projectDisplayName(locale, project)}
         description={[
           locale === "en" ? project.nameZh : project.nameEn,
-          `${project.clientName} · ${t.projects.progress} ${project.completedStageCount}/${project.totalStageCount}`,
+          `${project.clientName} · 已完成检查点 ${project.completedStageCount}/${project.totalStageCount}`,
+          activeStages.length > 0 ? `当前并行 ${activeStages.length} 项` : "当前无进行中事项",
         ]
           .filter(Boolean)
           .join(" — ")}
@@ -138,54 +143,45 @@ export default async function ProjectDetailPage({
         </div>
       ) : null}
 
+      {updated === "training" || updated === "training-checklist" ? (
+        <div className="mb-5 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          培训台账已保存。
+        </div>
+      ) : null}
+
+      {trainingProfile ? <TrainingProfilePanel profile={trainingProfile} /> : null}
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
           <Card>
             <CardHeader className="border-b border-border">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <CardTitle>{t.detail.stageTimeline}</CardTitle>
-                {dbReady
-                  ? (() => {
-                      const current =
-                        stages.find((s) => s.status === "IN_PROGRESS") ??
-                        stages.find((s) => s.status === "DELAYED") ??
-                        stages.find((s) => s.status === "NOT_STARTED");
-                      if (!current) return null;
-                      const hasNext = stages.some(
-                        (s) =>
-                          s.sortOrder > current.sortOrder &&
-                          s.status === "NOT_STARTED",
-                      );
-                      return (
-                        <form action={advanceStageAction}>
-                          <input
-                            type="hidden"
-                            name="projectId"
-                            value={project.id}
-                          />
-                          <Button type="submit" size="sm">
-                            <ChevronsRight className="h-4 w-4" />
-                            {hasNext
-                              ? t.detail.advance(current.name)
-                              : t.detail.advanceLast(current.name)}
-                          </Button>
-                        </form>
-                      );
-                    })()
-                  : null}
+                <CardTitle>推进地图</CardTitle>
+                <Badge tone={activeStages.length > 0 ? "info" : "neutral"}>
+                  {activeStages.length > 0 ? `并行推进 ${activeStages.length} 项` : "等待下一轮"}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="pt-5">
+              {activeStages.length > 0 ? (
+                <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-border pb-4">
+                  <span className="text-xs text-muted-foreground">本轮重点</span>
+                  {activeStages.map((stage) => (
+                    <Badge key={stage.id} tone={stage.status === "DELAYED" ? "risk" : "info"}>
+                      {stage.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
               <div>
-                {stages.map((stage, index) => {
-                  const isLast = index === stages.length - 1;
+                {stages.map((stage) => {
                   const taskCount = tasks.filter(
                     (task) => task.stageId === stage.id,
                   ).length;
 
                   return (
-                    <div key={stage.id} className="relative flex gap-4">
-                      <div className="relative flex w-8 flex-col items-center">
+                    <div key={stage.id} className="flex gap-4 border-b border-border py-4 last:border-b-0">
+                      <div className="flex w-8 flex-col items-center">
                         <span
                           className={cn(
                             "z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-card text-xs font-semibold",
@@ -194,11 +190,8 @@ export default async function ProjectDetailPage({
                         >
                           {stage.sortOrder}
                         </span>
-                        {!isLast ? (
-                          <span className="w-0.5 flex-1 bg-border" />
-                        ) : null}
                       </div>
-                      <div className={cn("min-w-0 flex-1", isLast ? "pb-1" : "pb-6")}>
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h2 className="text-sm font-semibold">{stage.name}</h2>
                           <StageStatusPill status={stage.status} />
@@ -330,7 +323,7 @@ export default async function ProjectDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>{t.detail.activity}</CardTitle>
+              <CardTitle>操作与交付记录</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {timeline.map((event) => (

@@ -23,6 +23,7 @@ import {
 } from "@/lib/database-data";
 import { TodayTaskCheck } from "./today-task-check";
 import { TodayTimeline } from "./today-timeline";
+import { ReminderButton } from "./reminder-button";
 import type { TripSegment, WeekBlock } from "../week/week-board";
 import { parseTimeToMin } from "../week/timeline-shared";
 
@@ -129,6 +130,11 @@ export default async function TodayPage() {
           </h1>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
+          <ReminderButton
+            overdue={overdue.length}
+            dueToday={dueToday.length}
+            receptions={prepCount}
+          />
           <Link href="/week?new=1#new">
             <Button variant="outline">
               <Plus className="h-4 w-4" />

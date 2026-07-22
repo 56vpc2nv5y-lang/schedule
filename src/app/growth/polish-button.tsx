@@ -8,10 +8,14 @@ import { useDict } from "@/components/layout/locale-provider";
 export function PolishButton({
   title,
   detail,
+  projectName,
+  happenedAt,
   configured,
 }: {
   title: string;
   detail?: string;
+  projectName?: string;
+  happenedAt: string;
   configured: boolean;
 }) {
   const t = useDict();
@@ -30,7 +34,12 @@ export function PolishButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "resume",
-          input: detail ? `${title}\n补充背景：${detail}` : title,
+          input: [
+            `项目：${projectName || "内部工作"}`,
+            `日期：${happenedAt}`,
+            `成果标题：${title}`,
+            detail ? `事实证据：${detail}` : "事实证据：未补充",
+          ].join("\n"),
         }),
       });
       const data = await res.json();
@@ -62,7 +71,7 @@ export function PolishButton({
         ) : (
           <Sparkles className="h-3.5 w-3.5" />
         )}
-        {loading ? t.growth.aiWorking : t.growth.aiPolish}
+        {loading ? t.growth.aiWorking : "生成简历要点"}
       </button>
 
       {error ? (
@@ -73,7 +82,7 @@ export function PolishButton({
       {result ? (
         <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <div className="flex items-start justify-between gap-2">
-            <div className="whitespace-pre-wrap text-sm leading-6">{result}</div>
+            <div className="min-w-0 whitespace-pre-wrap break-words text-sm leading-6">{result}</div>
             <button
               onClick={copy}
               className="shrink-0 text-muted-foreground hover:text-primary"

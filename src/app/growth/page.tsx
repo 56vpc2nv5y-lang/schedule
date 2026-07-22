@@ -16,9 +16,10 @@ import { growthCategoryMeta, type GrowthCategory } from "@/lib/default-data";
 import { isAiConfigured } from "@/lib/ai";
 import { getT } from "@/lib/locale";
 import { projectDisplayName } from "@/lib/i18n";
-import { getGrowthLogsForView, getProjectsForView } from "@/lib/database-data";
-import { TripMap } from "@/components/trip-map";
-import { PolishButton } from "./polish-button";
+import { getGrowthLogsForView, getProjectsForView, getResumePointsForView } from "@/lib/database-data";
+import { ResumeCoach } from "./resume-coach";
+import { ResumePointsLibrary } from "./resume-points-library";
+import { ResumeBaseline } from "./resume-baseline";
 
 export const dynamic = "force-dynamic";
 
@@ -38,19 +39,22 @@ export default async function GrowthPage({
     created?: string;
     error?: string;
     new?: string;
+    resumePoint?: string;
   }>;
 }) {
-  const [{ setup, created, error, new: openForm }, { locale, t }, logs, projects, aiReady] =
+  const [{ setup, created, error, new: openForm, resumePoint }, { locale, t }, logs, projects, resumePoints, aiReady] =
     await Promise.all([
       searchParams,
       getT(),
       getGrowthLogsForView(),
       getProjectsForView(),
+      getResumePointsForView(),
       isAiConfigured(),
     ]);
   const projectMap = new Map(projects.map((project) => [project.id, project]));
   const pname = (p: { nameZh: string; nameEn?: string }) =>
     projectDisplayName(locale, p);
+  const projectOptions = projects.map((project) => ({ id: project.id, name: pname(project) }));
 
   return (
     <AppShell>
@@ -59,12 +63,15 @@ export default async function GrowthPage({
         title={t.growth.title}
         description={t.growth.desc}
         action={
-          <Link href="/growth?new=1#new">
-            <Button>
-              <Plus className="h-4 w-4" />
-              {t.growth.addOne}
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <ResumeCoach configured={aiReady} projects={projectOptions} />
+            <Link href="/growth?new=1#new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                {t.growth.addOne}
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -78,15 +85,20 @@ export default async function GrowthPage({
           {t.growth.savedMsg}
         </div>
       ) : null}
-      {error === "missing-required" ? (
+      {resumePoint === "saved" ? (
+        <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          简历要点已收藏，可在下方继续编辑。
+        </div>
+      ) : null}
+      {error === "missing-required" || error === "missing-resume-point" ? (
         <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
           {t.common.required}
         </div>
       ) : null}
 
-      <div className="mb-5">
-        <TripMap />
-      </div>
+      <ResumeBaseline />
+
+      <ResumePointsLibrary points={resumePoints} projects={projectOptions} />
 
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {categoryOrder.map((category) => {
@@ -149,10 +161,16 @@ export default async function GrowthPage({
                           </p>
                         ) : null}
                         <div className="mt-2 flex items-center gap-4">
-                          <PolishButton
-                            title={log.title}
-                            detail={log.detail}
+                          <ResumeCoach
                             configured={aiReady}
+                            projects={projectOptions}
+                            source={{
+                              title: log.title,
+                              detail: log.detail,
+                              projectId: log.projectId,
+                              projectName: project ? pname(project) : "",
+                              happenedAt: log.happenedAt,
+                            }}
                           />
                           <InlineEdit label={t.common.edit}>
                             <form

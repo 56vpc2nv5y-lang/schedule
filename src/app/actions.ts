@@ -295,7 +295,10 @@ export async function createTaskAction(formData: FormData) {
     redirect("/tasks?error=missing-required");
   }
 
-  const typeTag = await ensureTag(TagType.TASK_TYPE, typeName || "商务沟通");
+  const typeTag = await ensureTag(
+    TagType.TASK_TYPE,
+    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "项目",
+  );
 
   await getPrisma().task.create({
     data: {
@@ -400,7 +403,10 @@ export async function updateTaskAction(formData: FormData) {
   const assigneeId = getString(formData, "assigneeId");
   const dueDate = getDate(formData, "dueDate");
   const priority = parsePriority(getString(formData, "priority"));
-  const typeTag = await ensureTag(TagType.TASK_TYPE, typeName || "商务沟通");
+  const typeTag = await ensureTag(
+    TagType.TASK_TYPE,
+    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "项目",
+  );
 
   const previous = await getPrisma().task.findUnique({
     where: { id: taskId },
@@ -781,6 +787,46 @@ export async function createResourceAction(formData: FormData) {
 
   revalidatePath("/resources");
   redirect("/resources?created=resource");
+}
+
+export async function uploadResourceAction(formData: FormData) {
+  requireDatabase("/resources");
+
+  const file = formData.get("file");
+  const name = getString(formData, "name");
+  const category = getString(formData, "category") || "其他";
+  const note = getString(formData, "note");
+  const important = getString(formData, "important") === "on";
+
+  if (!isStorageConfigured()) {
+    redirect("/resources?new=1&error=storage-not-configured#new");
+  }
+  if (!(file instanceof File) || file.size === 0) {
+    redirect("/resources?new=1&error=file-empty#new");
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    redirect("/resources?new=1&error=file-too-large#new");
+  }
+
+  let url: string;
+  try {
+    url = await uploadToBucket(file, "resources");
+  } catch {
+    redirect("/resources?new=1&error=upload-failed#new");
+  }
+
+  await getPrisma().resource.create({
+    data: {
+      name: name || file.name,
+      category,
+      url: url!,
+      note: note || null,
+      important,
+    },
+  });
+
+  revalidatePath("/resources");
+  redirect("/resources?created=resource-upload");
 }
 
 export async function updateResourceAction(formData: FormData) {
@@ -1504,7 +1550,7 @@ export async function loginAction(formData: FormData) {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 60 * 24 * 365,
   });
   redirect("/today");
 }
@@ -1523,7 +1569,7 @@ export async function saveAppPasswordAction(formData: FormData) {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: 60 * 60 * 24 * 365,
     });
   }
   revalidatePath("/settings");
@@ -1592,6 +1638,125 @@ export async function updateStageAction(formData: FormData) {
   redirect(`/projects/${stage.projectId}?updated=stage`);
 }
 
+const TRAINING_PHASES = [
+  "课程大纲",
+  "核算成本",
+  "报价",
+  "合同签署 / 招标采购",
+  "筹备",
+  "暂停 / 重启复核",
+] as const;
+
+function optionalNumber(formData: FormData, key: string) {
+  const value = getString(formData, key);
+  if (!value) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function optionalInteger(formData: FormData, key: string) {
+  const number = optionalNumber(formData, key);
+  return number === null ? null : Math.max(0, Math.round(number));
+}
+
+export async function updateTrainingProfileAction(formData: FormData) {
+  requireDatabase("/projects");
+  const projectId = getString(formData, "projectId");
+  if (!projectId) redirect("/projects");
+
+  const requestedPhase = getString(formData, "currentPhase");
+  const currentPhase = TRAINING_PHASES.includes(
+    requestedPhase as (typeof TRAINING_PHASES)[number],
+  )
+    ? requestedPhase
+    : "课程大纲";
+  const text = (key: string) => getString(formData, key) || null;
+
+  await getPrisma().trainingProfile.upsert({
+    where: { projectId },
+    create: {
+      projectId,
+      currentPhase,
+      clientContactName: text("clientContactName"),
+      clientContactInfo: text("clientContactInfo"),
+      topicSource: text("topicSource"),
+      topicCount: optionalInteger(formData, "topicCount"),
+      participantCount: optionalInteger(formData, "participantCount"),
+      totalDays: optionalNumber(formData, "totalDays"),
+      dailyHours: optionalNumber(formData, "dailyHours"),
+      location: text("location"),
+      budget: optionalNumber(formData, "budget"),
+      currency: getString(formData, "currency") || "CNY",
+      costOwnership: text("costOwnership"),
+      internalCostNote: text("internalCostNote"),
+      quoteRound: optionalInteger(formData, "quoteRound") || 1,
+      internalContractStatus: text("internalContractStatus"),
+      clientContractStatus: text("clientContractStatus"),
+      depositNote: text("depositNote"),
+      prepaymentPercent: optionalNumber(formData, "prepaymentPercent"),
+      paymentMilestones: text("paymentMilestones"),
+      reportingStatus: text("reportingStatus"),
+      postponed: getString(formData, "postponed") === "on",
+    },
+    update: {
+      currentPhase,
+      clientContactName: text("clientContactName"),
+      clientContactInfo: text("clientContactInfo"),
+      topicSource: text("topicSource"),
+      topicCount: optionalInteger(formData, "topicCount"),
+      participantCount: optionalInteger(formData, "participantCount"),
+      totalDays: optionalNumber(formData, "totalDays"),
+      dailyHours: optionalNumber(formData, "dailyHours"),
+      location: text("location"),
+      budget: optionalNumber(formData, "budget"),
+      currency: getString(formData, "currency") || "CNY",
+      costOwnership: text("costOwnership"),
+      internalCostNote: text("internalCostNote"),
+      quoteRound: optionalInteger(formData, "quoteRound") || 1,
+      internalContractStatus: text("internalContractStatus"),
+      clientContractStatus: text("clientContractStatus"),
+      depositNote: text("depositNote"),
+      prepaymentPercent: optionalNumber(formData, "prepaymentPercent"),
+      paymentMilestones: text("paymentMilestones"),
+      reportingStatus: text("reportingStatus"),
+      postponed: getString(formData, "postponed") === "on",
+    },
+  });
+
+  await getPrisma().timelineEvent.create({
+    data: {
+      projectId,
+      entityType: "TrainingProfile",
+      entityId: projectId,
+      action: "培训台账更新",
+      message: `培训项目字段已更新，当前阶段为「${currentPhase}」。`,
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+  redirect(`/projects/${projectId}?updated=training`);
+}
+
+export async function toggleTrainingChecklistAction(formData: FormData) {
+  requireDatabase("/projects");
+  const itemId = getString(formData, "itemId");
+  const done = getString(formData, "done") === "true";
+  if (!itemId) redirect("/projects");
+
+  const item = await getPrisma().trainingChecklistItem.update({
+    where: { id: itemId },
+    data: { done },
+    select: {
+      trainingProfile: { select: { projectId: true } },
+    },
+  });
+  const projectId = item.trainingProfile.projectId;
+  revalidatePath("/");
+  revalidatePath(`/projects/${projectId}`);
+  redirect(`/projects/${projectId}?updated=training-checklist`);
+}
 // ── 设置：标签 / 文件类型 / 角色 / 阶段模板 增删改 ────────
 
 export async function createTagAction(formData: FormData) {
@@ -1940,6 +2105,66 @@ export async function deleteGrowthLogAction(formData: FormData) {
   revalidatePath("/growth");
 }
 
+export async function createResumePointAction(formData: FormData) {
+  requireDatabase("/growth");
+
+  const title = getString(formData, "title");
+  const chinese = getString(formData, "chinese");
+  const english = getString(formData, "english");
+  if (!title || !chinese || !english) {
+    redirect("/growth?error=missing-resume-point");
+  }
+
+  await getPrisma().resumePoint.create({
+    data: {
+      title,
+      chinese,
+      english,
+      sourceNote: getString(formData, "sourceNote") || null,
+      projectId: getString(formData, "projectId") || null,
+    },
+  });
+
+  revalidatePath("/growth");
+  redirect("/growth?resumePoint=saved");
+}
+
+export async function updateResumePointAction(formData: FormData) {
+  requireDatabase("/growth");
+
+  const id = getString(formData, "id");
+  const title = getString(formData, "title");
+  const chinese = getString(formData, "chinese");
+  const english = getString(formData, "english");
+  if (!id || !title || !chinese || !english) {
+    redirect("/growth?error=missing-resume-point");
+  }
+
+  await getPrisma().resumePoint.update({
+    where: { id },
+    data: {
+      title,
+      chinese,
+      english,
+      sourceNote: getString(formData, "sourceNote") || null,
+      projectId: getString(formData, "projectId") || null,
+    },
+  });
+
+  revalidatePath("/growth");
+  redirect("/growth?resumePoint=saved");
+}
+
+export async function deleteResumePointAction(formData: FormData) {
+  requireDatabase("/growth");
+
+  const id = getString(formData, "id");
+  if (id) {
+    await getPrisma().resumePoint.delete({ where: { id } }).catch(() => {});
+  }
+
+  revalidatePath("/growth");
+}
 // ── 数据导入（恢复联系人 / 资料库这类独立记录）──────────
 
 export async function importDataAction(formData: FormData) {

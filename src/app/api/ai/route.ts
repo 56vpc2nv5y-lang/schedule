@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { AI_MODES, isAiConfigured, runDeepseek, type AiMode } from "@/lib/ai";
+import { isAiConfigured, runDeepseek } from "@/lib/ai";
+import { AI_MODES, type AiMode } from "@/lib/ai-modes";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

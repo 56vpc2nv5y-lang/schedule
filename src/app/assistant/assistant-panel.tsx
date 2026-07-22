@@ -15,9 +15,10 @@ import {
   createPromptTemplateAction,
   deletePromptTemplateAction,
 } from "@/app/actions";
-import { AI_MODES, PROMPT_PRESETS, type AiMode } from "@/lib/ai";
+import { AI_MODES, PROMPT_PRESETS, type AiMode } from "@/lib/ai-modes";
 import { Button } from "@/components/ui/button";
 import { useDict } from "@/components/layout/locale-provider";
+import { TaskIntakePanel } from "@/app/assistant/task-intake-panel";
 
 type Template = { id: string; name: string; content: string };
 
@@ -40,10 +41,12 @@ export function AssistantPanel({
   configured,
   templates,
   dbReady,
+  projects,
 }: {
   configured: boolean;
   templates: Template[];
   dbReady: boolean;
+  projects: { id: string; name: string }[];
 }) {
   const t = useDict();
   const [initialWeek] = useState(currentWeekRange);
@@ -125,6 +128,8 @@ export function AssistantPanel({
 
   return (
     <div className="space-y-5">
+      <TaskIntakePanel projects={projects} dbReady={dbReady} />
+
       {!configured ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
           <span>{t.assistant.notConfigured}</span>

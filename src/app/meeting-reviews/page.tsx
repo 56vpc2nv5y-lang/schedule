@@ -14,6 +14,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollapseCard } from "@/components/ui/collapse-card";
 import { getT } from "@/lib/locale";
@@ -94,6 +95,9 @@ export default async function MeetingReviewsPage({
 
       {created === "review" ? <Banner tone="ok">{t.common.saved}</Banner> : null}
       {created === "round" ? <Banner tone="ok">{t.common.saved}</Banner> : null}
+      {created === "question" || created === "question-updated" ? (
+        <Banner tone="ok">问题记录已保存。</Banner>
+      ) : null}
       {created === "finalized" ? (
         <Banner tone="ok">{t.meetings.finalizedNote}</Banner>
       ) : null}
@@ -250,9 +254,13 @@ export default async function MeetingReviewsPage({
                       </select>
                     </label>
                     <div className="flex items-end">
-                      <Button type="submit" size="sm" variant="outline">
+                      <SubmitButton
+                        size="sm"
+                        variant="outline"
+                        pendingLabel="保存中..."
+                      >
                         {t.questions.updateBtn}
-                      </Button>
+                      </SubmitButton>
                     </div>
                   </form>
                 </div>

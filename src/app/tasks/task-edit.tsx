@@ -23,11 +23,13 @@ export function TaskEditButton({
   projects,
   contacts,
   taskTypes,
+  trigger = "icon",
 }: {
   task: Task;
   projects: { id: string; name: string }[];
   contacts: { id: string; name: string; organization: string }[];
   taskTypes: readonly string[];
+  trigger?: "icon" | "title";
 }) {
   const t = useDict();
   const [open, setOpen] = useState(false);
@@ -35,16 +37,27 @@ export function TaskEditButton({
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        type="button"
-        className="h-8 w-8"
-        title={t.common.edit}
-        onClick={() => setOpen(true)}
-      >
-        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-      </Button>
+      {trigger === "title" ? (
+        <button
+          type="button"
+          className="block w-full text-left font-medium hover:text-primary hover:underline"
+          title={t.common.edit}
+          onClick={() => setOpen(true)}
+        >
+          {task.title}
+        </button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t.common.edit}
+          onClick={() => setOpen(true)}
+        >
+          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      )}
 
       {open ? (
         <div

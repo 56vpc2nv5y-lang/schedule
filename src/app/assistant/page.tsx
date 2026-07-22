@@ -3,16 +3,17 @@ import { PageHeader } from "@/components/layout/page-header";
 import { isAiConfigured } from "@/lib/ai";
 import { isDatabaseConfigured } from "@/lib/db-status";
 import { getT } from "@/lib/locale";
-import { getPromptTemplatesForView } from "@/lib/database-data";
+import { getProjectsForView, getPromptTemplatesForView } from "@/lib/database-data";
 import { AssistantPanel } from "./assistant-panel";
 
 export const dynamic = "force-dynamic";
 
 export default async function AssistantPage() {
-  const [{ t }, configured, templates] = await Promise.all([
+  const [{ t }, configured, templates, projects] = await Promise.all([
     getT(),
     isAiConfigured(),
     getPromptTemplatesForView(),
+    getProjectsForView(),
   ]);
 
   return (
@@ -26,6 +27,9 @@ export default async function AssistantPage() {
         configured={configured}
         templates={templates}
         dbReady={isDatabaseConfigured()}
+        projects={projects
+          .filter((project) => project.status !== "ARCHIVED")
+          .map((project) => ({ id: project.id, name: project.nameZh }))}
       />
     </AppShell>
   );

@@ -20,7 +20,6 @@ import {
   importDataAction,
   initializeDefaultsAction,
   renameStageTemplateItemAction,
-  saveAppPasswordAction,
   saveDeepseekKeyAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/layout/app-shell";
@@ -108,24 +107,12 @@ export default async function SettingsPage({
           title={t.settings.security}
           description={t.settings.securityHint}
         >
-          {dbReady ? (
-            <form action={saveAppPasswordAction} className="flex gap-2">
-              <input
-                type="password"
-                name="password"
-                placeholder={t.settings.newPassword}
-                className="field"
-                autoComplete="new-password"
-              />
-              <Button type="submit" size="sm" className="h-9 shrink-0">
-                {t.settings.savePassword}
-              </Button>
-            </form>
-          ) : (
-            <p className="text-xs leading-5 text-muted-foreground">
-              {t.settings.securityNeedDb}
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge tone="done">自动进入</Badge>
+            <p className="text-sm text-muted-foreground">
+              个人设备模式已启用，内置口令 <code>sunny</code>，无需再次登录。
             </p>
-          )}
+          </div>
         </SettingCard>
 
         <SettingCard

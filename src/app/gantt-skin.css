@@ -1,0 +1,58 @@
+/* Gantt color details shared by the two installed skins. */
+html[data-skin="vibrant"] .blueprint-gantt-summary-bar {
+  background: oklch(0.48 0.17 278);
+  color: oklch(0.99 0.006 278);
+  box-shadow: 0 2px 5px oklch(0.37 0.13 278 / 0.2);
+}
+
+html[data-skin="vibrant"] .blueprint-gantt-summary-bar:hover {
+  background: oklch(0.44 0.17 278);
+}
+
+html[data-skin="vibrant"] .blueprint-gantt-stage-bar.bg-indigo-600,
+html[data-skin="vibrant"] .blueprint-gantt-header .bg-indigo-600 {
+  background: oklch(0.57 0.18 274);
+}
+
+html[data-skin="vibrant"] .blueprint-gantt-stage-bar.bg-emerald-600,
+html[data-skin="vibrant"] .blueprint-gantt-header .bg-emerald-600 {
+  background: oklch(0.58 0.14 157);
+}
+
+html[data-skin="vibrant"] .blueprint-gantt-stage-bar.bg-red-600,
+html[data-skin="vibrant"] .blueprint-gantt-header .bg-red-600 {
+  background: oklch(0.62 0.2 25);
+}
+
+html[data-skin="vibrant"] .blueprint-gantt-stage-bar.bg-slate-500 {
+  background: oklch(0.6 0.055 255);
+}
+
+html[data-skin="sunset"] .blueprint-gantt-summary-bar {
+  background: oklch(0.47 0.115 35);
+  color: oklch(0.99 0.008 70);
+  box-shadow: 0 2px 5px oklch(0.4 0.09 35 / 0.2);
+}
+
+html[data-skin="sunset"] .blueprint-gantt-summary-bar:hover {
+  background: oklch(0.43 0.115 35);
+}
+
+html[data-skin="sunset"] .blueprint-gantt-stage-bar.bg-indigo-600,
+html[data-skin="sunset"] .blueprint-gantt-header .bg-indigo-600 {
+  background: oklch(0.63 0.18 34);
+}
+
+html[data-skin="sunset"] .blueprint-gantt-stage-bar.bg-emerald-600,
+html[data-skin="sunset"] .blueprint-gantt-header .bg-emerald-600 {
+  background: oklch(0.58 0.105 143);
+}
+
+html[data-skin="sunset"] .blueprint-gantt-stage-bar.bg-red-600,
+html[data-skin="sunset"] .blueprint-gantt-header .bg-red-600 {
+  background: oklch(0.57 0.18 25);
+}
+
+html[data-skin="sunset"] .blueprint-gantt-stage-bar.bg-slate-500 {
+  background: oklch(0.62 0.055 55);
+}

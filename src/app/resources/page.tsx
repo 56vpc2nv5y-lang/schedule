@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { ExternalLink, FolderOpen, Plus, Star } from "lucide-react";
-import {
-  createResourceAction,
-  deleteResourceAction,
-  updateResourceAction,
-} from "@/app/actions";
+import { deleteResourceAction, updateResourceAction } from "@/app/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +12,8 @@ import { resourceCategories } from "@/lib/default-data";
 import { getT } from "@/lib/locale";
 import type { Dict } from "@/lib/i18n";
 import { getResourcesForView } from "@/lib/database-data";
+import { isStorageConfigured } from "@/lib/storage";
+import { ResourceCreatePanel } from "@/app/resources/resource-create-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +24,7 @@ export default async function ResourcesPage({
 }) {
   const [{ created, error, new: openForm }, { t }, resources] =
     await Promise.all([searchParams, getT(), getResourcesForView()]);
+  const storageReady = isStorageConfigured();
 
   const important = resources.filter((r) => r.important);
   const byCategory = resourceCategories
@@ -51,7 +50,7 @@ export default async function ResourcesPage({
         }
       />
 
-      {created === "resource" ? (
+      {created === "resource" || created === "resource-upload" ? (
         <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
           {t.common.saved}
         </div>
@@ -59,6 +58,26 @@ export default async function ResourcesPage({
       {error === "missing-required" ? (
         <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
           {t.common.required}
+        </div>
+      ) : null}
+      {error === "file-empty" ? (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          请选择需要上传的文件。
+        </div>
+      ) : null}
+      {error === "file-too-large" ? (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          文件超过 20MB，请压缩后重试或改为登记网盘链接。
+        </div>
+      ) : null}
+      {error === "storage-not-configured" ? (
+        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          文件存储尚未配置，请先到设置页检查 Supabase Storage。
+        </div>
+      ) : null}
+      {error === "upload-failed" ? (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          上传失败。请检查存储桶是否存在、是否允许上传，然后重试。
         </div>
       ) : null}
 
@@ -117,41 +136,7 @@ export default async function ResourcesPage({
         title={t.resources.newResource}
         open={openForm === "1" || Boolean(error)}
       >
-        <form action={createResourceAction} className="grid gap-4 lg:grid-cols-6">
-          <label className="lg:col-span-2">
-            <span className="flabel">{t.resources.fName}</span>
-            <input name="name" className="field" />
-          </label>
-          <label>
-            <span className="flabel">{t.resources.fCategory}</span>
-            <select name="category" className="field" defaultValue="公司模板">
-              {resourceCategories.map((category) => (
-                <option key={category}>{category}</option>
-              ))}
-            </select>
-          </label>
-          <label className="lg:col-span-3">
-            <span className="flabel">{t.resources.fUrl}</span>
-            <input name="url" placeholder="https://" className="field" />
-          </label>
-          <label className="lg:col-span-4">
-            <span className="flabel">{t.resources.fNote}</span>
-            <input name="note" className="field" />
-          </label>
-          <label className="flex items-center gap-2 self-end text-sm">
-            <input type="checkbox" name="important" className="h-4 w-4" />
-            <span className="flex items-center gap-1">
-              <Star className="h-3.5 w-3.5 text-amber-500" />
-              {t.resources.fImportant}
-            </span>
-          </label>
-          <div className="flex items-end">
-            <Button className="w-full" type="submit">
-              <Plus className="h-4 w-4" />
-              {t.common.save}
-            </Button>
-          </div>
-        </form>
+        <ResourceCreatePanel categories={resourceCategories} storageReady={storageReady} />
       </CollapseCard>
     </AppShell>
   );

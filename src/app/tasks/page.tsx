@@ -207,7 +207,16 @@ export default async function TasksPage({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium">{task.title}</div>
+                        <TaskEditButton
+                          trigger="title"
+                          task={task}
+                          projects={projects.map((project) => ({
+                            id: project.id,
+                            name: pname(project),
+                          }))}
+                          contacts={contacts}
+                          taskTypes={taskTypes}
+                        />
                         {assignee ? (
                           <div className="mt-0.5 text-xs text-muted-foreground">
                             {assignee.name}
@@ -243,15 +252,6 @@ export default async function TasksPage({
                             taskId={task.id}
                             value={task.status}
                             options={statusOptions}
-                          />
-                          <TaskEditButton
-                            task={task}
-                            projects={projects.map((project) => ({
-                              id: project.id,
-                              name: pname(project),
-                            }))}
-                            contacts={contacts}
-                            taskTypes={taskTypes}
                           />
                           <form action={deleteTaskAction}>
                             <input type="hidden" name="taskId" value={task.id} />
