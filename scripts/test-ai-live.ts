@@ -1,4 +1,5 @@
-import { AI_MODES, isAiConfigured, runDeepseek, type AiMode } from "../src/lib/ai";
+import { isAiConfigured, runDeepseek } from "../src/lib/ai";
+import { AI_MODES, type AiMode } from "../src/lib/ai-modes";
 
 type Case = {
   mode: AiMode;

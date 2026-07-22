@@ -80,6 +80,7 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  const autoLoginPassed = !page.url().includes("/login");
   if (page.url().includes("/login")) {
     const password = await appPassword();
     if (!password) throw new Error("Login is required but no password is available.");
@@ -89,6 +90,8 @@ try {
       page.getByRole("button", { name: "进入", exact: true }).click(),
     ]);
   }
+
+  checks.push({ name: "personal-auto-login", passed: autoLoginPassed });
 
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
   const dashboardText = await page.locator("body").innerText();
@@ -122,7 +125,39 @@ try {
     fullPage: true,
   });
 
-  await page.goto(`${baseUrl}/tasks`, { waitUntil: "networkidle" });
+  await page.setViewportSize({ width: 915, height: 760 });
+  await page.evaluate(() => localStorage.setItem("skin", "blueprint"));
+  await page.reload({ waitUntil: "networkidle" });
+  const tabletLayout = await page.evaluate(() => {
+    const sidebar = document.querySelector(".app-sidebar");
+    const mobileHeader = document.querySelector(".mobile-app-header");
+    const main = document.querySelector(".app-main");
+    return {
+      skin: document.documentElement.getAttribute("data-skin"),
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : "",
+      mobileDisplay: mobileHeader ? getComputedStyle(mobileHeader).display : "",
+      mainLeft: main?.getBoundingClientRect().left ?? 0,
+      swatches: document.querySelectorAll(".skin-toggle button").length,
+      overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    };
+  });
+  checks.push({
+    name: "tablet-sidebar-no-sticky-nav-overlap",
+    passed:
+      tabletLayout.skin === "vibrant" &&
+      tabletLayout.sidebarDisplay !== "none" &&
+      tabletLayout.mobileDisplay === "none" &&
+      tabletLayout.mainLeft >= 240 &&
+      tabletLayout.swatches === 2 &&
+      !tabletLayout.overflow,
+  });
+  await page.screenshot({
+    path: path.join(outputDir, "dashboard-tablet-915.png"),
+    fullPage: false,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
+  await page.goto(`${baseUrl}/tasks?new=1`, { waitUntil: "networkidle" });
   const taskText = await page.locator("body").innerText();
   const editButtons = page.getByTitle("编辑");
   const hasEdit = (await editButtons.count()) > 0;
@@ -136,11 +171,24 @@ try {
       (await dialog.locator('textarea[name="description"]').count()) === 1;
     await dialog.getByRole("button", { name: "取消", exact: true }).click();
   }
+  const createTypeOptions = await page
+    .locator('form select[name="type"]')
+    .last()
+    .locator("option")
+    .allTextContents();
+  const dbTaskTypes = await prisma.tag.findMany({
+    where: { type: "TASK_TYPE" },
+    orderBy: { sortOrder: "asc" },
+    select: { name: true },
+  });
   checks.push({
-    name: "task-edit-and-classification",
+    name: "task-edit-and-four-categories",
     passed:
       taskText.includes("非项目任务") &&
       !taskText.includes("项目待办和个人杂事") &&
+      JSON.stringify(createTypeOptions) === JSON.stringify(["接待", "培训", "项目", "展会"]) &&
+      JSON.stringify(dbTaskTypes.map((item) => item.name)) ===
+        JSON.stringify(["接待", "培训", "项目", "展会"]) &&
       hasEdit &&
       editDialogPassed,
   });
@@ -164,6 +212,76 @@ try {
       !projectsText.includes("生命周期进度"),
   });
 
+  await page.goto(baseUrl + "/growth", { waitUntil: "networkidle" });
+  const baseline = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "现有简历基线", exact: true }),
+  });
+  const baselineStyle = await baseline.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      borderRadius: style.borderRadius,
+      borderTop: style.borderTopWidth,
+      borderLeft: style.borderLeftWidth,
+    };
+  });
+  const baselineCardPassed =
+    baselineStyle.borderRadius !== "0px" &&
+    baselineStyle.borderTop !== "0px" &&
+    baselineStyle.borderLeft !== "0px";
+  const globalCoach = page.getByRole("button", { name: "简历对话", exact: true });
+  const hasGlobalCoach = (await globalCoach.count()) === 1;
+  let globalDialogPassed = false;
+  if (hasGlobalCoach) {
+    await globalCoach.click();
+    const dialog = page.getByRole("dialog", { name: "简历对话助手" });
+    globalDialogPassed =
+      (await dialog.count()) === 1 &&
+      (await dialog.locator("textarea").count()) === 1 &&
+      (await dialog.getByText("像和编辑一起改稿：先给可用版本，再围绕事实、语气和岗位逐步调整。").count()) === 1;
+    await dialog.getByTitle("关闭").click();
+  }
+  const sourceCoach = page.getByRole("button", { name: "在对话中润色", exact: true }).first();
+  const hasSourceCoach = (await sourceCoach.count()) === 1;
+  let sourceContextPassed = false;
+  if (hasSourceCoach) {
+    await sourceCoach.click();
+    const dialog = page.getByRole("dialog", { name: "简历对话助手" });
+    const preparedInput = await dialog.locator("textarea").inputValue();
+    sourceContextPassed = preparedInput.includes("经历标题：") && preparedInput.includes("候选要点");
+    await dialog.getByTitle("关闭").click();
+  }
+  checks.push({
+    name: "growth-resume-conversation-and-favorites",
+    passed: baselineCardPassed && hasGlobalCoach && globalDialogPassed && hasSourceCoach && sourceContextPassed,
+  });
+  await page.screenshot({
+    path: path.join(outputDir, "growth-resume-dialog.png"),
+    fullPage: false,
+  });
+
+  await page.goto(baseUrl + "/assistant", { waitUntil: "networkidle" });
+  const intake = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "说完就记进看板", exact: true }),
+  });
+  const intakeStyle = await intake.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      borderRadius: style.borderRadius,
+      borderTop: style.borderTopWidth,
+      borderLeft: style.borderLeftWidth,
+    };
+  });
+  checks.push({
+    name: "assistant-intake-rounded-card",
+    passed:
+      intakeStyle.borderRadius !== "0px" &&
+      intakeStyle.borderTop !== "0px" &&
+      intakeStyle.borderLeft !== "0px",
+  });
+  await page.screenshot({
+    path: path.join(outputDir, "assistant-intake-rounded.png"),
+    fullPage: false,
+  });
   await browser.close();
   const result = {
     passed:

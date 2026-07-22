@@ -51,7 +51,6 @@ const context = await browser.newContext({
   locale: "zh-CN",
 });
 await context.addInitScript(() => {
-  localStorage.setItem("skin-blueprint-v1", "1");
   localStorage.setItem("skin", "vibrant");
 });
 const page = await context.newPage();
