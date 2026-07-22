@@ -29,7 +29,6 @@ const zh = {
     settings: "设置",
     logout: "退出登录",
     skin: "皮肤",
-    skinBlueprint: "蓝墨蓝图",
     skinBusiness: "商务",
     skinVibrant: "活泼",
     skinDark: "暗夜",

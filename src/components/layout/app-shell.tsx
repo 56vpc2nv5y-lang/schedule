@@ -14,7 +14,6 @@ import {
   GanttChartSquare,
   KanbanSquare,
   LayoutDashboard,
-  LogOut,
   PlaneTakeoff,
   Settings,
   Sparkles,
@@ -22,7 +21,6 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
-import { logoutAction } from "@/app/actions";
 import { SkinToggle } from "@/components/layout/skin-toggle";
 import { useDict } from "@/components/layout/locale-provider";
 import type { Dict } from "@/lib/i18n";
@@ -91,19 +89,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const flatItems = navGroups.flatMap((group) => group.items);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-border bg-card lg:block">
+    <div className="app-shell min-h-screen bg-background text-foreground">
+      <aside className="app-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-border bg-card md:block">
         <div className="flex h-full flex-col">
-          <div className="px-4 pb-3 pt-5">
+          <div className="app-brand px-4 pb-3 pt-5">
             <Link href="/" className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <span className="app-brand-mark flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
                 <GanttChartSquare className="h-5 w-5" />
               </span>
               <div>
-                <div className="text-sm font-semibold text-foreground">
+                <div className="app-brand-title text-sm font-semibold text-foreground">
                   {t.nav.appName}
                 </div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="app-brand-sub text-[11px] text-muted-foreground">
                   {t.nav.appSub}
                 </div>
               </div>
@@ -113,7 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {navGroups.map((group, gi) => (
               <div key={gi}>
                 {group.label ? (
-                  <div className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+                  <div className="app-nav-group mb-1 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
                     {group.label(t)}
                   </div>
                 ) : null}
@@ -126,8 +124,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <Link
                         key={item.href}
                         href={item.href}
+                        data-active={active}
                         className={cn(
-                          "relative flex h-9 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                          "app-nav-link relative flex h-9 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                           active && "bg-primary/10 font-medium text-primary",
                         )}
                       >
@@ -147,34 +146,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="space-y-2 border-t border-border p-3">
             <SkinToggle />
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              >
-                <LogOut className="h-4 w-4" />
-                {t.nav.logout}
-              </button>
-            </form>
           </div>
         </div>
       </aside>
 
-      <div className="lg:pl-60">
-        <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur lg:hidden">
+      <div className="app-frame md:pl-60">
+        <header className="mobile-app-header sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur md:hidden">
           <div className="flex h-14 items-center gap-3 px-4">
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold">{t.nav.appName}</div>
             </div>
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                title={t.nav.logout}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </form>
           </div>
           <nav className="flex gap-1 overflow-x-auto border-t border-border px-3 py-2">
             {flatItems.map((item) => {
@@ -185,8 +166,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-active={active}
                   className={cn(
-                    "flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs text-muted-foreground",
+                    "app-nav-link flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs text-muted-foreground",
                     active && "bg-primary/10 font-medium text-primary",
                   )}
                 >
@@ -197,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
         </header>
-        <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="app-main px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

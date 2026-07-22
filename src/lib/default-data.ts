@@ -27,26 +27,7 @@ export const defaultStageTemplate = {
 
 export const regions = ["新加坡", "澳门", "越南", "国内", "其他"];
 
-export const taskTypes = [
-  "商务沟通",
-  "甲方会议",
-  "供应商会议",
-  "甲方邮件问题",
-  "供应商文件问题",
-  "PPT制作翻译审查",
-  "会议纪要循环校对",
-  "合同跟进",
-  "交付跟进",
-  "验收跟进",
-  "售后跟进",
-  "接待安排",
-  "展会邀请函",
-  "文档翻译",
-  "口译/交传",
-  "背景资料搜集",
-  "行政/报销",
-  "内部流程",
-];
+export const taskTypes = ["接待", "培训", "项目", "展会"] as const;
 
 // ── 流程模板：一键生成一组任务（offset 为相对开始日期的天数）──
 export const workflowTemplates = [
@@ -959,7 +940,7 @@ export const tasks = [
     projectId: "p-sit",
     stageId: undefined,
     title: "SIT 跟进：等对方确认会面时间（0706 说 find a time）",
-    type: "商务沟通",
+    type: "项目",
     status: "WAITING" as TaskStatus,
     priority: "LOW" as Priority,
     dueDate: "2026-07-13",

@@ -187,7 +187,7 @@ export const getTasksForView = cache(async () => {
     stageId: task.stageId ?? undefined,
     title: task.title,
     description: task.description ?? "",
-    type: task.typeTag?.name ?? "商务沟通",
+    type: task.typeTag?.name ?? "项目",
     status: task.status,
     priority: task.priority,
     dueDate: toDateText(task.dueDate),
@@ -253,7 +253,7 @@ export const getTaskPageData = cache(async () => {
       stageId: task.stageId ?? undefined,
       title: task.title,
       description: task.description ?? "",
-      type: task.typeTag?.name ?? "商务沟通",
+      type: task.typeTag?.name ?? "项目",
       status: task.status,
       priority: task.priority,
       dueDate: toDateText(task.dueDate),
@@ -534,6 +534,23 @@ export const getGrowthLogsForView = cache(async () => {
   }));
 });
 
+export const getResumePointsForView = cache(async () => {
+  if (!isDatabaseConfigured()) return [];
+
+  const points = await getPrisma().resumePoint.findMany({
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return points.map((point) => ({
+    id: point.id,
+    title: point.title,
+    chinese: point.chinese,
+    english: point.english,
+    sourceNote: point.sourceNote ?? "",
+    projectId: point.projectId ?? "",
+    updatedAt: toDateText(point.updatedAt),
+  }));
+});
 export const getResourcesForView = cache(async () => {
   if (!isDatabaseConfigured()) {
     return seedResources;
@@ -642,6 +659,54 @@ export async function getContactForView(id: string) {
 export async function getProjectForView(id: string) {
   const projects = await getProjectsForView();
   return projects.find((project) => project.id === id);
+}
+
+export async function getTrainingProfileForView(projectId: string) {
+  if (!isDatabaseConfigured()) return null;
+
+  const profile = await getPrisma().trainingProfile.findUnique({
+    where: { projectId },
+    include: {
+      checklistItems: {
+        orderBy: [{ section: "asc" }, { sortOrder: "asc" }],
+      },
+    },
+  });
+  if (!profile) return null;
+
+  return {
+    id: profile.id,
+    projectId: profile.projectId,
+    currentPhase: profile.currentPhase,
+    clientContactName: profile.clientContactName ?? "",
+    clientContactInfo: profile.clientContactInfo ?? "",
+    topicSource: profile.topicSource ?? "",
+    topicCount: profile.topicCount,
+    participantCount: profile.participantCount,
+    totalDays: profile.totalDays,
+    dailyHours: profile.dailyHours,
+    location: profile.location ?? "",
+    budget: profile.budget,
+    currency: profile.currency,
+    costOwnership: profile.costOwnership ?? "",
+    internalCostNote: profile.internalCostNote ?? "",
+    quoteRound: profile.quoteRound,
+    internalContractStatus: profile.internalContractStatus ?? "",
+    clientContractStatus: profile.clientContractStatus ?? "",
+    depositNote: profile.depositNote ?? "",
+    prepaymentPercent: profile.prepaymentPercent,
+    paymentMilestones: profile.paymentMilestones ?? "",
+    reportingStatus: profile.reportingStatus ?? "",
+    postponed: profile.postponed,
+    checklistItems: profile.checklistItems.map((item) => ({
+      id: item.id,
+      section: item.section,
+      label: item.label,
+      done: item.done,
+      note: item.note ?? "",
+      sortOrder: item.sortOrder,
+    })),
+  };
 }
 
 export async function getProjectStagesForView(projectId: string) {

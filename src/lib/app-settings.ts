@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import { getPrisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-status";
-import { getAppPassword as getEnvPassword } from "@/lib/auth";
+import {
+  PERSONAL_APP_PASSWORD,
+  getAppPassword as getEnvPassword,
+  isPersonalAutoLoginEnabled,
+} from "@/lib/auth";
 
 // 运行时配置：优先读数据库 AppSetting，回退环境变量。
 // 带 60 秒内存缓存，避免每个请求都查库（proxy 里每次页面跳转都会走到）。
@@ -51,10 +55,11 @@ export async function setDbSetting(key: string, value: string) {
   invalidateSettingCache(key);
 }
 
-/** 生效的登录密码：设置页里存的优先，其次 .env 的 APP_PASSWORD。空 = 不启用保护 */
+/** 个人模式固定使用内置口令；关闭自动登录后回退到数据库、环境变量或默认口令。 */
 export async function getEffectivePassword(): Promise<string> {
+  if (isPersonalAutoLoginEnabled()) return PERSONAL_APP_PASSWORD;
   const fromDb = await getDbSetting(SETTING_KEYS.password);
-  return fromDb ?? getEnvPassword();
+  return fromDb ?? (getEnvPassword() || PERSONAL_APP_PASSWORD);
 }
 
 /** 生效的 DeepSeek API Key：设置页里存的优先，其次 .env */
