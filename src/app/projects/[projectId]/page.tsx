@@ -91,10 +91,12 @@ export default async function ProjectDetailPage({
   const supplierContacts = project.supplierContactIds
     .map((id) => contactMap.get(id))
     .filter(isContact);
-  const activeStages = stages.filter(
-    (stage) => stage.status === "IN_PROGRESS" || stage.status === "DELAYED",
-  );
-
+  const projectIsPaused = project.status === "PAUSED";
+  const activeStages = projectIsPaused
+    ? []
+    : stages.filter(
+        (stage) => stage.status === "IN_PROGRESS" || stage.status === "DELAYED",
+      );
   return (
     <AppShell>
       <PageHeader
@@ -103,7 +105,11 @@ export default async function ProjectDetailPage({
         description={[
           locale === "en" ? project.nameZh : project.nameEn,
           `${project.clientName} · 已完成检查点 ${project.completedStageCount}/${project.totalStageCount}`,
-          activeStages.length > 0 ? `当前并行 ${activeStages.length} 项` : "当前无进行中事项",
+          projectIsPaused
+            ? "项目已暂停，等待重启复核"
+            : activeStages.length > 0
+              ? "当前并行 " + activeStages.length + " 项"
+              : "当前无进行中事项",
         ]
           .filter(Boolean)
           .join(" — ")}
@@ -149,7 +155,12 @@ export default async function ProjectDetailPage({
         </div>
       ) : null}
 
-      {trainingProfile ? <TrainingProfilePanel profile={trainingProfile} /> : null}
+      {trainingProfile ? (
+        <TrainingProfilePanel
+          profile={trainingProfile}
+          projectStatus={project.status}
+        />
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">

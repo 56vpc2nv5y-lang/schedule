@@ -85,7 +85,10 @@ export default async function ProjectsPage({
           status: project.status,
           completedStageCount: project.completedStageCount,
           totalStageCount: project.totalStageCount,
-          currentStageName: project.currentStageName,
+          currentStageName:
+            project.status === "PAUSED"
+              ? "已暂停 · 待重启复核"
+              : project.currentStageName,
           taskCount: taskCounts.get(project.id) ?? 0,
         }))}
         columns={columns}

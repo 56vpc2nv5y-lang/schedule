@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { Check, Plus, RotateCcw, Trash2 } from "lucide-react";
 import {
   createTaskAction,
   createWorkflowTasksAction,
   deleteTaskAction,
+  toggleTrainingChecklistAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -38,6 +39,12 @@ function nonProjectScope(type: string) {
   return "未关联项目";
 }
 
+function checklistSectionLabel(section: string) {
+  if (section === "COST") return "成本核算";
+  if (section === "PREPARATION") return "筹备检查";
+  if (section === "RESTART") return "重启复核";
+  return "培训清单";
+}
 export const dynamic = "force-dynamic";
 
 export default async function TasksPage({
@@ -49,10 +56,11 @@ export default async function TasksPage({
     error?: string;
     filter?: string;
     new?: string;
+    updated?: string;
   }>;
 }) {
   const [
-    { setup, created, error, filter = "open", new: openForm },
+    { setup, created, error, filter = "open", new: openForm, updated },
     { locale, t },
     taskPageData,
   ] = await Promise.all([
@@ -60,7 +68,7 @@ export default async function TasksPage({
     getT(),
     getTaskPageData(),
   ]);
-  const { projects, tasks, contacts } = taskPageData;
+  const { projects, tasks, contacts, trainingChecklistItems } = taskPageData;
   const projectMap = new Map(projects.map((project) => [project.id, project]));
   const contactMap = new Map(contacts.map((contact) => [contact.id, contact]));
   const pname = (p: { nameZh: string; nameEn?: string }) =>
@@ -74,29 +82,56 @@ export default async function TasksPage({
   );
 
   const filters = [
-    { key: "open", label: t.tasks.fOpen },
-    { key: "personal", label: t.tasks.fPersonal },
+    { key: "open", label: "项目待办" },
+    { key: "personal", label: "行政 / 个人" },
+    { key: "checklist", label: "培训清单" },
     { key: "overdue", label: t.tasks.fOverdue },
     { key: "done", label: t.tasks.fDone },
     { key: "all", label: t.tasks.fAll },
   ];
 
-  const visibleTasks = tasks
+  const taskRows = tasks.map((task) => ({ ...task, source: "task" as const }));
+  const checklistRows = trainingChecklistItems.map((item) => ({
+    id: "training-" + item.id,
+    itemId: item.id,
+    source: "trainingChecklist" as const,
+    projectId: item.projectId,
+    projectStatus: item.projectStatus,
+    section: item.section,
+    title: item.label,
+    description: item.note,
+    type: "培训清单",
+    status: (item.done ? "DONE" : "TODO") as "DONE" | "TODO",
+    priority: (item.section === "RESTART" ? "HIGH" : "MEDIUM") as "HIGH" | "MEDIUM",
+    dueDate: "",
+    assigneeId: "",
+    done: item.done,
+  }));
+  const allRows = [...taskRows, ...checklistRows];
+
+  const visibleTasks = allRows
     .filter((task) => {
       switch (filter) {
         case "personal":
-          return !task.projectId;
+          return task.source === "task" && !task.projectId && task.status !== "DONE";
+        case "checklist":
+          return task.source === "trainingChecklist";
         case "overdue":
-          return task.status === "OVERDUE";
+          return task.source === "task" && task.status === "OVERDUE";
         case "done":
           return task.status === "DONE";
         case "all":
           return true;
         default:
-          return task.status !== "DONE";
+          if (task.source === "trainingChecklist") {
+            return (
+              !task.done &&
+              (task.projectStatus !== "PAUSED" || task.section === "RESTART")
+            );
+          }
+          return Boolean(task.projectId) && task.status !== "DONE";
       }
     })
-    // 高优先级排前面，同级按截止日期
     .sort((a, b) => {
       const pa = PRIORITY_META[a.priority]?.weight ?? 1;
       const pb = PRIORITY_META[b.priority]?.weight ?? 1;
@@ -105,15 +140,30 @@ export default async function TasksPage({
     });
 
   const formOpen = openForm === "1" || Boolean(created) || Boolean(error);
-  const openTaskCount = tasks.filter((task) => task.status !== "DONE").length;
-  const nonProjectCount = tasks.filter((task) => !task.projectId).length;
-
+  const projectOpenCount = allRows.filter((task) => {
+    if (task.source === "trainingChecklist") {
+      return (
+        !task.done &&
+        (task.projectStatus !== "PAUSED" || task.section === "RESTART")
+      );
+    }
+    return Boolean(task.projectId) && task.status !== "DONE";
+  }).length;
+  const nonProjectCount = tasks.filter(
+    (task) => !task.projectId && task.status !== "DONE",
+  ).length;
   return (
     <AppShell>
       <PageHeader
         eyebrow={t.tasks.workspace}
         title={t.tasks.title}
-        description={t.tasks.summary(openTaskCount, nonProjectCount)}
+        description={
+          "项目待办 " +
+          projectOpenCount +
+          " 项；行政 / 个人 " +
+          nonProjectCount +
+          " 项"
+        }
         action={
           <Link href="/tasks?new=1#new">
             <Button>
@@ -139,12 +189,16 @@ export default async function TasksPage({
           {t.workflow.generated(Number(created.slice("workflow-".length)) || 0)}
         </div>
       ) : null}
+      {updated === "training-checklist" ? (
+        <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          培训清单已更新。
+        </div>
+      ) : null}
       {error === "missing-required" ? (
         <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
           {t.common.required}
         </div>
       ) : null}
-
       <Card>
         <CardHeader className="border-b border-border">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -185,8 +239,13 @@ export default async function TasksPage({
                   const project = task.projectId
                     ? projectMap.get(task.projectId)
                     : undefined;
-                  const assignee = contactMap.get(task.assigneeId);
-                  const pmeta = PRIORITY_META[task.priority] ?? PRIORITY_META.MEDIUM;
+                  const isChecklist = task.source === "trainingChecklist";
+                  const assignee =
+                    task.source === "task"
+                      ? contactMap.get(task.assigneeId)
+                      : undefined;
+                  const pmeta =
+                    PRIORITY_META[task.priority] ?? PRIORITY_META.MEDIUM;
 
                   return (
                     <tr
@@ -207,65 +266,125 @@ export default async function TasksPage({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <TaskEditButton
-                          trigger="title"
-                          task={task}
-                          projects={projects.map((project) => ({
-                            id: project.id,
-                            name: pname(project),
-                          }))}
-                          contacts={contacts}
-                          taskTypes={taskTypes}
-                        />
-                        {assignee ? (
-                          <div className="mt-0.5 text-xs text-muted-foreground">
-                            {assignee.name}
+                        {isChecklist ? (
+                          <div>
+                            <Link
+                              href={"/projects/" + task.projectId}
+                              className="font-medium hover:text-primary hover:underline"
+                            >
+                              {task.title}
+                            </Link>
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                              培训清单 · {checklistSectionLabel(task.section)}
+                            </div>
+                            {task.description ? (
+                              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                                {task.description}
+                              </p>
+                            ) : null}
                           </div>
-                        ) : null}
+                        ) : (
+                          <>
+                            <TaskEditButton
+                              trigger="title"
+                              task={task}
+                              projects={projects.map((project) => ({
+                                id: project.id,
+                                name: pname(project),
+                              }))}
+                              contacts={contacts}
+                              taskTypes={taskTypes}
+                            />
+                            {assignee ? (
+                              <div className="mt-0.5 text-xs text-muted-foreground">
+                                {assignee.name}
+                              </div>
+                            ) : null}
+                          </>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {project ? (
                           <Link
-                            href={`/projects/${project.id}`}
+                            href={"/projects/" + project.id}
                             className="text-muted-foreground hover:text-primary hover:underline"
                           >
                             {pname(project)}
                           </Link>
                         ) : (
                           <Badge tone="neutral">
-                            {nonProjectScope(task.type)}
+                            {isChecklist ? "培训项目" : nonProjectScope(task.type)}
                           </Badge>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge tone="info">{task.type}</Badge>
+                        <Badge tone={isChecklist ? "waiting" : "info"}>
+                          {task.type}
+                        </Badge>
                       </td>
                       <td className="tnum px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {task.dueDate || t.common.none}
+                        {isChecklist
+                          ? "随项目阶段"
+                          : task.dueDate || t.common.none}
                       </td>
                       <td className="px-4 py-3">
-                        <TaskStatusPill status={task.status} />
+                        <TaskStatusPill
+                          status={
+                            task.status as
+                              | "TODO"
+                              | "IN_PROGRESS"
+                              | "WAITING"
+                              | "DONE"
+                              | "OVERDUE"
+                          }
+                        />
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <StatusSelect
-                            taskId={task.id}
-                            value={task.status}
-                            options={statusOptions}
-                          />
-                          <form action={deleteTaskAction}>
-                            <input type="hidden" name="taskId" value={task.id} />
+                        {isChecklist ? (
+                          <form action={toggleTrainingChecklistAction}>
+                            <input type="hidden" name="itemId" value={task.itemId} />
+                            <input
+                              type="hidden"
+                              name="done"
+                              value={String(!task.done)}
+                            />
+                            <input type="hidden" name="returnTo" value="tasks" />
+                            <input type="hidden" name="filter" value={filter} />
                             <Button
                               variant="ghost"
                               size="icon"
                               type="submit"
                               className="h-8 w-8"
-                              title={t.tasks.deleteTask}
+                              title={task.done ? "标记未完成" : "标记已完成"}
                             >
-                              <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              {task.done ? (
+                                <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                              )}
                             </Button>
                           </form>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <StatusSelect
+                              taskId={task.id}
+                              value={task.status}
+                              options={statusOptions}
+                            />
+                            <form action={deleteTaskAction}>
+                              <input type="hidden" name="taskId" value={task.id} />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                type="submit"
+                                className="h-8 w-8"
+                                title={t.tasks.deleteTask}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              </Button>
+                            </form>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

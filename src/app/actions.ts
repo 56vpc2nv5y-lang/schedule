@@ -1166,6 +1166,79 @@ export async function updateFeedbackQuestionAction(formData: FormData) {
   redirect("/meeting-reviews?created=question-updated");
 }
 
+export async function createFeedbackFollowUpTaskAction(formData: FormData) {
+  requireDatabase("/meeting-reviews");
+  const questionId = getString(formData, "questionId");
+  if (!questionId) redirect("/meeting-reviews");
+
+  const prisma = getPrisma();
+  const question = await prisma.feedbackQuestion.findUnique({
+    where: { id: questionId },
+    select: {
+      id: true,
+      projectId: true,
+      source: true,
+      question: true,
+      note: true,
+      status: true,
+      followUpTaskId: true,
+    },
+  });
+  if (!question) redirect("/meeting-reviews");
+  if (question.followUpTaskId) {
+    redirect("/meeting-reviews?created=follow-up-task-exists");
+  }
+  if (
+    question.status !== QuestionStatus.UNCLEAR &&
+    question.status !== QuestionStatus.NEED_MEETING
+  ) {
+    redirect("/meeting-reviews?error=question-not-actionable");
+  }
+
+  const typeTag = await ensureTag(TagType.TASK_TYPE, "项目");
+  const title =
+    question.status === QuestionStatus.NEED_MEETING
+      ? "安排会议澄清：" + question.question
+      : "追问并确认：" + question.question;
+  const task = await prisma.task.create({
+    data: {
+      projectId: question.projectId,
+      typeTagId: typeTag?.id ?? null,
+      title,
+      description:
+        "来自问题反馈清单（" +
+        question.source +
+        "）。待确认：" +
+        (question.note || question.question),
+      priority:
+        question.status === QuestionStatus.NEED_MEETING
+          ? Priority.HIGH
+          : Priority.MEDIUM,
+      dueDate: new Date(),
+      status: TaskStatus.TODO,
+    },
+  });
+  await prisma.feedbackQuestion.update({
+    where: { id: question.id },
+    data: { followUpTaskId: task.id },
+  });
+  await prisma.timelineEvent.create({
+    data: {
+      projectId: question.projectId,
+      entityType: "FeedbackQuestion",
+      entityId: question.id,
+      action: "生成跟进任务",
+      message: "问题已生成后续任务「" + task.title + "」。",
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/tasks");
+  revalidatePath("/meeting-reviews");
+  revalidatePath("/projects/" + question.projectId);
+  redirect("/meeting-reviews?created=follow-up-task");
+}
 export async function deleteFeedbackQuestionAction(formData: FormData) {
   requireDatabase("/meeting-reviews");
   const id = getString(formData, "id");
@@ -1186,26 +1259,58 @@ export async function updateProjectStatusQuickAction(
     ? (status as ProjectStatus)
     : null;
   if (!parsed) return;
-  const project = await getPrisma().project.update({
+
+  const prisma = getPrisma();
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      nameZh: true,
+      trainingProfile: { select: { currentPhase: true } },
+    },
+  });
+  if (!project) return;
+
+  await prisma.project.update({
     where: { id: projectId },
     data: { status: parsed },
-    select: { nameZh: true },
   });
-  await getPrisma().timelineEvent.create({
+
+  // 培训台账是状态的从属视图：项目暂停/恢复时同步其工作位置。
+  if (project.trainingProfile) {
+    const trainingData =
+      parsed === ProjectStatus.PAUSED
+        ? { postponed: true, currentPhase: "暂停 / 重启复核" }
+        : parsed === ProjectStatus.ACTIVE
+          ? {
+              postponed: false,
+              currentPhase:
+                project.trainingProfile.currentPhase === "暂停 / 重启复核"
+                  ? "筹备"
+                  : project.trainingProfile.currentPhase,
+            }
+          : { postponed: false };
+    await prisma.trainingProfile.update({
+      where: { projectId },
+      data: trainingData,
+    });
+  }
+
+  await prisma.timelineEvent.create({
     data: {
       projectId,
       entityType: "Project",
       entityId: projectId,
       action: "项目状态",
-      message: `项目「${project.nameZh}」状态调整为 ${parsed}。`,
+      message: "项目「" + project.nameZh + "」状态调整为 " + parsed + "。",
     },
   });
   revalidatePath("/");
   revalidatePath("/today");
   revalidatePath("/projects");
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/tasks");
+  revalidatePath("/meeting-reviews");
+  revalidatePath("/projects/" + projectId);
 }
-
 // ── 按流程模板一键生成任务（报销/出差申请/用车/供应商新增…）──
 
 export async function createWorkflowTasksAction(formData: FormData) {
@@ -1216,7 +1321,7 @@ export async function createWorkflowTasksAction(formData: FormData) {
   const template = workflowTemplates.find((item) => item.key === key);
   if (!template) redirect("/tasks");
 
-  const typeTag = await ensureTag(TagType.TASK_TYPE, "内部流程");
+  const typeTag = await ensureTag(TagType.TASK_TYPE, "项目");
   await getPrisma().task.createMany({
     data: template!.items.map((item) => ({
       projectId: projectId || null,
@@ -1664,85 +1769,100 @@ export async function updateTrainingProfileAction(formData: FormData) {
   const projectId = getString(formData, "projectId");
   if (!projectId) redirect("/projects");
 
+  const postponed = getString(formData, "postponed") === "on";
   const requestedPhase = getString(formData, "currentPhase");
-  const currentPhase = TRAINING_PHASES.includes(
+  const selectedPhase = TRAINING_PHASES.includes(
     requestedPhase as (typeof TRAINING_PHASES)[number],
   )
     ? requestedPhase
     : "课程大纲";
+  const currentPhase = postponed
+    ? "暂停 / 重启复核"
+    : selectedPhase === "暂停 / 重启复核"
+      ? "筹备"
+      : selectedPhase;
   const text = (key: string) => getString(formData, key) || null;
+  const prisma = getPrisma();
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { nameZh: true, status: true },
+  });
+  if (!project) redirect("/projects");
 
-  await getPrisma().trainingProfile.upsert({
+  const data = {
+    currentPhase,
+    clientContactName: text("clientContactName"),
+    clientContactInfo: text("clientContactInfo"),
+    topicSource: text("topicSource"),
+    topicCount: optionalInteger(formData, "topicCount"),
+    participantCount: optionalInteger(formData, "participantCount"),
+    totalDays: optionalNumber(formData, "totalDays"),
+    dailyHours: optionalNumber(formData, "dailyHours"),
+    location: text("location"),
+    budget: optionalNumber(formData, "budget"),
+    currency: getString(formData, "currency") || "CNY",
+    costOwnership: text("costOwnership"),
+    internalCostNote: text("internalCostNote"),
+    quoteRound: optionalInteger(formData, "quoteRound") || 1,
+    internalContractStatus: text("internalContractStatus"),
+    clientContractStatus: text("clientContractStatus"),
+    depositNote: text("depositNote"),
+    prepaymentPercent: optionalNumber(formData, "prepaymentPercent"),
+    paymentMilestones: text("paymentMilestones"),
+    reportingStatus: text("reportingStatus"),
+    postponed,
+  };
+
+  await prisma.trainingProfile.upsert({
     where: { projectId },
-    create: {
-      projectId,
-      currentPhase,
-      clientContactName: text("clientContactName"),
-      clientContactInfo: text("clientContactInfo"),
-      topicSource: text("topicSource"),
-      topicCount: optionalInteger(formData, "topicCount"),
-      participantCount: optionalInteger(formData, "participantCount"),
-      totalDays: optionalNumber(formData, "totalDays"),
-      dailyHours: optionalNumber(formData, "dailyHours"),
-      location: text("location"),
-      budget: optionalNumber(formData, "budget"),
-      currency: getString(formData, "currency") || "CNY",
-      costOwnership: text("costOwnership"),
-      internalCostNote: text("internalCostNote"),
-      quoteRound: optionalInteger(formData, "quoteRound") || 1,
-      internalContractStatus: text("internalContractStatus"),
-      clientContractStatus: text("clientContractStatus"),
-      depositNote: text("depositNote"),
-      prepaymentPercent: optionalNumber(formData, "prepaymentPercent"),
-      paymentMilestones: text("paymentMilestones"),
-      reportingStatus: text("reportingStatus"),
-      postponed: getString(formData, "postponed") === "on",
-    },
-    update: {
-      currentPhase,
-      clientContactName: text("clientContactName"),
-      clientContactInfo: text("clientContactInfo"),
-      topicSource: text("topicSource"),
-      topicCount: optionalInteger(formData, "topicCount"),
-      participantCount: optionalInteger(formData, "participantCount"),
-      totalDays: optionalNumber(formData, "totalDays"),
-      dailyHours: optionalNumber(formData, "dailyHours"),
-      location: text("location"),
-      budget: optionalNumber(formData, "budget"),
-      currency: getString(formData, "currency") || "CNY",
-      costOwnership: text("costOwnership"),
-      internalCostNote: text("internalCostNote"),
-      quoteRound: optionalInteger(formData, "quoteRound") || 1,
-      internalContractStatus: text("internalContractStatus"),
-      clientContractStatus: text("clientContractStatus"),
-      depositNote: text("depositNote"),
-      prepaymentPercent: optionalNumber(formData, "prepaymentPercent"),
-      paymentMilestones: text("paymentMilestones"),
-      reportingStatus: text("reportingStatus"),
-      postponed: getString(formData, "postponed") === "on",
-    },
+    create: { projectId, ...data },
+    update: data,
   });
 
-  await getPrisma().timelineEvent.create({
+  const nextStatus = postponed
+    ? ProjectStatus.PAUSED
+    : project.status === ProjectStatus.PAUSED
+      ? ProjectStatus.ACTIVE
+      : project.status;
+  if (nextStatus !== project.status) {
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { status: nextStatus },
+    });
+    await prisma.timelineEvent.create({
+      data: {
+        projectId,
+        entityType: "Project",
+        entityId: projectId,
+        action: "项目状态",
+        message: "项目「" + project.nameZh + "」状态调整为 " + nextStatus + "。",
+      },
+    });
+  }
+
+  await prisma.timelineEvent.create({
     data: {
       projectId,
       entityType: "TrainingProfile",
       entityId: projectId,
       action: "培训台账更新",
-      message: `培训项目字段已更新，当前阶段为「${currentPhase}」。`,
+      message: "培训项目字段已更新，工作位置为「" + currentPhase + "」。",
     },
   });
 
   revalidatePath("/");
+  revalidatePath("/today");
   revalidatePath("/projects");
-  revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}?updated=training`);
+  revalidatePath("/tasks");
+  revalidatePath("/projects/" + projectId);
+  redirect("/projects/" + projectId + "?updated=training");
 }
-
 export async function toggleTrainingChecklistAction(formData: FormData) {
   requireDatabase("/projects");
   const itemId = getString(formData, "itemId");
   const done = getString(formData, "done") === "true";
+  const returnTo = getString(formData, "returnTo");
+  const filter = getString(formData, "filter");
   if (!itemId) redirect("/projects");
 
   const item = await getPrisma().trainingChecklistItem.update({
@@ -1754,8 +1874,13 @@ export async function toggleTrainingChecklistAction(formData: FormData) {
   });
   const projectId = item.trainingProfile.projectId;
   revalidatePath("/");
-  revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}?updated=training-checklist`);
+  revalidatePath("/today");
+  revalidatePath("/tasks");
+  revalidatePath("/projects/" + projectId);
+  if (returnTo === "tasks") {
+    redirect("/tasks?filter=" + (filter || "checklist") + "&updated=training-checklist");
+  }
+  redirect("/projects/" + projectId + "?updated=training-checklist");
 }
 // ── 设置：标签 / 文件类型 / 角色 / 阶段模板 增删改 ────────
 

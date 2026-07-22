@@ -45,7 +45,14 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="mb-1 block text-xs font-medium text-muted-foreground">{children}</span>;
 }
 
-export function TrainingProfilePanel({ profile }: { profile: TrainingProfile }) {
+export function TrainingProfilePanel({
+  profile,
+  projectStatus,
+}: {
+  profile: TrainingProfile;
+  projectStatus: string;
+}) {
+  const isPaused = projectStatus === "PAUSED";
   const groups = new Map<string, TrainingProfile["checklistItems"]>();
   for (const item of profile.checklistItems) {
     const items = groups.get(item.section) ?? [];
@@ -62,8 +69,10 @@ export function TrainingProfilePanel({ profile }: { profile: TrainingProfile }) 
             培训项目台账
           </CardTitle>
           <div className="flex items-center gap-2">
-            {profile.postponed ? <Badge tone="waiting">已延期</Badge> : null}
-            <Badge tone="info">当前：{profile.currentPhase}</Badge>
+            <Badge tone={isPaused ? "waiting" : "active"}>
+              {isPaused ? "项目状态：已暂停" : "项目状态：进行中"}
+            </Badge>
+            <Badge tone="neutral">工作位置：{profile.currentPhase}</Badge>
           </div>
         </div>
       </CardHeader>
@@ -193,8 +202,8 @@ export function TrainingProfilePanel({ profile }: { profile: TrainingProfile }) 
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             <label className="flex items-center gap-2 text-sm">
-              <input name="postponed" type="checkbox" defaultChecked={profile.postponed} className="h-4 w-4 accent-primary" />
-              客户已 postpone，进入暂停 / 重启复核
+              <input name="postponed" type="checkbox" defaultChecked={isPaused} className="h-4 w-4 accent-primary" />
+              暂停项目（项目状态会同步为已暂停）
             </label>
             <Button type="submit">保存培训台账</Button>
           </div>

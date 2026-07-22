@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { CheckCircle2, FilePlus2, Plus, Send } from "lucide-react";
+import { CheckCircle2, FilePlus2, ListTodo, Plus, Send } from "lucide-react";
 import {
   addReviewRoundAction,
+  createFeedbackFollowUpTaskAction,
   createFeedbackQuestionAction,
   createMeetingReviewAction,
   deleteFeedbackQuestionAction,
@@ -98,10 +99,15 @@ export default async function MeetingReviewsPage({
       {created === "question" || created === "question-updated" ? (
         <Banner tone="ok">问题记录已保存。</Banner>
       ) : null}
+      {created === "follow-up-task" ? (
+        <Banner tone="ok">已生成跟进任务，可在任务列表继续推进。</Banner>
+      ) : null}
+      {created === "follow-up-task-exists" ? (
+        <Banner tone="ok">该问题已有一条关联任务。</Banner>
+      ) : null}
       {created === "finalized" ? (
         <Banner tone="ok">{t.meetings.finalizedNote}</Banner>
-      ) : null}
-      {error === "missing-required" ? (
+      ) : null}      {error === "missing-required" ? (
         <Banner tone="err">{t.common.required}</Banner>
       ) : null}
 
@@ -216,7 +222,28 @@ export default async function MeetingReviewsPage({
                   <div className="mt-2 text-sm font-medium leading-6">
                     {q.question}
                   </div>
-                  <form
+                  {q.status === "UNCLEAR" || q.status === "NEED_MEETING" ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {q.followUpTaskId ? (
+                        <Link
+                          href="/tasks?filter=open"
+                          className="text-xs text-primary hover:underline"
+                        >
+                          <Badge tone="info">
+                            已生成任务：{q.followUpTaskTitle || "查看任务列表"}
+                          </Badge>
+                        </Link>
+                      ) : (
+                        <form action={createFeedbackFollowUpTaskAction}>
+                          <input type="hidden" name="questionId" value={q.id} />
+                          <Button type="submit" size="sm" variant="outline">
+                            <ListTodo className="h-3.5 w-3.5" />
+                            生成跟进任务
+                          </Button>
+                        </form>
+                      )}
+                    </div>
+                  ) : null}                  <form
                     action={updateFeedbackQuestionAction}
                     className="mt-3 grid gap-2 rounded-lg bg-secondary/30 p-3 md:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_150px_auto]"
                   >
