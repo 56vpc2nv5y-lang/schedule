@@ -12,6 +12,7 @@ enum ProjectStatus {
   ACTIVE
   PAUSED
   COMPLETED
+  CANCELLED
   ARCHIVED
 }
 
@@ -35,6 +36,16 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+}
+
+/// Every task has a single originating workflow. Source records remain the
+/// authority for checklist-backed tasks; this is only the shared task index.
+enum TaskSource {
+  MANUAL
+  PROJECT_STAGE
+  TRAINING_CHECKLIST
+  RECEPTION_CHECKLIST
+  FEEDBACK_FOLLOW_UP
 }
 
 enum ProjectContactSide {
@@ -334,6 +345,9 @@ model Task {
   description String?
   status      TaskStatus @default(TODO)
   priority    Priority   @default(MEDIUM)
+  source      TaskSource @default(MANUAL)
+  sourceRefId String?
+  sourceLabel String?
   dueDate     DateTime?
   assigneeId  String?
   createdAt   DateTime   @default(now())
@@ -346,9 +360,11 @@ model Task {
   contacts         TaskContact[]
   feedbackFollowUp FeedbackQuestion? @relation("FeedbackFollowUp")
 
+  @@unique([source, sourceRefId])
   @@index([projectId, status])
   @@index([stageId])
   @@index([assigneeId])
+  @@index([source, status])
 }
 
 model TaskContact {
