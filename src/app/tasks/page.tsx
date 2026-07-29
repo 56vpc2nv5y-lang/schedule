@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { Check, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   createTaskAction,
   createWorkflowTasksAction,
   deleteTaskAction,
-  toggleTrainingChecklistAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/layout/app-shell";
-import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,30 +19,30 @@ import { cn } from "@/lib/utils";
 import { StatusSelect } from "./status-select";
 import { TaskEditButton } from "./task-edit";
 
-// 优先级：颜色 + 权重（用于排序和左侧色条）
 const PRIORITY_META: Record<
   string,
   { tone: "risk" | "waiting" | "info" | "neutral"; bar: string; weight: number }
 > = {
-  URGENT: { tone: "risk", bar: "bg-red-500", weight: 3 },
-  HIGH: { tone: "waiting", bar: "bg-amber-500", weight: 2 },
-  MEDIUM: { tone: "info", bar: "bg-blue-400", weight: 1 },
-  LOW: { tone: "neutral", bar: "bg-slate-300", weight: 0 },
+  URGENT: { tone: "risk", bar: "var(--status-danger)", weight: 3 },
+  HIGH: { tone: "waiting", bar: "var(--status-wait)", weight: 2 },
+  MEDIUM: { tone: "info", bar: "var(--status-active)", weight: 1 },
+  LOW: { tone: "neutral", bar: "var(--ink-faint)", weight: 0 },
 };
+
+function sourceMeta(source: string) {
+  if (source === "RECEPTION_CHECKLIST") return { label: "接待清单", tone: "waiting" as const };
+  if (source === "FEEDBACK_FOLLOW_UP") return { label: "来自纪要", tone: "risk" as const };
+  if (source === "MANUAL") return { label: "手动新建", tone: "neutral" as const };
+  return { label: "项目阶段", tone: "info" as const };
+}
 
 function nonProjectScope(type: string) {
   if (/行政|报销|入职|财务/.test(type)) return "行政事务";
   if (/接待|展会/.test(type)) return "接待协作";
   if (/内部|汇报|团队/.test(type)) return "内部工作";
-  return "未关联项目";
+  return "个人/行政事务";
 }
 
-function checklistSectionLabel(section: string) {
-  if (section === "COST") return "成本核算";
-  if (section === "PREPARATION") return "筹备检查";
-  if (section === "RESTART") return "重启复核";
-  return "培训清单";
-}
 export const dynamic = "force-dynamic";
 
 export default async function TasksPage({
@@ -63,73 +61,52 @@ export default async function TasksPage({
     { setup, created, error, filter = "open", new: openForm, updated },
     { locale, t },
     taskPageData,
-  ] = await Promise.all([
-    searchParams,
-    getT(),
-    getTaskPageData(),
-  ]);
-  const { projects, tasks, contacts, trainingChecklistItems } = taskPageData;
+  ] = await Promise.all([searchParams, getT(), getTaskPageData()]);
+  const { projects, tasks, contacts } = taskPageData;
   const projectMap = new Map(projects.map((project) => [project.id, project]));
   const contactMap = new Map(contacts.map((contact) => [contact.id, contact]));
-  const pname = (p: { nameZh: string; nameEn?: string }) =>
-    projectDisplayName(locale, p);
+  const pname = (p: { nameZh: string; nameEn?: string }) => projectDisplayName(locale, p);
 
-  const statusOptions = (
-    ["TODO", "IN_PROGRESS", "WAITING", "DONE", "OVERDUE"] as const
-  ).map((value) => ({ value, label: t.statuses.task[value] }));
-  const priorityOptions = (["LOW", "MEDIUM", "HIGH", "URGENT"] as const).map(
-    (value) => ({ value, label: t.statuses.priority[value] }),
-  );
+  const statusOptions = (["TODO", "IN_PROGRESS", "WAITING", "DONE", "OVERDUE"] as const).map((value) => ({
+    value,
+    label: t.statuses.task[value],
+  }));
+  const priorityOptions = (["LOW", "MEDIUM", "HIGH", "URGENT"] as const).map((value) => ({
+    value,
+    label: t.statuses.priority[value],
+  }));
 
   const filters = [
     { key: "open", label: "项目待办" },
-    { key: "personal", label: "行政 / 个人" },
-    { key: "checklist", label: "培训清单" },
+    { key: "personal", label: "个人/行政" },
+    { key: "training", label: "培训清单" },
+    { key: "reception", label: "接待清单" },
+    { key: "minutes", label: "来自纪要" },
     { key: "overdue", label: t.tasks.fOverdue },
     { key: "done", label: t.tasks.fDone },
     { key: "all", label: t.tasks.fAll },
   ];
 
-  const taskRows = tasks.map((task) => ({ ...task, source: "task" as const }));
-  const checklistRows = trainingChecklistItems.map((item) => ({
-    id: "training-" + item.id,
-    itemId: item.id,
-    source: "trainingChecklist" as const,
-    projectId: item.projectId,
-    projectStatus: item.projectStatus,
-    section: item.section,
-    title: item.label,
-    description: item.note,
-    type: "培训清单",
-    status: (item.done ? "DONE" : "TODO") as "DONE" | "TODO",
-    priority: (item.section === "RESTART" ? "HIGH" : "MEDIUM") as "HIGH" | "MEDIUM",
-    dueDate: "",
-    assigneeId: "",
-    done: item.done,
-  }));
-  const allRows = [...taskRows, ...checklistRows];
-
-  const visibleTasks = allRows
+  const visibleTasks = tasks
     .filter((task) => {
+      const project = task.projectId ? projectMap.get(task.projectId) : undefined;
       switch (filter) {
         case "personal":
-          return task.source === "task" && !task.projectId && task.status !== "DONE";
-        case "checklist":
-          return task.source === "trainingChecklist";
+          return !task.projectId && task.status !== "DONE";
+        case "training":
+          return task.source === "TRAINING_CHECKLIST";
+        case "reception":
+          return task.source === "RECEPTION_CHECKLIST";
+        case "minutes":
+          return task.source === "FEEDBACK_FOLLOW_UP";
         case "overdue":
-          return task.source === "task" && task.status === "OVERDUE";
+          return task.status === "OVERDUE";
         case "done":
           return task.status === "DONE";
         case "all":
           return true;
         default:
-          if (task.source === "trainingChecklist") {
-            return (
-              !task.done &&
-              (task.projectStatus !== "PAUSED" || task.section === "RESTART")
-            );
-          }
-          return Boolean(task.projectId) && task.status !== "DONE";
+          return Boolean(task.projectId) && task.status !== "DONE" && task.status !== "WAITING" && project?.status !== "COMPLETED" && project?.status !== "CANCELLED";
       }
     })
     .sort((a, b) => {
@@ -140,386 +117,236 @@ export default async function TasksPage({
     });
 
   const formOpen = openForm === "1" || Boolean(created) || Boolean(error);
-  const projectOpenCount = allRows.filter((task) => {
-    if (task.source === "trainingChecklist") {
-      return (
-        !task.done &&
-        (task.projectStatus !== "PAUSED" || task.section === "RESTART")
-      );
-    }
-    return Boolean(task.projectId) && task.status !== "DONE";
-  }).length;
-  const nonProjectCount = tasks.filter(
-    (task) => !task.projectId && task.status !== "DONE",
-  ).length;
+  const projectOpenCount = tasks.filter((task) => Boolean(task.projectId) && task.status !== "DONE" && task.status !== "WAITING").length;
+  const nonProjectCount = tasks.filter((task) => !task.projectId && task.status !== "DONE").length;
+  const sourceCounts = {
+    project: tasks.filter((task) => task.source === "PROJECT_STAGE" || task.source === "TRAINING_CHECKLIST").length,
+    reception: tasks.filter((task) => task.source === "RECEPTION_CHECKLIST").length,
+    minutes: tasks.filter((task) => task.source === "FEEDBACK_FOLLOW_UP").length,
+    manual: tasks.filter((task) => task.source === "MANUAL").length,
+  };
+
   return (
     <AppShell>
-      <PageHeader
-        eyebrow={t.tasks.workspace}
-        title={t.tasks.title}
-        description={
-          "项目待办 " +
-          projectOpenCount +
-          " 项；行政 / 个人 " +
-          nonProjectCount +
-          " 项"
-        }
-        action={
+      <div className="sunny-page">
+        <div className="sunny-page-head flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="page-eyebrow text-xs text-muted-foreground">Task Registry</div>
+            <h1 className="page-title mt-2">任务列表</h1>
+            <p className="page-description mt-2 text-sm leading-6">
+              项目待办 {projectOpenCount} 项；个人 / 行政 {nonProjectCount} 项。每一行都标明任务来源。
+            </p>
+          </div>
           <Link href="/tasks?new=1#new">
             <Button>
               <Plus className="h-4 w-4" />
               {t.tasks.newTask}
             </Button>
           </Link>
-        }
-      />
+        </div>
 
-      {setup === "database-required" ? (
-        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          {t.common.demoMode}
+        {setup === "database-required" ? <Banner tone="warn">{t.common.demoMode}</Banner> : null}
+        {created === "task" ? <Banner tone="ok">{t.tasks.savedTask}</Banner> : null}
+        {created?.startsWith("workflow-") ? <Banner tone="ok">{t.workflow.generated(Number(created.slice("workflow-".length)) || 0)}</Banner> : null}
+        {updated === "training-checklist" ? <Banner tone="ok">培训清单已更新。</Banner> : null}
+        {error === "missing-required" ? <Banner tone="err">{t.common.required}</Banner> : null}
+
+        <div className="mb-5 grid gap-3 md:grid-cols-4">
+          <MiniStat label="项目阶段" value={sourceCounts.project} />
+          <MiniStat label="接待清单" value={sourceCounts.reception} />
+          <MiniStat label="来自纪要" value={sourceCounts.minutes} />
+          <MiniStat label="手动新建" value={sourceCounts.manual} />
         </div>
-      ) : null}
-      {created === "task" ? (
-        <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-          {t.tasks.savedTask}
-        </div>
-      ) : null}
-      {created?.startsWith("workflow-") ? (
-        <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-          {t.workflow.generated(Number(created.slice("workflow-".length)) || 0)}
-        </div>
-      ) : null}
-      {updated === "training-checklist" ? (
-        <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-          培训清单已更新。
-        </div>
-      ) : null}
-      {error === "missing-required" ? (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-          {t.common.required}
-        </div>
-      ) : null}
-      <Card>
-        <CardHeader className="border-b border-border">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>{t.tasks.listTitle}</CardTitle>
-            <div className="flex flex-wrap gap-1.5">
-              {filters.map((item) => (
-                <Link
-                  key={item.key}
-                  href={`/tasks?filter=${item.key}`}
-                  className={cn(
-                    "rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary",
-                    filter === item.key &&
-                      "border-primary/30 bg-primary/10 font-medium text-primary",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ))}
+
+        <Card>
+          <CardHeader className="border-b border-border">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle>{t.tasks.listTitle}</CardTitle>
+              <div className="flex flex-wrap gap-1.5">
+                {filters.map((item) => (
+                  <Link
+                    key={item.key}
+                    href={`/tasks?filter=${item.key}`}
+                    className={cn(
+                      "chip",
+                      filter === item.key && "border-primary text-primary",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="border-b border-border bg-secondary/70 text-xs text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">{t.common.priority}</th>
-                  <th className="px-4 py-3 font-medium">{t.tasks.colTask}</th>
-                  <th className="px-4 py-3 font-medium">{t.tasks.colBelong}</th>
-                  <th className="px-4 py-3 font-medium">{t.common.type}</th>
-                  <th className="px-4 py-3 font-medium">{t.common.dueDate}</th>
-                  <th className="px-4 py-3 font-medium">{t.common.status}</th>
-                  <th className="px-4 py-3 font-medium">{t.common.actions}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+          </CardHeader>
+          <CardContent className="pt-4">
+            {visibleTasks.length === 0 ? (
+              <div className="rounded border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+                {t.tasks.emptyFilter}
+              </div>
+            ) : (
+              <div className="space-y-3">
                 {visibleTasks.map((task) => {
-                  const project = task.projectId
-                    ? projectMap.get(task.projectId)
-                    : undefined;
-                  const isChecklist = task.source === "trainingChecklist";
-                  const assignee =
-                    task.source === "task"
-                      ? contactMap.get(task.assigneeId)
-                      : undefined;
-                  const pmeta =
-                    PRIORITY_META[task.priority] ?? PRIORITY_META.MEDIUM;
+                  const project = task.projectId ? projectMap.get(task.projectId) : undefined;
+                  const sourceBacked = task.source !== "MANUAL";
+                  const assignee = contactMap.get(task.assigneeId);
+                  const pmeta = PRIORITY_META[task.priority] ?? PRIORITY_META.MEDIUM;
+                  const smeta = sourceMeta(task.source);
 
                   return (
-                    <tr
-                      key={task.id}
-                      className="bg-card transition-colors hover:bg-secondary/40"
-                    >
-                      <td className="py-3 pl-0 pr-2">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn("h-8 w-1 rounded-full", pmeta.bar)}
-                            aria-hidden
-                          />
-                          <Badge tone={pmeta.tone}>
-                            {t.statuses.priority[
-                              task.priority as keyof typeof t.statuses.priority
-                            ] ?? task.priority}
-                          </Badge>
+                    <article key={task.id} className="task-row-card grid gap-4 md:grid-cols-[8px_minmax(0,1fr)_220px]">
+                      <span className="h-full rounded-full" style={{ background: pmeta.bar }} aria-hidden />
+                      <div className="min-w-0">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <Badge tone={pmeta.tone}>{t.statuses.priority[task.priority as keyof typeof t.statuses.priority] ?? task.priority}</Badge>
+                          <Badge tone={smeta.tone}>{smeta.label}</Badge>
+                          {project ? <span className="chip">{pname(project)}</span> : <span className="chip">{nonProjectScope(task.type)}</span>}
+                          {task.dueDate ? <span className="chip">{task.dueDate}</span> : null}
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {isChecklist ? (
-                          <div>
-                            <Link
-                              href={"/projects/" + task.projectId}
-                              className="font-medium hover:text-primary hover:underline"
-                            >
+                        {sourceBacked ? (
+                          project ? (
+                            <Link href={`/projects/${project.id}`} className="sunny-title text-base hover:text-primary hover:underline">
                               {task.title}
                             </Link>
-                            <div className="mt-0.5 text-xs text-muted-foreground">
-                              培训清单 · {checklistSectionLabel(task.section)}
-                            </div>
-                            {task.description ? (
-                              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                                {task.description}
-                              </p>
-                            ) : null}
-                          </div>
+                          ) : (
+                            <div className="sunny-title text-base">{task.title}</div>
+                          )
                         ) : (
-                          <>
-                            <TaskEditButton
-                              trigger="title"
-                              task={task}
-                              projects={projects.map((project) => ({
-                                id: project.id,
-                                name: pname(project),
-                              }))}
-                              contacts={contacts}
-                              taskTypes={taskTypes}
-                            />
-                            {assignee ? (
-                              <div className="mt-0.5 text-xs text-muted-foreground">
-                                {assignee.name}
-                              </div>
-                            ) : null}
-                          </>
+                          <TaskEditButton
+                            trigger="title"
+                            task={task}
+                            projects={projects.map((project) => ({ id: project.id, name: pname(project) }))}
+                            contacts={contacts}
+                            taskTypes={taskTypes}
+                          />
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {project ? (
-                          <Link
-                            href={"/projects/" + project.id}
-                            className="text-muted-foreground hover:text-primary hover:underline"
-                          >
-                            {pname(project)}
-                          </Link>
-                        ) : (
-                          <Badge tone="neutral">
-                            {isChecklist ? "培训项目" : nonProjectScope(task.type)}
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge tone={isChecklist ? "waiting" : "info"}>
-                          {task.type}
-                        </Badge>
-                      </td>
-                      <td className="tnum px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {isChecklist
-                          ? "随项目阶段"
-                          : task.dueDate || t.common.none}
-                      </td>
-                      <td className="px-4 py-3">
-                        <TaskStatusPill
-                          status={
-                            task.status as
-                              | "TODO"
-                              | "IN_PROGRESS"
-                              | "WAITING"
-                              | "DONE"
-                              | "OVERDUE"
-                          }
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        {isChecklist ? (
-                          <form action={toggleTrainingChecklistAction}>
-                            <input type="hidden" name="itemId" value={task.itemId} />
-                            <input
-                              type="hidden"
-                              name="done"
-                              value={String(!task.done)}
-                            />
-                            <input type="hidden" name="returnTo" value="tasks" />
-                            <input type="hidden" name="filter" value={filter} />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              type="submit"
-                              className="h-8 w-8"
-                              title={task.done ? "标记未完成" : "标记已完成"}
-                            >
-                              {task.done ? (
-                                <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-                              ) : (
-                                <Check className="h-3.5 w-3.5 text-emerald-600" />
-                              )}
-                            </Button>
-                          </form>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <StatusSelect
-                              taskId={task.id}
-                              value={task.status}
-                              options={statusOptions}
-                            />
+                        {task.description ? <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">{task.description}</p> : null}
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          来源：{smeta.label}{task.sourceLabel ? ` / ${task.sourceLabel}` : ""}
+                          {assignee ? ` / 负责人：${assignee.name}` : ""}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-start gap-2 md:items-end">
+                        <TaskStatusPill status={task.status} />
+                        <div className="flex items-center gap-1.5">
+                          <StatusSelect taskId={task.id} value={task.status} options={statusOptions} />
+                          {!sourceBacked ? (
                             <form action={deleteTaskAction}>
                               <input type="hidden" name="taskId" value={task.id} />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                type="submit"
-                                className="h-8 w-8"
-                                title={t.tasks.deleteTask}
-                              >
+                              <Button variant="ghost" size="icon" type="submit" className="h-8 w-8" title={t.tasks.deleteTask}>
                                 <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                               </Button>
                             </form>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
+                          ) : null}
+                        </div>
+                      </div>
+                    </article>
                   );
                 })}
-              </tbody>
-            </table>
-            {visibleTasks.length === 0 ? (
-              <div className="p-10 text-center text-sm text-muted-foreground">
-                {t.tasks.emptyFilter}
               </div>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
 
-      <CollapseCard
-        className="mt-5"
-        id="workflow"
-        title={t.workflow.title}
-        hint={t.workflow.hint}
-        open={created?.startsWith("workflow-") ?? false}
-      >
-        <form
-          action={createWorkflowTasksAction}
-          className="grid gap-4 lg:grid-cols-4"
-        >
-          <label>
-            <span className="flabel">{t.workflow.fWorkflow}</span>
-            <select name="workflow" className="field">
-              {workflowTemplates.map((tpl) => (
-                <option key={tpl.key} value={tpl.key}>
-                  {tpl.name}（{tpl.items.length}）
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="flabel">{t.workflow.fBase}</span>
-            <input type="date" name="baseDate" className="field" />
-          </label>
-          <label>
-            <span className="flabel">{t.workflow.fProject}</span>
-            <select name="projectId" className="field">
-              <option value="">{t.common.noProject}</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {pname(project)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-end">
-            <Button className="w-full" type="submit">
-              <Plus className="h-4 w-4" />
-              {t.workflow.generate}
-            </Button>
-          </div>
-        </form>
-      </CollapseCard>
+        <CollapseCard className="mt-5" id="workflow" title={t.workflow.title} hint={t.workflow.hint} open={created?.startsWith("workflow-") ?? false}>
+          <form action={createWorkflowTasksAction} className="grid gap-4 lg:grid-cols-4">
+            <label>
+              <span className="flabel">{t.workflow.fWorkflow}</span>
+              <select name="workflow" className="field">
+                {workflowTemplates.map((tpl) => (
+                  <option key={tpl.key} value={tpl.key}>{tpl.name}（{tpl.items.length}）</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="flabel">{t.workflow.fBase}</span>
+              <input type="date" name="baseDate" className="field" />
+            </label>
+            <label>
+              <span className="flabel">{t.workflow.fProject}</span>
+              <select name="projectId" className="field">
+                <option value="">{t.common.noProject}</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>{pname(project)}</option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-end">
+              <Button className="w-full" type="submit">
+                <Plus className="h-4 w-4" />
+                {t.workflow.generate}
+              </Button>
+            </div>
+          </form>
+        </CollapseCard>
 
-      <CollapseCard
-        className="mt-5"
-        title={t.tasks.newTask}
-        hint={t.tasks.formHint}
-        open={formOpen}
-      >
-        <form action={createTaskAction} className="grid gap-4 lg:grid-cols-6">
-          <label className="lg:col-span-2">
-            <span className="flabel">{t.tasks.fTitle}</span>
-            <input
-              name="title"
-              placeholder={t.tasks.fTitlePh}
-              className="field"
-            />
-          </label>
-          <label className="lg:col-span-2">
-            <span className="flabel">{t.tasks.fProject}</span>
-            <select name="projectId" className="field">
-              <option value="">{t.common.noProject}</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {pname(project)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="flabel">{t.tasks.fType}</span>
-            <select name="type" className="field">
-              {taskTypes.map((type) => (
-                <option key={type}>{type}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="flabel">{t.tasks.fPriority}</span>
-            <select name="priority" defaultValue="MEDIUM" className="field">
-              {priorityOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="flabel">{t.tasks.fDue}</span>
-            <input type="date" name="dueDate" className="field" />
-          </label>
-          <label className="lg:col-span-2">
-            <span className="flabel">{t.tasks.fAssignee}</span>
-            <select name="assigneeId" className="field">
-              <option value="">{t.common.notSelected}</option>
-              {contacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {contact.name} · {contact.organization}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="lg:col-span-6">
-            <span className="flabel">{t.tasks.fDescription}</span>
-            <textarea
-              name="description"
-              className="field min-h-20 resize-y"
-              placeholder={t.tasks.fDescriptionPh}
-            />
-          </label>
-          <div className="flex items-end lg:col-start-6">
-            <Button className="w-full" type="submit">
-              <Plus className="h-4 w-4" />
-              {t.tasks.saveTask}
-            </Button>
-          </div>
-        </form>
-      </CollapseCard>
+        <CollapseCard className="mt-5" title={t.tasks.newTask} hint={t.tasks.formHint} open={formOpen}>
+          <form action={createTaskAction} className="grid gap-4 lg:grid-cols-6">
+            <label className="lg:col-span-2">
+              <span className="flabel">{t.tasks.fTitle}</span>
+              <input name="title" placeholder={t.tasks.fTitlePh} className="field" />
+            </label>
+            <label className="lg:col-span-2">
+              <span className="flabel">{t.tasks.fProject}</span>
+              <select name="projectId" className="field">
+                <option value="">{t.common.noProject}</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>{pname(project)}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="flabel">{t.tasks.fType}</span>
+              <select name="type" className="field">
+                {taskTypes.map((type) => <option key={type}>{type}</option>)}
+              </select>
+            </label>
+            <label>
+              <span className="flabel">{t.tasks.fPriority}</span>
+              <select name="priority" defaultValue="MEDIUM" className="field">
+                {priorityOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <label>
+              <span className="flabel">{t.tasks.fDue}</span>
+              <input type="date" name="dueDate" className="field" />
+            </label>
+            <label className="lg:col-span-2">
+              <span className="flabel">{t.tasks.fAssignee}</span>
+              <select name="assigneeId" className="field">
+                <option value="">{t.common.notSelected}</option>
+                {contacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.name} / {contact.organization}</option>)}
+              </select>
+            </label>
+            <label className="lg:col-span-6">
+              <span className="flabel">{t.tasks.fDescription}</span>
+              <textarea name="description" className="field min-h-20 resize-y" placeholder={t.tasks.fDescriptionPh} />
+            </label>
+            <div className="flex items-end lg:col-start-6">
+              <Button className="w-full" type="submit">
+                <Plus className="h-4 w-4" />
+                {t.tasks.saveTask}
+              </Button>
+            </div>
+          </form>
+        </CollapseCard>
+      </div>
     </AppShell>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="focus-card border border-border bg-card">
+      <strong className="tnum">{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function Banner({ tone, children }: { tone: "ok" | "warn" | "err"; children: React.ReactNode }) {
+  return (
+    <div className={tone === "err" ? "mb-5 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-900" : "mb-5 rounded border border-border bg-secondary/50 p-4 text-sm"}>
+      {children}
+    </div>
   );
 }

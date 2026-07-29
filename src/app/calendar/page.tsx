@@ -2,7 +2,6 @@ import Link from "next/link";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { addDays, addMonths, endOfMonth, format, parse, startOfMonth, startOfWeek } from "date-fns";
 import { AppShell } from "@/components/layout/app-shell";
-import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { isDatabaseConfigured } from "@/lib/db-status";
 import { getT } from "@/lib/locale";
@@ -26,7 +25,7 @@ function ymToDate(ym: string | undefined): Date | null {
 function receptionColor(type: string) {
   if (type === "BUSINESS_TRIP") return "bg-amber-500";
   if (type === "EXHIBITION_INVITE") return "bg-violet-500";
-  return "bg-emerald-500"; // VISIT 接待
+  return "bg-emerald-500";
 }
 
 export default async function CalendarPage({
@@ -42,86 +41,79 @@ export default async function CalendarPage({
     getProjectsForView(),
   ]);
   const projectMap = new Map(projects.map((project) => [project.id, project]));
+  const isPausedProject = (projectId?: string) => Boolean(projectId && projectMap.get(projectId)?.status === "PAUSED");
+  const isPauseFollowUpTask = (task: (typeof tasks)[number]) =>
+    task.source === "TRAINING_CHECKLIST" && task.sourceLabel.includes("暂停期间复核");
+  const shouldShowTask = (task: (typeof tasks)[number]) => {
+    if (!task.dueDate) return false;
+    if (task.status === "DONE") return true;
+    if (isPausedProject(task.projectId)) return isPauseFollowUpTask(task);
+    return true;
+  };
+  const shouldShowReception = (reception: (typeof receptions)[number]) => {
+    if (!reception.startAt || reception.status === "CANCELLED") return false;
+    if (isPausedProject(reception.projectId)) return reception.status === "DONE";
+    return true;
+  };
 
   const events: CalendarEvent[] = [
-    ...tasks
-      .filter((task) => task.dueDate)
-      .map((task) => ({
-        id: `task-${task.id}`,
-        rawId: task.id,
-        kind: "task" as const,
-        title: task.title,
-        start: task.dueDate,
-        end: task.dueDate,
-        color: task.status === "OVERDUE" ? "bg-red-500" : "bg-sky-500",
-        tag: t.calendar.legendTask,
-        projectName: task.projectId
-          ? projectMap.get(task.projectId)?.nameZh
-          : undefined,
-      })),
-    ...receptions
-      .filter((reception) => reception.startAt)
-      .map((reception) => {
-        const start = reception.startAt.slice(0, 10);
-        const end = reception.endAt ? reception.endAt.slice(0, 10) : start;
-        return {
-          id: `reception-${reception.id}`,
-          rawId: reception.id,
-          kind: "reception" as const,
-          title: reception.title,
-          start,
-          end,
-          color: receptionColor(reception.type),
-          tag:
-            receptionTypeMeta[reception.type as keyof typeof receptionTypeMeta]
-              ?.short ?? "接待",
-          projectName: reception.projectId
-            ? projectMap.get(reception.projectId)?.nameZh
-            : undefined,
-        };
-      }),
+    ...tasks.filter(shouldShowTask).map((task) => ({
+      id: `task-${task.id}`,
+      rawId: task.id,
+      kind: "task" as const,
+      title: task.title,
+      start: task.dueDate,
+      end: task.dueDate,
+      color: isPauseFollowUpTask(task) ? "bg-amber-500" : task.status === "DONE" ? "bg-slate-400" : task.status === "OVERDUE" ? "bg-red-500" : "bg-sky-500",
+      tag: isPauseFollowUpTask(task) ? "暂停复核" : t.calendar.legendTask,
+      projectName: task.projectId ? projectMap.get(task.projectId)?.nameZh : undefined,
+    })),
+    ...receptions.filter(shouldShowReception).map((reception) => {
+      const start = reception.startAt.slice(0, 10);
+      const end = reception.endAt ? reception.endAt.slice(0, 10) : start;
+      return {
+        id: `reception-${reception.id}`,
+        rawId: reception.id,
+        kind: "reception" as const,
+        title: reception.title,
+        start,
+        end,
+        color: receptionColor(reception.type),
+        tag: receptionTypeMeta[reception.type as keyof typeof receptionTypeMeta]?.short ?? "接待",
+        projectName: reception.projectId ? projectMap.get(reception.projectId)?.nameZh : undefined,
+      };
+    }),
   ];
 
-  // 连接数据库后默认显示当前月；演示模式落在离今天最近的安排所在月，避免打开是空月
   const today = new Date();
   const todayIso = format(today, "yyyy-MM-dd");
   const requested = ymToDate(ym);
   const nearest = events
     .map((event) => event.start)
-    .sort(
-      (a, b) =>
-        Math.abs(+new Date(a) - +today) - Math.abs(+new Date(b) - +today),
-    )[0];
-  const monthStart =
-    requested ??
-    (isDatabaseConfigured()
-      ? startOfMonth(today)
-      : startOfMonth(nearest ? new Date(nearest) : today));
+    .sort((a, b) => Math.abs(+new Date(a) - +today) - Math.abs(+new Date(b) - +today))[0];
+  const monthStart = requested ?? (isDatabaseConfigured() ? startOfMonth(today) : startOfMonth(nearest ? new Date(nearest) : today));
 
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-  const days = Array.from({ length: 42 }, (_, i) =>
-    format(addDays(gridStart, i), "yyyy-MM-dd"),
-  );
+  const days = Array.from({ length: 42 }, (_, i) => format(addDays(gridStart, i), "yyyy-MM-dd"));
 
   const prevYm = format(addMonths(monthStart, -1), "yyyy-MM");
   const nextYm = format(addMonths(monthStart, 1), "yyyy-MM");
   const monthStartIso = format(monthStart, "yyyy-MM-dd");
   const monthEndIso = format(endOfMonth(monthStart), "yyyy-MM-dd");
-  const monthEventCount = events.filter(
-    (event) => event.start <= monthEndIso && event.end >= monthStartIso,
-  ).length;
-  const monthLabel = t.calendar.monthLabel(
-    monthStart.getFullYear(),
-    monthStart.getMonth() + 1,
-  );
+  const monthEventCount = events.filter((event) => event.start <= monthEndIso && event.end >= monthStartIso).length;
+  const taskCount = events.filter((event) => event.kind === "task").length;
+  const receptionCount = events.filter((event) => event.kind === "reception").length;
+  const monthLabel = t.calendar.monthLabel(monthStart.getFullYear(), monthStart.getMonth() + 1);
 
   return (
     <AppShell>
-      <PageHeader
-        eyebrow={t.calendar.workspace}
-        title={monthLabel}
-        description={t.calendar.summary(monthEventCount)}
-        action={
+      <div className="sunny-page calendar-board-shell">
+        <div className="sunny-page-head flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="page-eyebrow text-xs text-muted-foreground">Calendar</div>
+            <h1 className="page-title mt-2">{monthLabel}</h1>
+            <p className="page-description mt-2 text-sm leading-6">{t.calendar.summary(monthEventCount)}</p>
+          </div>
           <div className="flex items-center gap-2">
             <Link href={`/calendar?ym=${prevYm}`}>
               <Button variant="outline" size="icon" title={t.calendar.prev}>
@@ -140,16 +132,25 @@ export default async function CalendarPage({
               </Button>
             </Link>
           </div>
-        }
-      />
+        </div>
 
-      <CalendarBoard
-        days={days}
-        events={events}
-        currentMonth={monthStart.getMonth()}
-        todayIso={todayIso}
-        dbConnected={isDatabaseConfigured()}
-      />
+        <div className="mb-5 grid gap-3 md:grid-cols-3">
+          <Mini label="本月安排" value={monthEventCount} />
+          <Mini label="任务" value={taskCount} />
+          <Mini label="出差/接待" value={receptionCount} />
+        </div>
+
+        <CalendarBoard days={days} events={events} currentMonth={monthStart.getMonth()} todayIso={todayIso} dbConnected={isDatabaseConfigured()} />
+      </div>
     </AppShell>
+  );
+}
+
+function Mini({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="focus-card border border-border bg-card">
+      <strong className="tnum">{value}</strong>
+      <span>{label}</span>
+    </div>
   );
 }

@@ -20,6 +20,7 @@ import {
   StageStatus,
   Tag,
   TagType,
+  TaskSource,
   TaskStatus,
   TemplateType,
 } from "@prisma/client";
@@ -34,6 +35,11 @@ import {
   setDbSetting,
 } from "@/lib/app-settings";
 import { isStorageConfigured, uploadToBucket } from "@/lib/storage";
+import {
+  deleteChecklistTask,
+  syncReceptionChecklistTasks,
+  syncTrainingChecklistTasks,
+} from "@/lib/task-sync";
 import {
   contactRoles,
   defaultStageTemplate,
@@ -183,6 +189,7 @@ export async function createContactAction(formData: FormData) {
   revalidatePath("/contacts");
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   redirect("/contacts?created=contact");
 }
 
@@ -275,6 +282,7 @@ export async function createProjectAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath("/projects");
   redirect(`/projects/${project.id}`);
 }
@@ -307,6 +315,8 @@ export async function createTaskAction(formData: FormData) {
       description: description || null,
       dueDate,
       priority,
+      status: TaskStatus.TODO,
+      source: TaskSource.MANUAL,
       typeTagId: typeTag?.id,
       assigneeId: assigneeId || undefined,
     },
@@ -326,6 +336,7 @@ export async function createTaskAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
   redirect("/tasks?created=task");
@@ -353,9 +364,36 @@ export async function updateTaskStatusAction(formData: FormData) {
   const task = await getPrisma().task.update({
     where: { id: taskId },
     data: { status },
-    select: { projectId: true, title: true },
+    select: { projectId: true, title: true, source: true, sourceRefId: true },
   });
 
+  // Checklist-backed rows share completion with their source record.
+  if (task.sourceRefId && task.source === TaskSource.TRAINING_CHECKLIST) {
+    await getPrisma().trainingChecklistItem.update({
+      where: { id: task.sourceRefId },
+      data: { done: status === TaskStatus.DONE },
+    }).catch(() => {});
+    if (task.projectId) await syncTrainingChecklistTasks(task.projectId);
+  }
+  if (task.sourceRefId && task.source === TaskSource.RECEPTION_CHECKLIST) {
+    const item = await getPrisma().receptionChecklistItem.update({
+      where: { id: task.sourceRefId },
+      data: { done: status === TaskStatus.DONE },
+      select: { receptionId: true },
+    }).catch(() => null);
+    if (item) await syncReceptionChecklistTasks(item.receptionId);
+  }
+  if (
+    task.sourceRefId &&
+    task.source === TaskSource.FEEDBACK_FOLLOW_UP &&
+    status === TaskStatus.DONE
+  ) {
+    await getPrisma().feedbackQuestion.update({
+      where: { id: task.sourceRefId },
+      data: { status: QuestionStatus.CONFIRMED },
+    }).catch(() => {});
+    revalidatePath("/meeting-reviews");
+  }
   if (task.projectId && status === TaskStatus.DONE) {
     await getPrisma().timelineEvent.create({
       data: {
@@ -371,6 +409,7 @@ export async function updateTaskStatusAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/today");
   revalidatePath("/tasks");
+  revalidatePath("/tasks");
   revalidatePath("/calendar");
   if (task.projectId) revalidatePath(`/projects/${task.projectId}`);
 }
@@ -380,10 +419,17 @@ export async function deleteTaskAction(formData: FormData) {
 
   const taskId = getString(formData, "taskId");
   if (taskId) {
-    await getPrisma().task.delete({ where: { id: taskId } }).catch(() => {});
+    const task = await getPrisma().task.findUnique({
+      where: { id: taskId },
+      select: { source: true },
+    });
+    if (task?.source === TaskSource.MANUAL) {
+      await getPrisma().task.delete({ where: { id: taskId } }).catch(() => {});
+    }
   }
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
 }
@@ -410,8 +456,11 @@ export async function updateTaskAction(formData: FormData) {
 
   const previous = await getPrisma().task.findUnique({
     where: { id: taskId },
-    select: { projectId: true },
+    select: { projectId: true, source: true },
   });
+  if (previous?.source !== TaskSource.MANUAL) {
+    redirect("/tasks?error=source-task");
+  }
 
   await getPrisma().task.update({
     where: { id: taskId },
@@ -428,6 +477,7 @@ export async function updateTaskAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
   if (previous?.projectId && previous.projectId !== projectId) {
@@ -647,43 +697,17 @@ export async function createReceptionAction(formData: FormData) {
 
   // 行前清单：勾选后按开始时间自动生成一组准备任务
   const wantChecklist = getString(formData, "checklist") === "on";
-  if (wantChecklist && startAt) {
-    const typeTag = await ensureTag(TagType.TASK_TYPE, "接待安排");
-    const offset = (days: number) =>
-      new Date(startAt.getTime() + days * 86400000);
-    const endBase = endAt ?? startAt;
-    const checklist =
-      type === ReceptionType.BUSINESS_TRIP
-        ? [
-            { title: `【${title}】OA 出差申请与订票订酒店`, due: offset(-7) },
-            { title: `【${title}】准备议程与出差材料`, due: offset(-3) },
-            { title: `【${title}】与对方确认时间地点`, due: offset(-1) },
-            {
-              title: `【${title}】整理票据提交报销`,
-              due: new Date(endBase.getTime() + 3 * 86400000),
-            },
-          ]
-        : [
-            { title: `【${title}】确认议程并制作桌牌`, due: offset(-7) },
-            { title: `【${title}】预订饭店与酒店`, due: offset(-7) },
-            { title: `【${title}】车辆路线 / 用车申请`, due: offset(-5) },
-            { title: `【${title}】确认接机/送机与入住安排`, due: offset(-3) },
-            { title: `【${title}】准备伴手礼与讲解材料`, due: offset(-3) },
-            {
-              title: `【${title}】整理照片纪要并报销`,
-              due: new Date(endBase.getTime() + 3 * 86400000),
-            },
-          ];
-    await getPrisma().task.createMany({
-      data: checklist.map((item) => ({
-        projectId: projectId || null,
+  if (wantChecklist) {
+    await getPrisma().receptionChecklistItem.createMany({
+      data: defaultVisitChecklist.map((item, index) => ({
+        receptionId: reception.id,
+        phase: item.phase,
         title: item.title,
-        dueDate: item.due,
-        typeTagId: typeTag?.id,
+        sortOrder: index,
       })),
     });
+    await syncReceptionChecklistTasks(reception.id);
   }
-
   revalidatePath("/receptions");
   revalidatePath("/calendar");
   revalidatePath("/tasks");
@@ -700,6 +724,7 @@ function revalidateReception(receptionId: string) {
   revalidatePath(`/receptions/${receptionId}`);
   revalidatePath("/receptions");
   revalidatePath("/today");
+  revalidatePath("/tasks");
 }
 
 export async function toggleReceptionChecklistItemAction(
@@ -712,6 +737,7 @@ export async function toggleReceptionChecklistItemAction(
     where: { id },
     data: { done },
   });
+  await syncReceptionChecklistTasks(receptionId);
   revalidateReception(receptionId);
 }
 
@@ -733,6 +759,7 @@ export async function addReceptionChecklistItemAction(
       sortOrder: count,
     },
   });
+  await syncReceptionChecklistTasks(receptionId);
   revalidateReception(receptionId);
 }
 
@@ -741,6 +768,7 @@ export async function deleteReceptionChecklistItemAction(
   receptionId: string,
 ) {
   if (!isDatabaseConfigured()) return;
+  await deleteChecklistTask(TaskSource.RECEPTION_CHECKLIST, id);
   await getPrisma().receptionChecklistItem.delete({ where: { id } });
   revalidateReception(receptionId);
 }
@@ -759,6 +787,7 @@ export async function applyReceptionChecklistTemplateAction(receptionId: string)
       sortOrder: existing + index,
     })),
   });
+  await syncReceptionChecklistTasks(receptionId);
   revalidateReception(receptionId);
 }
 
@@ -887,6 +916,7 @@ export async function updateStageScheduleAction(
 
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath(`/projects/${stage.projectId}`);
 }
 
@@ -902,6 +932,7 @@ export async function moveTaskDueDateAction(taskId: string, dueISO: string) {
   revalidatePath("/calendar");
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   if (task.projectId) revalidatePath(`/projects/${task.projectId}`);
 }
 
@@ -938,8 +969,19 @@ export async function setTaskStatusQuickAction(taskId: string, status: string) {
   const task = await getPrisma().task.update({
     where: { id: taskId },
     data: { status: parsed },
-    select: { projectId: true, title: true },
+    select: { projectId: true, title: true, source: true, sourceRefId: true },
   });
+  if (
+    task.sourceRefId &&
+    task.source === TaskSource.FEEDBACK_FOLLOW_UP &&
+    parsed === TaskStatus.DONE
+  ) {
+    await getPrisma().feedbackQuestion.update({
+      where: { id: task.sourceRefId },
+      data: { status: QuestionStatus.CONFIRMED },
+    }).catch(() => {});
+    revalidatePath("/meeting-reviews");
+  }
   if (task.projectId && parsed === TaskStatus.DONE) {
     await getPrisma().timelineEvent.create({
       data: {
@@ -954,6 +996,7 @@ export async function setTaskStatusQuickAction(taskId: string, status: string) {
   revalidatePath("/");
   revalidatePath("/today");
   revalidatePath("/tasks");
+  revalidatePath("/tasks");
   revalidatePath("/calendar");
   if (task.projectId) revalidatePath(`/projects/${task.projectId}`);
 }
@@ -963,6 +1006,7 @@ export async function deleteTaskQuickAction(taskId: string) {
   await getPrisma().task.delete({ where: { id: taskId } }).catch(() => {});
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath("/tasks");
   revalidatePath("/calendar");
 }
@@ -1014,6 +1058,7 @@ export async function setStageStatusQuickAction(
   });
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath(`/projects/${stage.projectId}`);
 }
 
@@ -1068,6 +1113,7 @@ export async function advanceStageAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}?updated=advanced`);
 }
@@ -1215,6 +1261,9 @@ export async function createFeedbackFollowUpTaskAction(formData: FormData) {
           ? Priority.HIGH
           : Priority.MEDIUM,
       dueDate: new Date(),
+      source: TaskSource.FEEDBACK_FOLLOW_UP,
+      sourceRefId: question.id,
+      sourceLabel: "来自纪要 / " + question.source,
       status: TaskStatus.TODO,
     },
   });
@@ -1235,6 +1284,7 @@ export async function createFeedbackFollowUpTaskAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/today");
   revalidatePath("/tasks");
+  revalidatePath("/tasks");
   revalidatePath("/meeting-reviews");
   revalidatePath("/projects/" + question.projectId);
   redirect("/meeting-reviews?created=follow-up-task");
@@ -1250,69 +1300,71 @@ export async function deleteFeedbackQuestionAction(formData: FormData) {
 
 // ── 项目看板拖拽改状态 ────────────────────────────────────
 
-export async function updateProjectStatusQuickAction(
-  projectId: string,
-  status: string,
-) {
+async function setProjectStatus(projectId: string, status: ProjectStatus) {
+  const prisma = getPrisma();
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, nameZh: true, status: true, trainingProfile: { select: { id: true } } },
+  });
+  if (!project) return;
+
+  if (project.status !== status) {
+    await prisma.project.update({ where: { id: projectId }, data: { status } });
+    const statusLabel: Record<ProjectStatus, string> = {
+      ACTIVE: "进行中",
+      PAUSED: "暂停",
+      COMPLETED: "已完成",
+      CANCELLED: "已取消",
+      ARCHIVED: "已归档",
+    };
+    await prisma.timelineEvent.create({
+      data: {
+        projectId,
+        entityType: "Project",
+        entityId: projectId,
+        action: "项目状态调整",
+        message: "项目“" + project.nameZh + "”状态调整为“" + statusLabel[status] + "”。",
+      },
+    });
+  }
+
+  // Project.status is authoritative. Training only reflects that status; it never
+  // changes the status by itself or overwrites the saved working phase.
+  if (project.trainingProfile) {
+    await prisma.trainingProfile.update({
+      where: { projectId },
+      data: { postponed: status === ProjectStatus.PAUSED },
+    });
+    await syncTrainingChecklistTasks(projectId);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/today");
+  revalidatePath("/tasks");
+  revalidatePath("/projects");
+  revalidatePath("/calendar");
+  revalidatePath("/week");
+  revalidatePath("/meeting-reviews");
+  revalidatePath("/projects/" + projectId);
+}
+
+export async function updateProjectStatusQuickAction(projectId: string, status: string) {
   if (!isDatabaseConfigured()) return;
   const parsed = (Object.values(ProjectStatus) as string[]).includes(status)
     ? (status as ProjectStatus)
     : null;
   if (!parsed) return;
-
-  const prisma = getPrisma();
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: {
-      nameZh: true,
-      trainingProfile: { select: { currentPhase: true } },
-    },
-  });
-  if (!project) return;
-
-  await prisma.project.update({
-    where: { id: projectId },
-    data: { status: parsed },
-  });
-
-  // 培训台账是状态的从属视图：项目暂停/恢复时同步其工作位置。
-  if (project.trainingProfile) {
-    const trainingData =
-      parsed === ProjectStatus.PAUSED
-        ? { postponed: true, currentPhase: "暂停 / 重启复核" }
-        : parsed === ProjectStatus.ACTIVE
-          ? {
-              postponed: false,
-              currentPhase:
-                project.trainingProfile.currentPhase === "暂停 / 重启复核"
-                  ? "筹备"
-                  : project.trainingProfile.currentPhase,
-            }
-          : { postponed: false };
-    await prisma.trainingProfile.update({
-      where: { projectId },
-      data: trainingData,
-    });
-  }
-
-  await prisma.timelineEvent.create({
-    data: {
-      projectId,
-      entityType: "Project",
-      entityId: projectId,
-      action: "项目状态",
-      message: "项目「" + project.nameZh + "」状态调整为 " + parsed + "。",
-    },
-  });
-  revalidatePath("/");
-  revalidatePath("/today");
-  revalidatePath("/projects");
-  revalidatePath("/tasks");
-  revalidatePath("/meeting-reviews");
-  revalidatePath("/projects/" + projectId);
+  await setProjectStatus(projectId, parsed);
 }
-// ── 按流程模板一键生成任务（报销/出差申请/用车/供应商新增…）──
 
+export async function updateProjectStatusAction(formData: FormData) {
+  requireDatabase("/projects");
+  const projectId = getString(formData, "projectId");
+  const status = getString(formData, "status");
+  if (!projectId) redirect("/projects");
+  await updateProjectStatusQuickAction(projectId, status);
+  redirect("/projects/" + projectId + "?updated=status");
+}
 export async function createWorkflowTasksAction(formData: FormData) {
   requireDatabase("/tasks");
   const key = getString(formData, "workflow");
@@ -1328,12 +1380,14 @@ export async function createWorkflowTasksAction(formData: FormData) {
       title: `【${template!.name}】${item.title}`,
       dueDate: new Date(baseDate.getTime() + item.offset * 86400000),
       typeTagId: typeTag?.id,
+      status: TaskStatus.TODO,
     })),
   });
 
   revalidatePath("/tasks");
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath("/calendar");
   redirect(`/tasks?created=workflow-${template!.items.length}`);
 }
@@ -1553,6 +1607,7 @@ export async function updateContactAction(formData: FormData) {
   revalidatePath("/contacts");
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   redirect("/contacts?created=contact");
 }
 
@@ -1739,6 +1794,7 @@ export async function updateStageAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath(`/projects/${stage.projectId}`);
   redirect(`/projects/${stage.projectId}?updated=stage`);
 }
@@ -1749,7 +1805,6 @@ const TRAINING_PHASES = [
   "报价",
   "合同签署 / 招标采购",
   "筹备",
-  "暂停 / 重启复核",
 ] as const;
 
 function optionalNumber(formData: FormData, key: string) {
@@ -1769,28 +1824,22 @@ export async function updateTrainingProfileAction(formData: FormData) {
   const projectId = getString(formData, "projectId");
   if (!projectId) redirect("/projects");
 
-  const postponed = getString(formData, "postponed") === "on";
   const requestedPhase = getString(formData, "currentPhase");
   const selectedPhase = TRAINING_PHASES.includes(
     requestedPhase as (typeof TRAINING_PHASES)[number],
   )
     ? requestedPhase
     : "课程大纲";
-  const currentPhase = postponed
-    ? "暂停 / 重启复核"
-    : selectedPhase === "暂停 / 重启复核"
-      ? "筹备"
-      : selectedPhase;
   const text = (key: string) => getString(formData, key) || null;
   const prisma = getPrisma();
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { nameZh: true, status: true },
+    select: { status: true },
   });
   if (!project) redirect("/projects");
 
   const data = {
-    currentPhase,
+    currentPhase: selectedPhase,
     clientContactName: text("clientContactName"),
     clientContactInfo: text("clientContactInfo"),
     topicSource: text("topicSource"),
@@ -1810,7 +1859,7 @@ export async function updateTrainingProfileAction(formData: FormData) {
     prepaymentPercent: optionalNumber(formData, "prepaymentPercent"),
     paymentMilestones: text("paymentMilestones"),
     reportingStatus: text("reportingStatus"),
-    postponed,
+    postponed: project.status === ProjectStatus.PAUSED,
   };
 
   await prisma.trainingProfile.upsert({
@@ -1818,35 +1867,14 @@ export async function updateTrainingProfileAction(formData: FormData) {
     create: { projectId, ...data },
     update: data,
   });
-
-  const nextStatus = postponed
-    ? ProjectStatus.PAUSED
-    : project.status === ProjectStatus.PAUSED
-      ? ProjectStatus.ACTIVE
-      : project.status;
-  if (nextStatus !== project.status) {
-    await prisma.project.update({
-      where: { id: projectId },
-      data: { status: nextStatus },
-    });
-    await prisma.timelineEvent.create({
-      data: {
-        projectId,
-        entityType: "Project",
-        entityId: projectId,
-        action: "项目状态",
-        message: "项目「" + project.nameZh + "」状态调整为 " + nextStatus + "。",
-      },
-    });
-  }
-
+  await syncTrainingChecklistTasks(projectId);
   await prisma.timelineEvent.create({
     data: {
       projectId,
       entityType: "TrainingProfile",
       entityId: projectId,
       action: "培训台账更新",
-      message: "培训项目字段已更新，工作位置为「" + currentPhase + "」。",
+      message: "培训项目字段已更新，当前阶段为“" + selectedPhase + "”。",
     },
   });
 
@@ -1857,6 +1885,7 @@ export async function updateTrainingProfileAction(formData: FormData) {
   revalidatePath("/projects/" + projectId);
   redirect("/projects/" + projectId + "?updated=training");
 }
+
 export async function toggleTrainingChecklistAction(formData: FormData) {
   requireDatabase("/projects");
   const itemId = getString(formData, "itemId");
@@ -1868,22 +1897,21 @@ export async function toggleTrainingChecklistAction(formData: FormData) {
   const item = await getPrisma().trainingChecklistItem.update({
     where: { id: itemId },
     data: { done },
-    select: {
-      trainingProfile: { select: { projectId: true } },
-    },
+    select: { trainingProfile: { select: { projectId: true } } },
   });
   const projectId = item.trainingProfile.projectId;
+  await syncTrainingChecklistTasks(projectId);
   revalidatePath("/");
   revalidatePath("/today");
   revalidatePath("/tasks");
   revalidatePath("/projects/" + projectId);
   if (returnTo === "tasks") {
-    redirect("/tasks?filter=" + (filter || "checklist") + "&updated=training-checklist");
+    redirect("/tasks?filter=" + (filter || "open") + "&updated=training-checklist");
   }
   redirect("/projects/" + projectId + "?updated=training-checklist");
 }
-// ── 设置：标签 / 文件类型 / 角色 / 阶段模板 增删改 ────────
 
+// 设置：标签 / 文件类型 / 角色 / 阶段模板 增删改
 export async function createTagAction(formData: FormData) {
   requireDatabase("/settings");
   const type = getString(formData, "type") as TagType;
@@ -2168,6 +2196,7 @@ export async function createDailyItemsAction(items: DailyDraft[]) {
             title,
             dueDate: toDate(item.date),
             description: item.detail || null,
+            status: TaskStatus.TODO,
           },
         });
       }
@@ -2179,6 +2208,7 @@ export async function createDailyItemsAction(items: DailyDraft[]) {
 
   revalidatePath("/");
   revalidatePath("/today");
+  revalidatePath("/tasks");
   revalidatePath("/tasks");
   revalidatePath("/growth");
   revalidatePath("/knowledge");

@@ -18,6 +18,7 @@ export default async function AssistantPage() {
 
   return (
     <AppShell>
+      <div className="sunny-page">
       <PageHeader
         eyebrow={t.assistant.eyebrow}
         title={t.assistant.title}
@@ -31,6 +32,7 @@ export default async function AssistantPage() {
           .filter((project) => project.status !== "ARCHIVED")
           .map((project) => ({ id: project.id, name: project.nameZh }))}
       />
+      </div>
     </AppShell>
   );
 }

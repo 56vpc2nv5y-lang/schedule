@@ -50,18 +50,27 @@ export default async function TodayPage() {
   const projectName = new Map(
     projects.map((p) => [p.id, projectDisplayName(locale, p)]),
   );
+  const projectById = new Map(projects.map((project) => [project.id, project]));
+  const isPausedProjectTask = (task: (typeof tasks)[number]) =>
+    Boolean(task.projectId && projectById.get(task.projectId)?.status === "PAUSED");
+  const isPauseFollowUpTask = (task: (typeof tasks)[number]) =>
+    task.source === "TRAINING_CHECKLIST" && task.sourceLabel.includes("暂停期间复核");
+  const shouldSurfaceTask = (task: (typeof tasks)[number]) =>
+    !isPausedProjectTask(task) || isPauseFollowUpTask(task);
   const projectOptions = projects.map((p) => ({
     id: p.id,
     name: projectDisplayName(locale, p),
   }));
 
   // ── 任务 ────────────────────────────────────────────────
-  const openTasks = tasks.filter((task) => task.status !== "DONE");
+  const openTasks = tasks.filter((task) => task.status !== "DONE" && shouldSurfaceTask(task));
   const overdue = openTasks.filter(
     (task) => task.dueDate && task.dueDate < todayIso,
   );
   const dueToday = openTasks.filter((task) => task.dueDate === todayIso);
   const todayTodos = [...overdue, ...dueToday];
+  const projectTodayTodos = todayTodos.filter((task) => Boolean(task.projectId));
+  const adminTodayTodos = todayTodos.filter((task) => !task.projectId);
   const waiting = tasks.filter((task) => task.status === "WAITING");
 
   // ── 接待 / 出差 ─────────────────────────────────────────
@@ -119,6 +128,40 @@ export default async function TodayPage() {
   const weekdayNames = t.calendar.weekdays;
   const dateLabel = `${format(now, "yyyy 年 M 月 d 日")} · ${t.calendar.weekdayPrefix}${weekdayNames[now.getDay()]}`;
 
+  const renderTodoList = (items: typeof todayTodos, emptyText: string) =>
+    items.length ? (
+      <div className="flex flex-col gap-1">
+        {items.map((task) => {
+          const isOverdue = task.dueDate && task.dueDate < todayIso;
+          return (
+            <div
+              key={task.id}
+              className={
+                "flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-secondary/60 " +
+                (isOverdue && task.projectId ? "bg-red-50/70" : "")
+              }
+            >
+              <TodayTaskCheck
+                taskId={task.id}
+                title={task.title}
+                overdue={Boolean(isOverdue)}
+              />
+              <Link href="/tasks" className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{task.title}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {task.projectId
+                    ? projectName.get(task.projectId) ?? t.common.personal
+                    : t.common.personal}
+                </div>
+              </Link>
+              <TaskStatusPill status={isOverdue ? "OVERDUE" : task.status} />
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      <Empty text={emptyText} />
+    );
   return (
     <AppShell>
       {/* Hero */}
@@ -248,39 +291,13 @@ export default async function TodayPage() {
         {/* 右：待办 / 接待 / 等回复 */}
         <div className="min-w-0 flex flex-col gap-4">
           {/* 今日待办 */}
-          <Panel title={t.today.todosTitle} count={t.today.countItems(todayTodos.length)}>
-            {todayTodos.length ? (
-              <div className="flex flex-col gap-1">
-                {todayTodos.map((task) => {
-                  const isOverdue = task.dueDate && task.dueDate < todayIso;
-                  return (
-                    <div
-                      key={task.id}
-                      className="flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-secondary/60"
-                    >
-                      <TodayTaskCheck
-                        taskId={task.id}
-                        title={task.title}
-                        overdue={Boolean(isOverdue)}
-                      />
-                      <Link href="/tasks" className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{task.title}</div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {task.projectId
-                            ? projectName.get(task.projectId) ?? t.common.personal
-                            : t.common.personal}
-                        </div>
-                      </Link>
-                      <TaskStatusPill status={isOverdue ? "OVERDUE" : task.status} />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <Empty text={t.today.todosEmpty} />
-            )}
+          <Panel title="项目任务" count={t.today.countItems(projectTodayTodos.length)}>
+            {renderTodoList(projectTodayTodos, "今天没有到期的项目任务。")}
           </Panel>
 
+          <Panel title="个人 / 行政事务" count={t.today.countItems(adminTodayTodos.length)}>
+            {renderTodoList(adminTodayTodos, "今天没有到期的个人或行政事项。")}
+          </Panel>
           {/* 接待预告 */}
           <Panel title={t.today.receptionTitle}>
             {nearest ? (

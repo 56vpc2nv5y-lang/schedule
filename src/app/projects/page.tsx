@@ -45,6 +45,7 @@ export default async function ProjectsPage({
     { label: t.projects.colActive, status: "ACTIVE", tone: "active" as const },
     { label: t.projects.colPaused, status: "PAUSED", tone: "waiting" as const },
     { label: t.projects.colDone, status: "COMPLETED", tone: "done" as const },
+    { label: "已取消", status: "CANCELLED", tone: "neutral" as const },
     { label: t.projects.colArchived, status: "ARCHIVED", tone: "neutral" as const },
   ];
 
@@ -87,7 +88,7 @@ export default async function ProjectsPage({
           totalStageCount: project.totalStageCount,
           currentStageName:
             project.status === "PAUSED"
-              ? "已暂停 · 待重启复核"
+              ? `已暂停 · ${project.currentStageName || "待重启复核"}`
               : project.currentStageName,
           taskCount: taskCounts.get(project.id) ?? 0,
         }))}

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollapseCard } from "@/components/ui/collapse-card";
+import { StatusStamp, type StatusStampTone } from "@/components/ui/status-pill";
 import { receptionTypeMeta } from "@/lib/default-data";
 import { getT } from "@/lib/locale";
 import { projectDisplayName } from "@/lib/i18n";
@@ -23,9 +24,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function statusTone(status: string): "done" | "waiting" | "neutral" | "risk" {
+function statusTone(status: string): StatusStampTone {
   if (status === "CONFIRMED" || status === "DONE") return "done";
-  if (status === "CANCELLED") return "risk";
+  if (status === "CANCELLED") return "danger";
   if (status === "PLANNED") return "waiting";
   return "neutral";
 }
@@ -133,16 +134,17 @@ export default async function ReceptionsPage({
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <Badge tone={statusTone(reception.status)}>{statusLabel}</Badge>
+                    <StatusStamp tone={statusTone(reception.status)}>{statusLabel}</StatusStamp>
                     {reception.checklistTotal > 0 ? (
                       <Link
                         href={`/receptions/${reception.id}`}
-                        className="tnum text-xs font-medium text-primary hover:underline"
+                        className="progress-ring"
+                        style={{
+                          background: `conic-gradient(var(--status-active) ${Math.round((reception.checklistDone / reception.checklistTotal) * 100)}%, var(--hairline) 0)`,
+                        }}
+                        title={t.receptions.checklistProgress(reception.checklistDone, reception.checklistTotal)}
                       >
-                        {t.receptions.checklistProgress(
-                          reception.checklistDone,
-                          reception.checklistTotal,
-                        )}
+                        <span>{reception.checklistDone}/{reception.checklistTotal}</span>
                       </Link>
                     ) : (
                       <Link

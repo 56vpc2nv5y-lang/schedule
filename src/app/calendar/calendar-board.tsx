@@ -223,7 +223,7 @@ export function CalendarBoard({
                       title={`${event.tag} · ${event.title}${
                         event.projectName ? ` · ${event.projectName}` : ""
                       } — ${t.calendar.clickToOpen}`}
-                      className={`flex items-center gap-1 rounded px-1 py-0.5 text-[11px] leading-4 ${
+                      className={`calendar-event-pill flex items-center gap-1 px-1 py-0.5 text-[11px] leading-4 ${
                         isStart
                           ? "cursor-pointer bg-secondary/70 hover:bg-secondary active:cursor-grabbing"
                           : "opacity-60"

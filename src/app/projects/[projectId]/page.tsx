@@ -13,6 +13,7 @@ import {
   createFileLinkAction,
   deleteFileAction,
   updateFileAction,
+  updateProjectStatusAction,
   updateStageAction,
   uploadFileAction,
 } from "@/app/actions";
@@ -46,6 +47,16 @@ const inputClass =
   "h-9 w-full rounded-md border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 const selectClass =
   "h-9 w-full rounded-md border border-input bg-white px-3 text-sm";
+const projectStatusOptions = [
+  { value: 'ACTIVE', label: '进行中' },
+  { value: 'PAUSED', label: '暂停' },
+  { value: 'COMPLETED', label: '已完成' },
+  { value: 'CANCELLED', label: '已取消' },
+] as const;
+
+function projectStatusLabel(status: string) {
+  return projectStatusOptions.find((item) => item.value === status)?.label ?? status;
+}
 
 type ContactRecord = Awaited<ReturnType<typeof getContactsForView>>[number];
 
@@ -91,35 +102,71 @@ export default async function ProjectDetailPage({
   const supplierContacts = project.supplierContactIds
     .map((id) => contactMap.get(id))
     .filter(isContact);
-  const projectIsPaused = project.status === "PAUSED";
+  const projectIsPaused = project.status === 'PAUSED';
   const activeStages = projectIsPaused
     ? []
     : stages.filter(
-        (stage) => stage.status === "IN_PROGRESS" || stage.status === "DELAYED",
+        (stage) => stage.status === 'IN_PROGRESS' || stage.status === 'DELAYED',
       );
+  const currentPhase = trainingProfile?.currentPhase ?? activeStages[0]?.name ?? '';
+  const statusLabel = projectStatusLabel(project.status);
+  const phaseSummary = currentPhase
+    ? `${statusLabel} · ${currentPhase}阶段`
+    : statusLabel;
+  const timelineLatest = timeline.slice(0, 3);
+  const timelineRest = timeline.slice(3);
+  const stageNameById = new Map(stages.map((stage) => [stage.id, stage.name]));
+  const fileGroupMap = new Map<string, typeof files>();
+  for (const file of files) {
+    const key = file.stageId ?? '';
+    const group = fileGroupMap.get(key) ?? [];
+    group.push(file);
+    fileGroupMap.set(key, group);
+  }
+  const fileGroups = Array.from(fileGroupMap.entries()).map(([stageId, groupFiles]) => ({
+    key: stageId || 'none',
+    label: stageId ? stageNameById.get(stageId) ?? '未命名阶段' : '未关联阶段',
+    files: groupFiles,
+  }));
+
   return (
     <AppShell>
       <PageHeader
         eyebrow={[project.region, project.type].filter(Boolean).join(" · ")}
         title={projectDisplayName(locale, project)}
         description={[
-          locale === "en" ? project.nameZh : project.nameEn,
+          locale === 'en' ? project.nameZh : project.nameEn,
           `${project.clientName} · 已完成检查点 ${project.completedStageCount}/${project.totalStageCount}`,
-          projectIsPaused
-            ? "项目已暂停，等待重启复核"
-            : activeStages.length > 0
-              ? "当前并行 " + activeStages.length + " 项"
-              : "当前无进行中事项",
+          phaseSummary,
         ]
           .filter(Boolean)
-          .join(" — ")}
+          .join(' · ')}
         action={
-          <Link href="/projects">
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4" />
-              {t.detail.backToBoard}
-            </Button>
-          </Link>
+          <div className='flex flex-wrap items-center gap-2'>
+            {dbReady ? (
+              <form action={updateProjectStatusAction} className='flex items-center gap-2'>
+                <input type='hidden' name='projectId' value={project.id} />
+                <select
+                  name='status'
+                  defaultValue={project.status}
+                  className='h-9 rounded-md border border-input bg-white px-3 text-sm'
+                >
+                  {projectStatusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <Button type='submit' variant='outline'>保存状态</Button>
+              </form>
+            ) : null}
+            <Link href='/projects'>
+              <Button variant='outline'>
+                <ArrowLeft className='h-4 w-4' />
+                {t.detail.backToBoard}
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -155,6 +202,11 @@ export default async function ProjectDetailPage({
         </div>
       ) : null}
 
+      {updated === 'status' ? (
+        <div className='mb-5 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900'>
+          项目状态已更新，任务来源和培训暂停清单已同步。
+        </div>
+      ) : null}
       {trainingProfile ? (
         <TrainingProfilePanel
           profile={trainingProfile}
@@ -337,17 +389,37 @@ export default async function ProjectDetailPage({
               <CardTitle>操作与交付记录</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {timeline.map((event) => (
-                <div key={event.id} className="border-l-2 border-primary/40 pl-3">
-                  <div className="text-sm font-medium">{event.action}</div>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              {timelineLatest.map((event) => (
+                <div key={event.id} className='border-l-2 border-primary/40 pl-3'>
+                  <div className='text-sm font-medium'>{event.action}</div>
+                  <p className='mt-1 text-xs leading-5 text-muted-foreground'>
                     {event.message}
                   </p>
-                  <div className="mt-1 font-mono text-xs text-muted-foreground">
+                  <div className='mt-1 font-mono text-xs text-muted-foreground'>
                     {event.createdAt}
                   </div>
                 </div>
               ))}
+              {timelineRest.length ? (
+                <details className='group border-t border-border pt-3'>
+                  <summary className='flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-primary hover:underline'>
+                    查看更早记录（{timelineRest.length}）
+                  </summary>
+                  <div className='mt-3 space-y-3'>
+                    {timelineRest.map((event) => (
+                      <div key={event.id} className='border-l-2 border-border pl-3'>
+                        <div className='text-sm font-medium'>{event.action}</div>
+                        <p className='mt-1 text-xs leading-5 text-muted-foreground'>
+                          {event.message}
+                        </p>
+                        <div className='mt-1 font-mono text-xs text-muted-foreground'>
+                          {event.createdAt}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -368,8 +440,14 @@ export default async function ProjectDetailPage({
                   还没有文件，用右侧表单登记链接或上传文件。
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {files.map((file) => (
+                <div className="space-y-5">
+                  {fileGroups.map((group) => (
+                    <section key={group.key} className="space-y-3">
+                      <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
+                        <h3 className="text-sm font-semibold">{group.label}</h3>
+                        <Badge tone="neutral">{group.files.length} 个文件</Badge>
+                      </div>
+                      {group.files.map((file) => (
                     <div
                       key={file.id}
                       className="rounded-md border border-border p-3"
@@ -502,6 +580,8 @@ export default async function ProjectDetailPage({
                         </div>
                       ) : null}
                     </div>
+                      ))}
+                    </section>
                   ))}
                 </div>
               )}

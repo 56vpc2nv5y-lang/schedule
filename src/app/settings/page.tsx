@@ -147,6 +147,16 @@ export default async function SettingsPage({
         </SettingCard>
       </div>
 
+      <SettingCard
+        icon={<ListChecks className="h-4 w-4 text-primary" />}
+        title="联动规则"
+        description="这些开关统一展示看板内跨模块同步策略；当前只接入设置页视觉入口。"
+      >
+        <SettingToggle title="状态来源统一" desc="项目、任务、纪要状态使用同一套图章和状态色。" enabled />
+        <SettingToggle title="阶段待办同步到任务列表" desc="项目阶段和培训清单产生的待办进入统一任务列表。" enabled />
+        <SettingToggle title="逾期强提醒" desc="首页和任务列表突出显示逾期事项。" enabled />
+        <SettingToggle title="联系人重复检测" desc="相似姓名且同项目时只提示，不自动合并。" enabled />
+      </SettingCard>
       <Card className="mb-5">
         <CardHeader className="border-b border-border">
           <CardTitle>{t.settings.dbCard}</CardTitle>
@@ -437,6 +447,25 @@ function SettingCard({
   );
 }
 
+function SettingToggle({
+  title,
+  desc,
+  enabled,
+}: {
+  title: string;
+  desc: string;
+  enabled?: boolean;
+}) {
+  return (
+    <div className="set-row">
+      <div>
+        <div className="text-sm font-medium">{title}</div>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{desc}</p>
+      </div>
+      <span className={enabled ? "toggle" : "toggle off"} aria-hidden />
+    </div>
+  );
+}
 function Banner({
   tone,
   children,

@@ -17,7 +17,7 @@ import {
   updateStageScheduleAction,
 } from "@/app/actions";
 import { useDict, useLocale } from "@/components/layout/locale-provider";
-import { Badge } from "@/components/ui/badge";
+import { StatusStamp } from "@/components/ui/status-pill";
 import { ContextMenu, type MenuItem } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 
@@ -46,10 +46,10 @@ type DragMode = "move" | "left" | "right";
 const DAY = 86_400_000;
 
 function stageTone(status: string) {
-  if (status === "COMPLETED") return "bg-emerald-600";
-  if (status === "IN_PROGRESS") return "bg-indigo-600";
-  if (status === "DELAYED") return "bg-red-600";
-  return "bg-slate-500";
+  if (status === "COMPLETED") return "gantt-stage-done";
+  if (status === "IN_PROGRESS") return "gantt-stage-active";
+  if (status === "DELAYED") return "gantt-stage-danger";
+  return "gantt-stage-pause";
 }
 
 function shiftIso(iso: string, days: number) {
@@ -268,9 +268,9 @@ export function GanttChart({
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <Legend color="bg-emerald-600" label={t.gantt.done} />
-          <Legend color="bg-indigo-600" label={t.gantt.active} />
-          <Legend color="bg-red-600" label={t.gantt.delayed} />
+          <Legend tone="done" label={t.gantt.done} />
+          <Legend tone="active" label={t.gantt.active} />
+          <Legend tone="danger" label={t.gantt.delayed} />
         </div>
       </header>
 
@@ -330,7 +330,7 @@ export function GanttChart({
                           {project.nameZh}
                         </span>
                         {project.status === "PAUSED" ? (
-                          <Badge tone="waiting">暂停</Badge>
+                          <StatusStamp tone="pause">暂停</StatusStamp>
                         ) : null}
                       </div>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -362,7 +362,7 @@ export function GanttChart({
                         onClick={() =>
                           setExpandedId(isExpanded ? null : project.id)
                         }
-                        className="blueprint-gantt-summary-bar absolute top-3 z-10 flex h-8 min-w-36 items-center overflow-hidden rounded bg-foreground px-3 text-left text-[11px] font-semibold text-background shadow-sm hover:bg-foreground/90"
+                        className="blueprint-gantt-summary-bar absolute top-3 z-10 flex h-8 min-w-36 items-center overflow-hidden rounded px-3 text-left text-[11px] font-semibold"
                         style={{
                           left: `${range.left}%`,
                           width: `max(${range.width}%, 144px)`,
@@ -441,7 +441,7 @@ export function GanttChart({
                               {overlaps ? (
                                 <div
                                   className={cn(
-                                    "blueprint-gantt-stage-bar group absolute top-2.5 z-10 flex h-7 min-w-24 cursor-grab items-center overflow-hidden rounded text-[11px] font-medium text-white shadow-sm active:cursor-grabbing",
+                                    "blueprint-gantt-stage-bar group absolute top-2.5 z-10 flex h-7 min-w-24 cursor-grab items-center overflow-hidden rounded text-[11px] font-medium active:cursor-grabbing",
                                     stageTone(stage.status),
                                     activeId === stage.id &&
                                       "ring-2 ring-foreground/30 ring-offset-1",
@@ -547,17 +547,25 @@ function TimelineGrid({
         );
       })}
       <span
-        className="blueprint-today-line absolute bottom-0 top-0 z-20 border-l border-red-500"
+        className="blueprint-today-line absolute bottom-0 top-0 z-20 border-l"
         style={{ left: `${todayPercent}%` }}
       />
     </div>
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+type LegendTone = "done" | "active" | "danger";
+
+const legendToneClass: Record<LegendTone, string> = {
+  done: "gantt-stage-done",
+  active: "gantt-stage-active",
+  danger: "gantt-stage-danger",
+};
+
+function Legend({ tone, label }: { tone: LegendTone; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className={cn("h-2 w-2 rounded-full", color)} />
+      <span className={cn("gantt-legend-swatch", legendToneClass[tone])} />
       {label}
     </span>
   );
