@@ -173,7 +173,12 @@ export const getStagesForView = cache(async () => {
 
 export const getTasksForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedTasks;
+    return seedTasks.map((task) => ({
+      ...task,
+      description: "",
+      source: "MANUAL",
+      sourceLabel: "手动新建",
+    }));
   }
 
   const tasks = await getPrisma().task.findMany({
@@ -190,35 +195,38 @@ export const getTasksForView = cache(async () => {
     type: task.typeTag?.name ?? "项目",
     status: task.status,
     priority: task.priority,
+    source: task.source,
+    sourceLabel: task.sourceLabel ?? "手动新建",
     dueDate: toDateText(task.dueDate),
     assigneeId: task.assigneeId ?? "",
   }));
 });
-
 export const getTaskPageData = cache(async () => {
   if (!isDatabaseConfigured()) {
     return {
-      projects: seedProjects.map(({ id, nameZh, nameEn }) => ({
+      projects: seedProjects.map(({ id, nameZh, nameEn, status }) => ({
         id,
         nameZh,
         nameEn,
+        status,
       })),
       tasks: seedTasks.map((task) => ({
         ...task,
         description: "",
+        source: "MANUAL",
+        sourceLabel: "手动新建",
       })),
       contacts: seedContacts.map(({ id, name, organization }) => ({
         id,
         name,
         organization,
       })),
-      trainingChecklistItems: [],
     };
   }
 
-  const [projects, tasks, contacts, trainingChecklistItems] = await Promise.all([
+  const [projects, tasks, contacts] = await Promise.all([
     getPrisma().project.findMany({
-      select: { id: true, nameZh: true, nameEn: true },
+      select: { id: true, nameZh: true, nameEn: true, status: true },
       orderBy: { updatedAt: "desc" },
     }),
     getPrisma().task.findMany({
@@ -230,6 +238,8 @@ export const getTaskPageData = cache(async () => {
         description: true,
         status: true,
         priority: true,
+        source: true,
+        sourceLabel: true,
         dueDate: true,
         assigneeId: true,
         typeTag: { select: { name: true } },
@@ -240,23 +250,6 @@ export const getTaskPageData = cache(async () => {
       select: { id: true, name: true, organization: true },
       orderBy: { name: "asc" },
     }),
-    getPrisma().trainingChecklistItem.findMany({
-      select: {
-        id: true,
-        section: true,
-        label: true,
-        done: true,
-        note: true,
-        sortOrder: true,
-        trainingProfile: {
-          select: {
-            projectId: true,
-            project: { select: { status: true } },
-          },
-        },
-      },
-      orderBy: [{ section: "asc" }, { sortOrder: "asc" }],
-    }),
   ]);
 
   return {
@@ -264,6 +257,7 @@ export const getTaskPageData = cache(async () => {
       id: project.id,
       nameZh: project.nameZh,
       nameEn: project.nameEn ?? "",
+      status: project.status,
     })),
     tasks: tasks.map((task) => ({
       id: task.id,
@@ -274,19 +268,12 @@ export const getTaskPageData = cache(async () => {
       type: task.typeTag?.name ?? "项目",
       status: task.status,
       priority: task.priority,
+      source: task.source,
+      sourceLabel: task.sourceLabel ?? "手动新建",
       dueDate: toDateText(task.dueDate),
       assigneeId: task.assigneeId ?? "",
     })),
     contacts,
-    trainingChecklistItems: trainingChecklistItems.map((item) => ({
-      id: item.id,
-      projectId: item.trainingProfile.projectId,
-      projectStatus: item.trainingProfile.project.status,
-      section: item.section,
-      label: item.label,
-      note: item.note ?? "",
-      done: item.done,
-    })),
   };
 });
 export const getFilesForView = cache(async () => {
@@ -345,30 +332,62 @@ export const getReceptionsForView = cache(async () => {
     });
   }
 
-  const receptions = await getPrisma().reception.findMany({
+  const prisma = getPrisma();
+  const receptions = await prisma.reception.findMany({
     include: {
       visitors: true,
-      checklistItems: { select: { done: true } },
+      checklistItems: { select: { id: true } },
     },
     orderBy: { startAt: "asc" },
   });
 
-  return receptions.map((reception) => ({
-    id: reception.id,
-    projectId: reception.projectId ?? undefined,
-    type: reception.type,
-    title: reception.title,
-    location: reception.location ?? "",
-    purpose: reception.purpose ?? "",
-    startAt: toDateTimeText(reception.startAt),
-    endAt: toDateTimeText(reception.endAt),
-    status: reception.status,
-    visitorIds: reception.visitors.map((visitor) => visitor.contactId),
-    checklistTotal: reception.checklistItems.length,
-    checklistDone: reception.checklistItems.filter((item) => item.done).length,
-  }));
-});
+  const checklistIds = receptions.flatMap((reception) =>
+    reception.checklistItems.map((item) => item.id),
+  );
+  const checklistTasks = checklistIds.length
+    ? await prisma.task.findMany({
+        where: {
+          source: "RECEPTION_CHECKLIST",
+          sourceRefId: { in: checklistIds },
+        },
+        select: { sourceRefId: true, status: true },
+      })
+    : [];
+  const taskCountByChecklist = new Map<string, { total: number; done: number }>();
+  for (const task of checklistTasks) {
+    if (!task.sourceRefId) continue;
+    const current = taskCountByChecklist.get(task.sourceRefId) ?? { total: 0, done: 0 };
+    current.total += 1;
+    if (task.status === "DONE") current.done += 1;
+    taskCountByChecklist.set(task.sourceRefId, current);
+  }
 
+  return receptions.map((reception) => {
+    const progress = reception.checklistItems.reduce(
+      (sum, item) => {
+        const count = taskCountByChecklist.get(item.id);
+        if (!count) return sum;
+        return { total: sum.total + count.total, done: sum.done + count.done };
+      },
+      { total: 0, done: 0 },
+    );
+
+    return {
+      id: reception.id,
+      projectId: reception.projectId ?? undefined,
+      type: reception.type,
+      title: reception.title,
+      location: reception.location ?? "",
+      purpose: reception.purpose ?? "",
+      startAt: toDateTimeText(reception.startAt),
+      endAt: toDateTimeText(reception.endAt),
+      status: reception.status,
+      visitorIds: reception.visitors.map((visitor) => visitor.contactId),
+      checklistTotal: progress.total,
+      checklistDone: progress.done,
+    };
+  });
+});
 /** 单场接待详情 + 分阶段清单（演示模式读种子数据，只读） */
 export async function getReceptionDetailForView(id: string) {
   if (!isDatabaseConfigured()) {
