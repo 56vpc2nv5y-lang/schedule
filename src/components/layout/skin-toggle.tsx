@@ -2,22 +2,23 @@
 
 import { useSyncExternalStore } from "react";
 import { Palette } from "lucide-react";
-import { useDict } from "@/components/layout/locale-provider";
 import { cn } from "@/lib/utils";
 
-type Skin = "vibrant" | "sunset";
-const SKINS: Skin[] = ["vibrant", "sunset"];
+type Skin = "sunny-a" | "sunny-c";
+const SKINS: Skin[] = ["sunny-a", "sunny-c"];
 const SKIN_CHANGE_EVENT = "schedule-skin-change";
 
-// 每个皮肤按钮的小色卡，直观预览主色
-const SWATCH: Record<Skin, string> = {
-  vibrant: "oklch(0.55 0.19 274)",
-  sunset: "oklch(0.62 0.19 35)",
+const SKIN_META: Record<Skin, { label: string; dot: string; text: string }> = {
+  "sunny-a": { label: "默认暖白", dot: "#F6F3EC", text: "A" },
+  "sunny-c": { label: "古风公文", dot: "#EDE3D2", text: "C" },
 };
 
+function normalizeSkin(value: string | null): Skin {
+  return value === "sunny-c" ? "sunny-c" : "sunny-a";
+}
+
 function readSkin(): Skin {
-  const skin = document.documentElement.getAttribute("data-skin");
-  return skin === "sunset" ? "sunset" : "vibrant";
+  return normalizeSkin(document.documentElement.getAttribute("data-skin"));
 }
 
 function subscribeToSkin(onStoreChange: () => void) {
@@ -26,16 +27,10 @@ function subscribeToSkin(onStoreChange: () => void) {
 }
 
 function getServerSkin(): Skin {
-  return "vibrant";
+  return "sunny-a";
 }
 
 export function SkinToggle() {
-  const t = useDict();
-  const labels: Record<Skin, string> = {
-    vibrant: t.nav.skinVibrant,
-    sunset: t.nav.skinSunset,
-  };
-  // 默认皮肤「活泼」= @theme 基色，无需 data-skin
   const skin = useSyncExternalStore(subscribeToSkin, readSkin, getServerSkin);
 
   function apply(next: Skin) {
@@ -43,7 +38,7 @@ export function SkinToggle() {
     try {
       localStorage.setItem("skin", next);
     } catch {
-      // 忽略隐私模式等写入失败
+      // Ignore private-mode storage failures; the current DOM still updates.
     }
     window.dispatchEvent(new Event(SKIN_CHANGE_EVENT));
   }
@@ -52,31 +47,27 @@ export function SkinToggle() {
     <div className="skin-toggle rounded-lg border border-border bg-card p-2.5">
       <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Palette className="h-3.5 w-3.5" />
-        {t.nav.skin}
+        皮肤
       </div>
       <div className="flex items-center gap-2">
-        {SKINS.map((option) => (
-          <button
-            key={option}
-            onClick={() => apply(option)}
-            title={labels[option]}
-            aria-label={labels[option]}
-            className={cn(
-              "grid h-8 w-8 place-items-center rounded-md border transition-colors",
-              skin === option
-                ? "border-primary/50 bg-primary/10"
-                : "border-transparent hover:bg-secondary",
-            )}
-          >
-            <span
+        {SKINS.map((option) => {
+          const meta = SKIN_META[option];
+          return (
+            <button
+              key={option}
+              onClick={() => apply(option)}
+              title={meta.label}
+              aria-label={meta.label}
               className={cn(
-                "h-3.5 w-3.5 rounded-full border border-black/10",
-                skin === option && "ring-2 ring-primary/25 ring-offset-2 ring-offset-card",
+                "skin-dot grid h-8 w-8 place-items-center rounded-full border text-[10px] font-semibold transition-colors",
+                skin === option ? "is-active border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground",
               )}
-              style={{ background: SWATCH[option] }}
-            />
-          </button>
-        ))}
+              style={{ background: meta.dot }}
+            >
+              {meta.text}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

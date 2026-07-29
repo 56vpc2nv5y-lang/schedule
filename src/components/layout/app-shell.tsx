@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpenText,
-  CalendarClock,
   CalendarDays,
   CircleHelp,
   ClipboardList,
@@ -51,7 +50,6 @@ const navGroups: { label?: (t: Dict) => string; items: NavItem[] }[] = [
     label: (t) => t.nav.groupSchedule,
     items: [
       { href: "/calendar", label: (t) => t.nav.calendar, icon: CalendarDays },
-      { href: "/week", label: (t) => t.nav.week, icon: CalendarClock },
       { href: "/receptions", label: (t) => t.nav.receptions, icon: PlaneTakeoff },
     ],
   },
