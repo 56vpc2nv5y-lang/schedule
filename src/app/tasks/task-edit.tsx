@@ -5,6 +5,7 @@ import { Pencil, X } from "lucide-react";
 import { updateTaskAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { useDict } from "@/components/layout/locale-provider";
+import { sendChannelOptions, taskStatusOptions, waitingOnOptions } from "@/lib/workflow-meta";
 
 type Task = {
   id: string;
@@ -15,9 +16,11 @@ type Task = {
   priority: string;
   dueDate: string;
   assigneeId: string;
+  status: string;
+  waitingOn?: string;
+  sendChannel?: string;
 };
 
-/** 任务编辑：铅笔按钮打开弹框，改 标题/项目/类型/优先级/截止/负责人 */
 export function TaskEditButton({
   task,
   projects,
@@ -38,122 +41,79 @@ export function TaskEditButton({
   return (
     <>
       {trigger === "title" ? (
-        <button
-          type="button"
-          className="block w-full text-left font-medium hover:text-primary hover:underline"
-          title={t.common.edit}
-          onClick={() => setOpen(true)}
-        >
+        <button type="button" className="block w-full text-left font-medium hover:text-primary hover:underline" title="编辑任务" onClick={() => setOpen(true)}>
           {task.title}
         </button>
       ) : (
-        <Button
-          variant="ghost"
-          size="icon"
-          type="button"
-          className="h-8 w-8"
-          title={t.common.edit}
-          onClick={() => setOpen(true)}
-        >
+        <Button variant="ghost" size="icon" type="button" className="h-8 w-8" title="编辑任务" onClick={() => setOpen(true)}>
           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
       )}
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-base font-semibold">{t.tasks.editTask}</div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      <div className={`s3-drawer ${open ? "is-open" : ""}`} role="dialog" aria-modal="true" aria-label="编辑任务">
+        <button type="button" className="s3-backdrop" aria-label="关闭编辑任务" onClick={() => setOpen(false)} />
+        <aside className="s3-drawer-panel">
+          <div className="s3-drawer-head">
+            <div className="min-w-0">
+              <div className="os-card-title truncate">编辑任务</div>
+              <div className="os-card-sub truncate">{task.title}</div>
             </div>
-            <form action={updateTaskAction} className="grid gap-3 sm:grid-cols-2">
+            <button type="button" className="s3-close" onClick={() => setOpen(false)}><X className="mx-auto h-4 w-4" /></button>
+          </div>
+          <div className="s3-drawer-body">
+            <form action={updateTaskAction} className="os-form-grid">
               <input type="hidden" name="taskId" value={task.id} />
-              <label className="sm:col-span-2">
-                <span className="flabel">{t.tasks.fTitle}</span>
+              <label className="os-field-full">
+                <span className="flabel">标题</span>
                 <input name="title" defaultValue={task.title} className="field" />
               </label>
-              <label className="sm:col-span-2">
-                <span className="flabel">{t.tasks.fDescription}</span>
-                <textarea
-                  name="description"
-                  defaultValue={task.description}
-                  className="field min-h-24 resize-y"
-                  placeholder={t.tasks.fDescriptionPh}
-                />
+              <label className="os-field-full">
+                <span className="flabel">下一步 / 说明</span>
+                <textarea name="description" defaultValue={task.description} className="field min-h-28 resize-y" placeholder="写清楚下一步动作。" />
               </label>
-              <label className="sm:col-span-2">
-                <span className="flabel">{t.tasks.fProject}</span>
+              <label className="os-field-full">
+                <span className="flabel">关联项目</span>
                 <select name="projectId" defaultValue={task.projectId} className="field">
-                  <option value="">{t.common.noProject}</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
+                  <option value="">不挂项目（个人/行政事务）</option>
+                  {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </label>
               <label>
-                <span className="flabel">{t.tasks.fType}</span>
-                <select name="type" defaultValue={task.type} className="field">
-                  {taskTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
+                <span className="flabel">类型</span>
+                <select name="type" defaultValue={task.type} className="field">{taskTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
               </label>
               <label>
-                <span className="flabel">{t.tasks.fPriority}</span>
-                <select name="priority" defaultValue={task.priority} className="field">
-                  {priorities.map((value) => (
-                    <option key={value} value={value}>
-                      {t.statuses.priority[value]}
-                    </option>
-                  ))}
-                </select>
+                <span className="flabel">优先级</span>
+                <select name="priority" defaultValue={task.priority} className="field">{priorities.map((value) => <option key={value} value={value}>{t.statuses.priority[value]}</option>)}</select>
               </label>
               <label>
-                <span className="flabel">{t.tasks.fDue}</span>
-                <input
-                  type="date"
-                  name="dueDate"
-                  defaultValue={task.dueDate}
-                  className="field"
-                />
+                <span className="flabel">状态</span>
+                <select name="status" defaultValue={task.status} className="field">{taskStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
               </label>
               <label>
-                <span className="flabel">{t.tasks.fAssignee}</span>
-                <select name="assigneeId" defaultValue={task.assigneeId} className="field">
-                  <option value="">{t.common.notSelected}</option>
-                  {contacts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} · {c.organization}
-                    </option>
-                  ))}
-                </select>
+                <span className="flabel">截止日期</span>
+                <input type="date" name="dueDate" defaultValue={task.dueDate} className="field" />
               </label>
-              <div className="flex items-center justify-end gap-2 sm:col-span-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  {t.common.cancel}
-                </Button>
-                <Button type="submit">{t.common.save}</Button>
+              <label>
+                <span className="flabel">等待对象</span>
+                <select name="waitingOn" defaultValue={task.waitingOn ?? ""} className="field"><option value="">无</option>{waitingOnOptions.map((option) => <option key={option}>{option}</option>)}</select>
+              </label>
+              <label>
+                <span className="flabel">发送渠道</span>
+                <select name="sendChannel" defaultValue={task.sendChannel ?? ""} className="field"><option value="">无</option>{sendChannelOptions.map((option) => <option key={option}>{option}</option>)}</select>
+              </label>
+              <label className="os-field-full">
+                <span className="flabel">负责人</span>
+                <select name="assigneeId" defaultValue={task.assigneeId} className="field"><option value="">暂不选择</option>{contacts.map((c) => <option key={c.id} value={c.id}>{c.name} / {c.organization}</option>)}</select>
+              </label>
+              <div className="os-row justify-end os-field-full">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>取消</Button>
+                <Button type="submit">保存修改</Button>
               </div>
             </form>
           </div>
-        </div>
-      ) : null}
+        </aside>
+      </div>
     </>
   );
 }

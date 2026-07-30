@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { setTaskStatusQuickAction } from "@/app/actions";
+import { normalizeTaskStatus } from "@/lib/workflow-meta";
 
 export function StatusSelect({
   taskId,
@@ -13,16 +14,16 @@ export function StatusSelect({
   value: string;
   options: { value: string; label: string }[];
 }) {
-  const [current, setCurrent] = useState(value);
+  const [current, setCurrent] = useState(normalizeTaskStatus(value));
   const [undoValue, setUndoValue] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const mounted = useRef(false);
   const storageKey = `task-status-undo:${taskId}`;
 
   useEffect(() => {
-    setCurrent(value);
+    setCurrent(normalizeTaskStatus(value));
     const saved = window.sessionStorage.getItem(storageKey);
-    if (saved && saved !== value) setUndoValue(saved);
+    if (saved && saved !== normalizeTaskStatus(value)) setUndoValue(saved);
     mounted.current = true;
   }, [storageKey, value]);
 

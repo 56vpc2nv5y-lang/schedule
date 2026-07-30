@@ -298,6 +298,9 @@ export async function createTaskAction(formData: FormData) {
   const assigneeId = getString(formData, "assigneeId");
   const dueDate = getDate(formData, "dueDate");
   const priority = parsePriority(getString(formData, "priority"));
+  const status = parseTaskStatus(getString(formData, "status"));
+  const waitingOn = getString(formData, "waitingOn");
+  const sendChannel = getString(formData, "sendChannel");
 
   if (!title) {
     redirect("/tasks?error=missing-required");
@@ -305,7 +308,7 @@ export async function createTaskAction(formData: FormData) {
 
   const typeTag = await ensureTag(
     TagType.TASK_TYPE,
-    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "椤圭洰",
+    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "项目",
   );
 
   await getPrisma().task.create({
@@ -315,7 +318,9 @@ export async function createTaskAction(formData: FormData) {
       description: description || null,
       dueDate,
       priority,
-      status: TaskStatus.TODO,
+      status,
+      waitingOn: waitingOn || null,
+      sendChannel: sendChannel || null,
       source: TaskSource.MANUAL,
       typeTagId: typeTag?.id,
       assigneeId: assigneeId || undefined,
@@ -351,7 +356,7 @@ function parsePriority(value: string): Priority {
 function parseTaskStatus(value: string): TaskStatus {
   return (Object.values(TaskStatus) as string[]).includes(value)
     ? (value as TaskStatus)
-    : TaskStatus.TODO;
+    : TaskStatus.NOT_STARTED;
 }
 
 export async function updateTaskStatusAction(formData: FormData) {
@@ -394,7 +399,7 @@ export async function updateTaskStatusAction(formData: FormData) {
   ) {
     await getPrisma().feedbackQuestion.update({
       where: { id: task.sourceRefId },
-      data: { status: QuestionStatus.CONFIRMED },
+      data: { status: QuestionStatus.TO_CLIENT },
     }).catch(() => {});
     revalidatePath("/meeting-reviews");
   }
@@ -453,9 +458,12 @@ export async function updateTaskAction(formData: FormData) {
   const assigneeId = getString(formData, "assigneeId");
   const dueDate = getDate(formData, "dueDate");
   const priority = parsePriority(getString(formData, "priority"));
+  const status = parseTaskStatus(getString(formData, "status"));
+  const waitingOn = getString(formData, "waitingOn");
+  const sendChannel = getString(formData, "sendChannel");
   const typeTag = await ensureTag(
     TagType.TASK_TYPE,
-    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "椤圭洰",
+    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "项目",
   );
 
   const previous = await getPrisma().task.findUnique({
@@ -474,6 +482,9 @@ export async function updateTaskAction(formData: FormData) {
       description: description || null,
       dueDate: dueDate ?? null,
       priority,
+      status,
+      waitingOn: waitingOn || null,
+      sendChannel: sendChannel || null,
       typeTagId: typeTag?.id ?? null,
       assigneeId: assigneeId || null,
     },
@@ -1001,7 +1012,7 @@ export async function setTaskStatusQuickAction(taskId: string, status: string) {
   ) {
     await getPrisma().feedbackQuestion.update({
       where: { id: task.sourceRefId },
-      data: { status: QuestionStatus.CONFIRMED },
+      data: { status: QuestionStatus.TO_CLIENT },
     }).catch(() => {});
     revalidatePath("/meeting-reviews");
   }
@@ -1202,19 +1213,29 @@ export async function deleteKnowledgeNoteAction(formData: FormData) {
 function parseQuestionStatus(value: string): QuestionStatus {
   return (Object.values(QuestionStatus) as string[]).includes(value)
     ? (value as QuestionStatus)
-    : QuestionStatus.OPEN;
+    : QuestionStatus.ORGANIZING;
 }
 
 export async function createFeedbackQuestionAction(formData: FormData) {
   requireDatabase("/meeting-reviews");
   const projectId = getString(formData, "projectId");
   const question = getString(formData, "question");
-  const source = getString(formData, "source") || "鐢叉柟";
+  const source = getString(formData, "source") || "甲方";
   if (!projectId || !question) {
     redirect("/meeting-reviews?error=missing-required");
   }
   await getPrisma().feedbackQuestion.create({
-    data: { projectId, question, source },
+    data: {
+      projectId,
+      question,
+      source,
+      background: getString(formData, "background") || null,
+      supplierQuestion: getString(formData, "supplierQuestion") || null,
+      ownerContactId: getString(formData, "ownerContactId") || null,
+      questionAt: getDateTime(formData, "questionAt") ?? null,
+      plannedSupplierSendAt: getDateTime(formData, "plannedSupplierSendAt") ?? null,
+      expectedReplyAt: getDateTime(formData, "expectedReplyAt") ?? null,
+    },
   });
   revalidatePath("/meeting-reviews");
   redirect("/meeting-reviews?created=question");
@@ -1225,11 +1246,38 @@ export async function updateFeedbackQuestionAction(formData: FormData) {
   const id = getString(formData, "id");
   if (!id) redirect("/meeting-reviews");
   const status = parseQuestionStatus(getString(formData, "status"));
-  const answer = getString(formData, "answer");
-  const note = getString(formData, "note");
+  const now = new Date();
+  const isArchived = status === QuestionStatus.SENT_CLIENT;
+
   await getPrisma().feedbackQuestion.update({
     where: { id },
-    data: { status, answer: answer || null, note: note || null },
+    data: {
+      status,
+      question: getString(formData, "question") || undefined,
+      source: getString(formData, "source") || undefined,
+      answer: getString(formData, "answer") || null,
+      note: getString(formData, "note") || null,
+      background: getString(formData, "background") || null,
+      supplierQuestion: getString(formData, "supplierQuestion") || null,
+      supplierReply: getString(formData, "supplierReply") || null,
+      sunnyJudgment: getString(formData, "sunnyJudgment") || null,
+      followUpLog: getString(formData, "followUpLog") || null,
+      finalReplyZh: getString(formData, "finalReplyZh") || null,
+      finalReplyEn: getString(formData, "finalReplyEn") || null,
+      internalNote: getString(formData, "internalNote") || null,
+      ownerContactId: getString(formData, "ownerContactId") || null,
+      sendChannel: getString(formData, "sendChannel") || null,
+      dueAt: getDateTime(formData, "dueAt") ?? null,
+      questionAt: getDateTime(formData, "questionAt") ?? null,
+      plannedSupplierSendAt: getDateTime(formData, "plannedSupplierSendAt") ?? null,
+      supplierSentAt: getDateTime(formData, "supplierSentAt") ?? null,
+      expectedReplyAt: getDateTime(formData, "expectedReplyAt") ?? null,
+      actualReplyAt: getDateTime(formData, "actualReplyAt") ?? null,
+      leaderReviewedAt: getDateTime(formData, "leaderReviewedAt") ?? null,
+      translatedAt: getDateTime(formData, "translatedAt") ?? null,
+      clientSentAt: getDateTime(formData, "clientSentAt") ?? (isArchived ? now : null),
+      archivedAt: isArchived ? now : null,
+    },
   });
   revalidatePath("/meeting-reviews");
   redirect("/meeting-reviews?created=question-updated");
@@ -1258,17 +1306,18 @@ export async function createFeedbackFollowUpTaskAction(formData: FormData) {
     redirect("/meeting-reviews?created=follow-up-task-exists");
   }
   if (
-    question.status !== QuestionStatus.UNCLEAR &&
-    question.status !== QuestionStatus.NEED_MEETING
+    question.status === QuestionStatus.SENT_CLIENT
   ) {
     redirect("/meeting-reviews?error=question-not-actionable");
   }
 
   const typeTag = await ensureTag(TagType.TASK_TYPE, "项目");
   const title =
-    question.status === QuestionStatus.NEED_MEETING
-      ? "安排会议澄清：" + question.question
-      : "追问并确认：" + question.question;
+    question.status === QuestionStatus.LEADER_REVIEW
+      ? "安排 Leader 审核：" + question.question
+      : question.status === QuestionStatus.TO_CLIENT
+        ? "发送客户版回复：" + question.question
+        : "跟进问题闭环：" + question.question;
   const task = await prisma.task.create({
     data: {
       projectId: question.projectId,
@@ -1280,14 +1329,14 @@ export async function createFeedbackFollowUpTaskAction(formData: FormData) {
         "）。待确认：" +
         (question.note || question.question),
       priority:
-        question.status === QuestionStatus.NEED_MEETING
+        question.status === QuestionStatus.LEADER_REVIEW || question.status === QuestionStatus.TO_CLIENT
           ? Priority.HIGH
           : Priority.MEDIUM,
       dueDate: new Date(),
       source: TaskSource.FEEDBACK_FOLLOW_UP,
       sourceRefId: question.id,
       sourceLabel: "来自纪要 / " + question.source,
-      status: TaskStatus.TODO,
+      status: TaskStatus.NOT_STARTED,
     },
   });
   await prisma.feedbackQuestion.update({
@@ -1424,7 +1473,7 @@ export async function createWorkflowTasksAction(formData: FormData) {
       title: `【${template!.name}】${item.title}`,
       dueDate: new Date(baseDate.getTime() + item.offset * 86400000),
       typeTagId: typeTag?.id,
-      status: TaskStatus.TODO,
+      status: TaskStatus.NOT_STARTED,
     })),
   });
 
@@ -2240,7 +2289,7 @@ export async function createDailyItemsAction(items: DailyDraft[]) {
             title,
             dueDate: toDate(item.date),
             description: item.detail || null,
-            status: TaskStatus.TODO,
+            status: TaskStatus.NOT_STARTED,
           },
         });
       }
