@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { addDays, addMonths, endOfMonth, format, parse, startOfMonth, startOfWeek } from "date-fns";
 import { AppShell } from "@/components/layout/app-shell";
@@ -22,10 +22,8 @@ function ymToDate(ym: string | undefined): Date | null {
   return null;
 }
 
-function receptionColor(type: string) {
-  if (type === "BUSINESS_TRIP") return "bg-amber-500";
-  if (type === "EXHIBITION_INVITE") return "bg-violet-500";
-  return "bg-emerald-500";
+function receptionKind(type: string): "reception" | "expo" {
+  return type === "VISIT" ? "reception" : "expo";
 }
 
 export default async function CalendarPage({
@@ -64,7 +62,6 @@ export default async function CalendarPage({
       title: task.title,
       start: task.dueDate,
       end: task.dueDate,
-      color: isPauseFollowUpTask(task) ? "bg-amber-500" : task.status === "DONE" ? "bg-slate-400" : task.status === "OVERDUE" ? "bg-red-500" : "bg-sky-500",
       tag: isPauseFollowUpTask(task) ? "暂停复核" : t.calendar.legendTask,
       projectName: task.projectId ? projectMap.get(task.projectId)?.nameZh : undefined,
     })),
@@ -74,11 +71,10 @@ export default async function CalendarPage({
       return {
         id: `reception-${reception.id}`,
         rawId: reception.id,
-        kind: "reception" as const,
+        kind: receptionKind(reception.type),
         title: reception.title,
         start,
         end,
-        color: receptionColor(reception.type),
         tag: receptionTypeMeta[reception.type as keyof typeof receptionTypeMeta]?.short ?? "接待",
         projectName: reception.projectId ? projectMap.get(reception.projectId)?.nameZh : undefined,
       };
@@ -102,7 +98,7 @@ export default async function CalendarPage({
   const monthEndIso = format(endOfMonth(monthStart), "yyyy-MM-dd");
   const monthEventCount = events.filter((event) => event.start <= monthEndIso && event.end >= monthStartIso).length;
   const taskCount = events.filter((event) => event.kind === "task").length;
-  const receptionCount = events.filter((event) => event.kind === "reception").length;
+  const receptionCount = events.filter((event) => event.kind !== "task").length;
   const monthLabel = t.calendar.monthLabel(monthStart.getFullYear(), monthStart.getMonth() + 1);
 
   return (
@@ -134,7 +130,7 @@ export default async function CalendarPage({
           </div>
         </div>
 
-        <div className="mb-5 grid gap-3 md:grid-cols-3">
+        <div className="mb-5 kpi-bar" data-cols="3">
           <Mini label="本月安排" value={monthEventCount} />
           <Mini label="任务" value={taskCount} />
           <Mini label="出差/接待" value={receptionCount} />
@@ -148,7 +144,7 @@ export default async function CalendarPage({
 
 function Mini({ label, value }: { label: string; value: number }) {
   return (
-    <div className="focus-card border border-border bg-card">
+    <div className="kpi-cell">
       <strong className="tnum">{value}</strong>
       <span>{label}</span>
     </div>

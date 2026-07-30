@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { CircleHelp } from "lucide-react";
@@ -16,15 +16,20 @@ import { ContextMenu, type MenuItem } from "@/components/ui/context-menu";
 import { useDict } from "@/components/layout/locale-provider";
 
 export type CalendarEvent = {
-  id: string; // 唯一 key，如 task-xxx
-  rawId: string; // 数据库里的真实 id
-  kind: "task" | "reception";
+  id: string;
+  rawId: string;
+  kind: "task" | "reception" | "expo";
   title: string;
-  start: string; // YYYY-MM-DD
-  end: string; // YYYY-MM-DD
-  color: string;
+  start: string;
+  end: string;
   tag: string;
   projectName?: string;
+};
+
+const kindLabels: Record<CalendarEvent["kind"], string> = {
+  task: "任务",
+  reception: "接待",
+  expo: "展会/出差",
 };
 
 function shiftIso(iso: string, days: number) {
@@ -46,6 +51,12 @@ export function CalendarBoard({
 }) {
   const t = useDict();
   const [items, setItems] = useState<CalendarEvent[]>(events);
+  const [filters, setFilters] = useState<Record<CalendarEvent["kind"], boolean>>({
+    task: true,
+    reception: true,
+    expo: true,
+  });
+  const [expandedIso, setExpandedIso] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overIso, setOverIso] = useState<string | null>(null);
   const [menu, setMenu] = useState<{
@@ -56,8 +67,13 @@ export function CalendarBoard({
   const [, startTransition] = useTransition();
   const router = useRouter();
 
+  const visibleItems = useMemo(
+    () => items.filter((event) => filters[event.kind]),
+    [filters, items],
+  );
+
   function eventsForDay(iso: string) {
-    return items.filter((event) => event.start <= iso && iso <= event.end);
+    return visibleItems.filter((event) => event.start <= iso && iso <= event.end);
   }
 
   function handleDrop(targetIso: string) {
@@ -66,15 +82,11 @@ export function CalendarBoard({
     setOverIso(null);
     if (!ev) return;
 
-    const delta = differenceInCalendarDays(
-      parseISO(targetIso),
-      parseISO(ev.start),
-    );
+    const delta = differenceInCalendarDays(parseISO(targetIso), parseISO(ev.start));
     if (delta === 0) return;
     applyShift(ev, delta);
   }
 
-  // 本地乐观更新 + 落库
   function applyShift(ev: CalendarEvent, delta: number) {
     setItems((prev) =>
       prev.map((event) =>
@@ -142,21 +154,29 @@ export function CalendarBoard({
     });
   }
 
+  const expandedEvents = expandedIso ? eventsForDay(expandedIso) : [];
+
   return (
     <div className="blueprint-calendar overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      <div className="calendar-toolbar flex flex-wrap items-center justify-end gap-3 border-b border-border px-5 py-3 text-xs text-muted-foreground">
-        <div className="flex flex-wrap items-center gap-3">
-          <Legend color="bg-sky-500" label={t.calendar.legendTask} />
-          <Legend color="bg-amber-500" label={t.calendar.legendTrip} />
-          <Legend color="bg-emerald-500" label={t.calendar.legendVisit} />
-          <Legend color="bg-violet-500" label={t.calendar.legendExpo} />
-          <span
-            className="flex h-6 w-6 items-center justify-center border-l border-border pl-3"
-            title={dbConnected ? t.calendar.dragTipLive : t.calendar.dragTipDemo}
-          >
-            <CircleHelp className="h-4 w-4" />
-          </span>
+      <div className="calendar-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2">
+          {(Object.keys(kindLabels) as CalendarEvent["kind"][]).map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className={`chip ${filters[kind] ? "" : "opacity-50"}`}
+              onClick={() => setFilters((prev) => ({ ...prev, [kind]: !prev[kind] }))}
+            >
+              <span className="calendar-event-chip" data-kind={kind} aria-hidden="true"><span>{kindLabels[kind]}</span></span>
+            </button>
+          ))}
         </div>
+        <span
+          className="flex h-6 w-6 items-center justify-center border-l border-border pl-3"
+          title={dbConnected ? t.calendar.dragTipLive : t.calendar.dragTipDemo}
+        >
+          <CircleHelp className="h-4 w-4" />
+        </span>
       </div>
 
       <div className="calendar-weekdays grid grid-cols-7 border-b border-border bg-secondary/60 text-center text-xs font-medium text-muted-foreground">
@@ -173,6 +193,8 @@ export function CalendarBoard({
           const inMonth = parseISO(iso).getMonth() === currentMonth;
           const isToday = iso === todayIso;
           const dayEvents = eventsForDay(iso);
+          const visibleDayEvents = dayEvents.slice(0, 2);
+          const hiddenCount = Math.max(0, dayEvents.length - visibleDayEvents.length);
           const isOver = overIso === iso;
 
           return (
@@ -189,9 +211,7 @@ export function CalendarBoard({
             >
               <div className="mb-1 flex items-center justify-between px-1">
                 <span
-                  className={`tnum text-xs ${
-                    inMonth ? "text-foreground" : "text-muted-foreground/60"
-                  } ${
+                  className={`tnum text-xs ${inMonth ? "text-foreground" : "text-muted-foreground/60"} ${
                     isToday
                       ? "calendar-day-today flex h-5 w-5 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground"
                       : ""
@@ -201,8 +221,7 @@ export function CalendarBoard({
                 </span>
               </div>
               <div className="space-y-1">
-                {dayEvents.map((event) => {
-                  // 跨天事件只在起始日显示可拖动的整块，其余日显示浅色延续
+                {visibleDayEvents.map((event) => {
                   const isStart = event.start === iso;
                   return (
                     <div
@@ -213,52 +232,54 @@ export function CalendarBoard({
                         setDragId(null);
                         setOverIso(null);
                       }}
-                      onClick={() => {
-                        // 点击（非拖动）跳转到对应页面
-                        router.push(
-                          event.kind === "task" ? "/tasks" : "/receptions",
-                        );
-                      }}
+                      onClick={() => router.push(event.kind === "task" ? "/tasks" : "/receptions")}
                       onContextMenu={(e) => openMenu(e, event)}
-                      title={`${event.tag} · ${event.title}${
-                        event.projectName ? ` · ${event.projectName}` : ""
-                      } — ${t.calendar.clickToOpen}`}
-                      className={`calendar-event-pill flex items-center gap-1 px-1 py-0.5 text-[11px] leading-4 ${
-                        isStart
-                          ? "cursor-pointer bg-secondary/70 hover:bg-secondary active:cursor-grabbing"
-                          : "opacity-60"
-                      }`}
+                      title={`${event.tag} · ${event.title}${event.projectName ? ` · ${event.projectName}` : ""} · ${t.calendar.clickToOpen}`}
+                      className={`calendar-event-chip ${isStart ? "cursor-pointer hover:opacity-80 active:cursor-grabbing" : "opacity-60"}`}
+                      data-kind={event.kind}
                     >
-                      <span
-                        className={`h-2 w-2 shrink-0 rounded-full ${event.color}`}
-                      />
-                      <span className="truncate">{event.title}</span>
+                      <span>{event.title}</span>
                     </div>
                   );
                 })}
+                {hiddenCount > 0 ? (
+                  <button
+                    type="button"
+                    className="calendar-more"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setExpandedIso(expandedIso === iso ? null : iso);
+                    }}
+                  >
+                    +{hiddenCount} 更多
+                  </button>
+                ) : null}
               </div>
             </div>
           );
         })}
       </div>
 
-      {menu ? (
-        <ContextMenu
-          x={menu.x}
-          y={menu.y}
-          items={menu.items}
-          onClose={() => setMenu(null)}
-        />
+      {expandedIso ? (
+        <div className="calendar-day-detail">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="section-label">当天详情</div>
+              <h3 className="sunny-title text-base">{expandedIso}</h3>
+            </div>
+            <button type="button" className="tab" onClick={() => setExpandedIso(null)}>收起</button>
+          </div>
+          <div className="space-y-2">
+            {expandedEvents.map((event) => (
+              <div key={`expanded-${event.id}`} className="calendar-event-chip" data-kind={event.kind}>
+                <span>{event.tag} · {event.title}{event.projectName ? ` · ${event.projectName}` : ""}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       ) : null}
-    </div>
-  );
-}
 
-function Legend({ color, label }: { color: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-      {label}
-    </span>
+      {menu ? <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} /> : null}
+    </div>
   );
 }
