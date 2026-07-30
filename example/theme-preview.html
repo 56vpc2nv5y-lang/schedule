@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="sunny-third" data-density="comfortable">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sunny OS 第三皮肤 · Executive Cobalt</title>
+  <link rel="stylesheet" href="sunny-theme-3.css">
+  <style>
+    .preview-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding:20px;border-radius:15px;background:#172033;color:white}
+    .preview-hero h2{margin:0;font-size:28px;letter-spacing:-.03em}.preview-hero p{margin:7px 0 0;color:#c8d0de;font-size:13px}.preview-swatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.swatch{padding:12px;border-radius:12px;border:1px solid var(--s3-border);background:white}.swatch-color{height:44px;border-radius:8px;margin-bottom:9px}.swatch b{font-size:12px}.swatch code{display:block;margin-top:3px;color:var(--s3-muted);font-size:11px}
+    .mini-kanban-title{font-size:13px;font-weight:760}.mini-kanban-meta{font-size:11px;color:var(--s3-muted);margin-top:5px}.preview-note{padding:12px 14px;border-left:4px solid var(--s3-primary);background:var(--s3-primary-soft);border-radius:9px;color:var(--s3-text-soft)}
+    @media(max-width:820px){.preview-hero{align-items:flex-start;flex-direction:column}.preview-swatches{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">Sunny OS<small>Theme 03 · Executive Cobalt</small></div>
+    <div class="nav-label">工作推进</div>
+    <nav class="nav">
+      <a class="active" href="#"><i>⌂</i><span>工作台</span></a>
+      <a href="#"><i>▦</i><span>项目看板</span></a>
+      <a href="#"><i>✓</i><span>任务列表</span></a>
+      <a href="#"><i>≡</i><span>纪要与问题</span></a>
+      <a href="#"><i>□</i><span>日历</span></a>
+    </nav>
+    <div class="nav-label">关系与资料</div>
+    <nav class="nav">
+      <a href="#"><i>◎</i><span>联系人库</span></a>
+      <a href="#"><i>▤</i><span>资料库</span></a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="page-title">第三皮肤预览</div>
+        <div class="page-sub">专业、紧凑、低噪音，适合国际业务与多项目管理</div>
+      </div>
+      <div class="row wrap">
+        <button class="btn" id="densityBtn">切换紧凑模式</button>
+        <button class="btn primary" data-open="demoDrawer">打开编辑抽屉</button>
+        <div class="avatar">S</div>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="preview-hero">
+        <div>
+          <h2>Executive Cobalt</h2>
+          <p>深色导航＋暖灰背景＋高对比钴蓝强调，信息密度适中但不显拥挤。</p>
+        </div>
+        <div class="row wrap">
+          <span class="pill blue">项目</span>
+          <span class="pill purple">培训</span>
+          <span class="pill green">接待</span>
+          <span class="pill orange">展会</span>
+        </div>
+      </section>
+
+      <div class="grid12 mt">
+        <section class="card s7">
+          <div class="card-head">
+            <div><div class="card-title">核心颜色</div><div class="card-sub">第三皮肤的固定业务语义色</div></div>
+          </div>
+          <div class="card-body">
+            <div class="preview-swatches">
+              <div class="swatch"><div class="swatch-color" style="background:#2f5bff"></div><b>主色 / 项目</b><code>#2F5BFF</code></div>
+              <div class="swatch"><div class="swatch-color" style="background:#7653e8"></div><b>培训</b><code>#7653E8</code></div>
+              <div class="swatch"><div class="swatch-color" style="background:#16835f"></div><b>接待</b><code>#16835F</code></div>
+              <div class="swatch"><div class="swatch-color" style="background:#c86812"></div><b>展会</b><code>#C86812</code></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card s5">
+          <div class="card-head"><div><div class="card-title">字体层级</div><div class="card-sub">避免所有文字抢同一层注意力</div></div></div>
+          <div class="card-body stack">
+            <div><div class="page-title">页面标题 22px</div><div class="page-sub">页面说明 12px</div></div>
+            <div><div class="card-title">区块标题 16px</div><div class="card-sub">区块辅助说明 12px</div></div>
+            <div><div class="strong">正文重点 14px</div><div class="small muted">正文辅助信息 12px</div></div>
+            <div class="preview-note">设计原则：重要动作靠位置、文字重量和留白突出，不依赖大号数字或强阴影。</div>
+          </div>
+        </section>
+      </div>
+
+      <div class="metric-grid mt">
+        <div class="metric"><div class="v">4</div><div class="l">今日重点</div></div>
+        <div class="metric"><div class="v">3</div><div class="l">待 Leader 审核</div></div>
+        <div class="metric"><div class="v">5</div><div class="l">待外部回复</div></div>
+        <div class="metric"><div class="v">2</div><div class="l">今日时间节点</div></div>
+      </div>
+
+      <div class="grid12 mt">
+        <section class="card s7">
+          <div class="card-head">
+            <div><div class="card-title">任务行与状态</div><div class="card-sub">强调下一步，不显示冗余负责人字段</div></div>
+            <button class="btn sm">查看全部</button>
+          </div>
+          <div class="card-body">
+            <div class="task-item">
+              <div class="priority"></div>
+              <div>
+                <div class="task-title">确认越南 LQDTU 两位参会人员名单与航班选择</div>
+                <div class="row wrap" style="margin-top:7px">
+                  <span class="pill orange">展会</span><span class="pill red">今日截止</span><span class="pill gray">兰州安全大会</span>
+                </div>
+                <div class="task-next">下一步：同步最新可选航班，锁定两位嘉宾信息并安排订票。</div>
+              </div>
+              <button class="btn sm">处理</button>
+            </div>
+            <div class="task-item">
+              <div class="priority" style="background:var(--s3-status-leader)"></div>
+              <div>
+                <div class="task-title">车辆预测性维保第三轮客户需求</div>
+                <div class="row wrap" style="margin-top:7px"><span class="pill blue">项目</span><span class="pill status-leader">待 Leader 审核</span></div>
+                <div class="task-next">下一步：确认 POC 数据提取、样本规模和数据出境问题口径。</div>
+              </div>
+              <button class="btn sm">查看</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card s5">
+          <div class="card-head"><div><div class="card-title">按钮与表单</div><div class="card-sub">统一高度、圆角和边框</div></div></div>
+          <div class="card-body stack">
+            <div class="row wrap"><button class="btn primary">主要操作</button><button class="btn dark">强调操作</button><button class="btn">次要操作</button><button class="btn sm">小按钮</button></div>
+            <div class="field"><label>搜索</label><div class="search"><span>⌕</span><input placeholder="搜索项目、任务或联系人"></div></div>
+            <div class="form-grid">
+              <div class="field"><label>业务类型</label><select><option>全部类型</option><option>项目</option><option>培训</option></select></div>
+              <div class="field"><label>状态</label><select><option>待 Leader 审核</option><option>待外部回复</option></select></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card mt">
+        <div class="card-head"><div><div class="card-title">项目看板组件</div><div class="card-sub">四列管理状态，业务类型通过标签区分</div></div><div class="tabs"><button class="tab active">全部</button><button class="tab">项目</button><button class="tab">培训</button><button class="tab">接待</button><button class="tab">展会</button></div></div>
+        <div class="card-body">
+          <div class="s3-kanban">
+            <div class="s3-kanban-column"><div class="s3-kanban-head"><span>正在推进</span><span class="pill gray">2</span></div><div class="s3-kanban-card"><div class="mini-kanban-title">电动汽车预测性维保</div><div class="row wrap" style="margin-top:8px"><span class="pill blue">项目</span><span class="pill status-progress">POC 澄清</span></div><div class="mini-kanban-meta">下一步：Leader 审核第三轮需求</div><div class="progress" style="margin-top:10px"><span style="width:74%"></span></div></div></div>
+            <div class="s3-kanban-column"><div class="s3-kanban-head"><span>等待审核／回复</span><span class="pill gray">2</span></div><div class="s3-kanban-card"><div class="mini-kanban-title">安全检测多技术合作</div><div class="row wrap" style="margin-top:8px"><span class="pill blue">项目</span><span class="pill yellow">待外部回复</span></div><div class="mini-kanban-meta">等待 Muru 内部讨论</div></div></div>
+            <div class="s3-kanban-column"><div class="s3-kanban-head"><span>计划与准备</span><span class="pill gray">2</span></div><div class="s3-kanban-card"><div class="mini-kanban-title">越南公共安全培训</div><div class="row wrap" style="margin-top:8px"><span class="pill purple">培训</span><span class="pill status-check">课程大纲</span></div><div class="mini-kanban-meta">明确对象、时长、预算和地点</div></div></div>
+            <div class="s3-kanban-column"><div class="s3-kanban-head"><span>暂停／已完成</span><span class="pill gray">2</span></div><div class="s3-kanban-card"><div class="mini-kanban-title">乌兹住建监察局培训</div><div class="row wrap" style="margin-top:8px"><span class="pill purple">培训</span><span class="pill gray">暂停</span></div><div class="mini-kanban-meta">仅保留三项重启复核</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card mt">
+        <div class="card-head"><div><div class="card-title">联系人与表格</div><div class="card-sub">适合方案 A 的信息密度</div></div></div>
+        <div class="card-body">
+          <div class="s3-table-wrap">
+            <table class="s3-table">
+              <thead><tr><th>联系人</th><th>机构</th><th>当前关联事项</th><th>最近联系</th><th>下一步</th></tr></thead>
+              <tbody>
+                <tr><td><div class="row"><div class="avatar">M</div><div><div class="strong">Peh Mu Ru</div><div class="tiny muted">Engineer</div></div></div></td><td>HTX</td><td><span class="pill blue">安全检测合作</span></td><td>7月18日</td><td>等待内部讨论</td></tr>
+                <tr><td><div class="row"><div class="avatar">T</div><div><div class="strong">Thang HM</div><div class="tiny muted">LQDTU</div></div></div></td><td>越南 LQDTU</td><td><span class="pill orange">兰州大会</span></td><td>今天</td><td>确认两人名单</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="demoDrawer" class="drawer">
+  <div class="backdrop" data-close="demoDrawer"></div>
+  <aside class="drawer-panel">
+    <div class="drawer-head"><div><div class="strong">编辑抽屉示例</div><div class="small muted">宽度、表单和固定标题栏均由主题控制</div></div><button class="close" data-close="demoDrawer">×</button></div>
+    <div class="drawer-body">
+      <div class="form-grid">
+        <div class="field full"><label>任务名称</label><input value="车辆预测性维保第三轮客户需求"></div>
+        <div class="field"><label>业务类型</label><select><option>项目</option><option>培训</option><option>接待</option><option>展会</option></select></div>
+        <div class="field"><label>状态</label><select><option>待 Leader 审核</option><option>待外部回复</option><option>待对外发送</option></select></div>
+        <div class="field full"><label>下一步动作</label><textarea>请 Leader 审核第三轮客户需求，重点确认 POC 数据提取、代表性车辆样本量与数据出境问题口径。</textarea></div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn" data-close="demoDrawer">取消</button><button class="btn primary" id="saveBtn">保存修改</button></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const densityBtn = document.getElementById('densityBtn');
+  densityBtn.addEventListener('click', () => {
+    const compact = root.dataset.density === 'compact';
+    root.dataset.density = compact ? 'comfortable' : 'compact';
+    densityBtn.textContent = compact ? '切换紧凑模式' : '切换舒适模式';
+  });
+
+  document.querySelectorAll('[data-open]').forEach(button => {
+    button.addEventListener('click', () => {
+      document.getElementById(button.dataset.open).classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+  });
+
+  document.querySelectorAll('[data-close]').forEach(button => {
+    button.addEventListener('click', () => {
+      document.getElementById(button.dataset.close).classList.remove('open');
+      document.body.style.overflow = '';
+    });
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    document.getElementById('demoDrawer').classList.remove('open');
+    document.body.style.overflow = '';
+  });
+</script>
+</body>
+</html>

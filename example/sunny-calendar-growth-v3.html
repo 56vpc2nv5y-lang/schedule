@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunny 看板 · 日历修正版 / 成长档案 v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F3EC; --surface:#FFFFFF; --surface-alt:#FBF8F2;
+    --ink:#2B2E33; --ink-soft:#6C7178; --ink-faint:#9A9D9F;
+    --hairline:#E3DECF; --hairline-cool:#DAE0E3;
+    --accent-active:#3E6E71; --accent-active-bg:#E6EEEC;
+    --accent-wait:#B07C3F; --accent-wait-bg:#F3E8D6;
+    --accent-pause:#7C8590; --accent-pause-bg:#E9EAEA;
+    --accent-danger:#A24A3C; --accent-danger-bg:#F3E1DC;
+    --accent-done:#5C7A56; --accent-done-bg:#E6ECE1;
+  }
+  *{ box-sizing:border-box; } html,body{ margin:0; padding:0; }
+  body{ background:var(--bg); color:var(--ink); font-family:"Noto Sans SC",-apple-system,sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1040px; margin:0 auto; padding:28px 20px 100px; }
+  .mono{ font-family:"IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; font-size:11px; }
+  header.top{ display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:16px; margin-bottom:20px; border-bottom:2px solid var(--ink); }
+  header.top h1{ font-family:"Noto Serif SC"; font-size:22px; margin:0 0 4px; font-weight:900; }
+  .top-actions{ display:flex; align-items:center; gap:8px; }
+  .btn{ font-family:"Noto Sans SC"; font-weight:600; font-size:12.5px; padding:7px 13px; border-radius:3px; border:1.5px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  .btn.ghost{ background:transparent; color:var(--ink); }
+  .section-label{ display:flex; align-items:baseline; gap:10px; margin:40px 0 12px; }
+  .section-label h2{ font-family:"Noto Serif SC"; font-size:18px; margin:0; font-weight:700; }
+  .section-label .desc{ font-size:12px; color:var(--ink-soft); margin-left:auto; }
+  .stamp{ display:inline-flex; align-items:center; gap:5px; font-family:"IBM Plex Mono"; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:2px; border:1.2px solid currentColor; transform:rotate(-1.2deg); }
+  .stamp.active{ color:var(--accent-active); background:var(--accent-active-bg); }
+  .stamp.wait{ color:var(--accent-wait); background:var(--accent-wait-bg); }
+  .stamp.pause{ color:var(--accent-pause); background:var(--accent-pause-bg); }
+  .stamp.done{ color:var(--accent-done); background:var(--accent-done-bg); }
+  .stamp.danger{ color:var(--accent-danger); background:var(--accent-danger-bg); }
+  .chip{ font-size:10.5px; padding:2px 8px; border-radius:10px; background:var(--surface-alt); border:1px solid var(--hairline); color:var(--ink-soft); cursor:pointer; }
+  .chip.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .panel{ border:1px solid var(--hairline); border-radius:6px; background:var(--surface); }
+
+  /* ============ 日历修正版 ============ */
+  .cal-kpi{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:4px; overflow:hidden; margin-bottom:18px; }
+  .cal-kpi .c{ background:var(--surface); padding:12px 16px; }
+  .cal-kpi .c .num{ font-family:"Noto Serif SC"; font-size:22px; font-weight:700; }
+  .cal-kpi .c .label{ font-size:11.5px; color:var(--ink-soft); }
+
+  .cal-filter{ display:flex; gap:8px; margin-bottom:14px; }
+
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:4px; overflow:hidden; }
+  .cal-dow{ background:var(--surface-alt); padding:7px 0; text-align:center; font-family:"IBM Plex Mono"; font-size:10px; color:var(--ink-faint); }
+  .cal-cell{ background:var(--surface); min-height:88px; max-height:88px; padding:6px; font-size:10.5px; overflow:hidden; position:relative; }
+  .cal-cell.blank{ background:var(--bg); }
+  .cal-cell.today{ box-shadow:inset 0 0 0 1.5px var(--accent-active); }
+  .cal-cell .d{ font-family:"Noto Serif SC"; font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .cal-cell.today .d{ color:var(--accent-active); font-weight:700; }
+  /* 关键修复：每格最多显示2条，超出用"+N"，不再整段文字堆叠撑破格子 */
+  .cal-item{ font-size:9.5px; padding:2px 5px; border-radius:2px; margin-bottom:3px; border-left:2px solid; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cal-item.task{ background:var(--accent-active-bg); border-color:var(--accent-active); color:var(--accent-active); }
+  .cal-item.trip{ background:var(--accent-wait-bg); border-color:var(--accent-wait); color:var(--accent-wait); }
+  .cal-item.expo{ background:var(--accent-pause-bg); border-color:var(--accent-pause); color:var(--ink-soft); }
+  .cal-more{ font-size:9.5px; color:var(--ink-faint); font-family:"IBM Plex Mono"; margin-top:2px; }
+
+  .cal-note{ font-size:11.5px; color:var(--ink-faint); margin-top:8px; }
+
+  /* ============ 成长档案 v3（按真实分类） ============ */
+  .g-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:4px; overflow:hidden; margin-bottom:20px; }
+  .g-stats .c{ background:var(--surface); padding:14px 16px; }
+  .g-stats .c .num{ font-family:"Noto Serif SC"; font-size:24px; font-weight:700; }
+  .g-stats .c .label{ font-size:11.5px; color:var(--ink-soft); }
+
+  .resume-base{ border:1px solid var(--hairline); border-radius:6px; background:var(--surface); padding:16px 18px; margin-bottom:24px; }
+  .resume-base .src{ font-size:11px; color:var(--ink-faint); margin-bottom:12px; }
+  .resume-line{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--hairline); font-size:12.5px; }
+  .resume-line:last-child{ border-bottom:none; }
+  .resume-line .r{ color:var(--ink-soft); font-family:"IBM Plex Mono"; font-size:10.5px; }
+
+  .cat-bar{ display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:4px; overflow:hidden; margin-bottom:16px; }
+  .cat-bar .c{ background:var(--surface); padding:10px 12px; text-align:center; cursor:pointer; }
+  .cat-bar .c .num{ font-family:"Noto Serif SC"; font-size:18px; font-weight:700; }
+  .cat-bar .c .label{ font-size:10px; color:var(--ink-faint); margin-top:2px; }
+  .cat-bar .c.on{ background:var(--accent-active-bg); }
+  .cat-bar .c.on .num{ color:var(--accent-active); }
+
+  details.g-entry{ border-bottom:1px solid var(--hairline); }
+  details.g-entry:last-child{ border-bottom:none; }
+  details.g-entry summary{ list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:flex-start; gap:12px; }
+  details.g-entry summary::-webkit-details-marker{ display:none; }
+  details.g-entry .txt{ flex:1; }
+  details.g-entry .h{ font-size:13.5px; font-weight:600; }
+  details.g-entry .c{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
+  details.g-entry .meta{ display:flex; gap:8px; align-items:center; flex:none; }
+  .g-entry-body{ padding:0 18px 16px 18px; }
+  .g-entry-body .edit-toggle{ margin-top:4px; }
+  .g-entry-body .fold-edit{ margin-top:10px; padding:12px; background:var(--surface-alt); border:1px dashed var(--hairline-cool); border-radius:4px; font-size:11.5px; color:var(--ink-faint); display:none; }
+  .g-entry-body .fold-edit.show{ display:block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ 日历 ============ -->
+  <header class="top">
+    <div><h1>日历</h1><div class="mono">2026年7月 · 33项安排</div></div>
+    <div class="top-actions"><button class="btn ghost">‹</button><button class="btn ghost">回到当前</button><button class="btn ghost">›</button></div>
+  </header>
+
+  <div class="cal-kpi">
+    <div class="c"><div class="num">33</div><div class="label">本月安排</div></div>
+    <div class="c"><div class="num">57</div><div class="label">任务</div></div>
+    <div class="c"><div class="num">5</div><div class="label">出差 / 接待</div></div>
+  </div>
+
+  <div class="cal-filter">
+    <span class="chip on">全部</span>
+    <span class="chip">任务</span>
+    <span class="chip">出差/接待</span>
+    <span class="chip">展会</span>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-dow">日</div><div class="cal-dow">一</div><div class="cal-dow">二</div><div class="cal-dow">三</div><div class="cal-dow">四</div><div class="cal-dow">五</div><div class="cal-dow">六</div>
+
+    <div class="cal-cell"><div class="d">28</div><div class="cal-item task">Scenario Analysis PPT三稿</div><div class="cal-item trip">澳门理事长接待</div></div>
+    <div class="cal-cell"><div class="d">29</div><div class="cal-item task">搜集新加坡局长参访点位</div><div class="cal-item trip">澳门理事长接待</div><div class="cal-more">+1 更多</div></div>
+    <div class="cal-cell"><div class="d">30</div><div class="cal-item task">核验北理工车辆维保回复</div><div class="cal-item trip">澳门理事长接待</div><div class="cal-more">+2 更多</div></div>
+    <div class="cal-cell"><div class="d">1</div><div class="cal-item trip">澳门理事长接待</div></div>
+    <div class="cal-cell"><div class="d">2</div><div class="cal-item trip">澳门理事长接待</div></div>
+    <div class="cal-cell"><div class="d">3</div></div>
+    <div class="cal-cell"><div class="d">4</div></div>
+
+    <div class="cal-cell"><div class="d">5</div></div>
+    <div class="cal-cell"><div class="d">6</div><div class="cal-item task">整理电动车参观内容</div></div>
+    <div class="cal-cell"><div class="d">7</div></div>
+    <div class="cal-cell"><div class="d">8</div></div>
+    <div class="cal-cell"><div class="d">9</div></div>
+    <div class="cal-cell"><div class="d">10</div><div class="cal-item task">催樊老师分析结果</div></div>
+    <div class="cal-cell"><div class="d">11</div></div>
+
+    <div class="cal-cell"><div class="d">12</div></div>
+    <div class="cal-cell"><div class="d">13</div><div class="cal-item trip">联合国人居署北京接待</div><div class="cal-more">+2 更多</div></div>
+    <div class="cal-cell"><div class="d">14</div><div class="cal-item task">上合国际合作案例材料</div></div>
+    <div class="cal-cell"><div class="d">15</div><div class="cal-item task">北理工回复中英双语核验</div><div class="cal-more">+1 更多</div></div>
+    <div class="cal-cell"><div class="d">16</div><div class="cal-item task">缪子阶段评估英文发送</div><div class="cal-more">+2 更多</div></div>
+    <div class="cal-cell"><div class="d">17</div></div>
+    <div class="cal-cell"><div class="d">18</div></div>
+
+    <div class="cal-cell"><div class="d">19</div></div>
+    <div class="cal-cell"><div class="d">20</div><div class="cal-item task">协议盖章回寄跟进</div><div class="cal-item task">工作预测定稿</div></div>
+    <div class="cal-cell"><div class="d">21</div></div>
+    <div class="cal-cell"><div class="d">22</div></div>
+    <div class="cal-cell"><div class="d">23</div><div class="cal-item task">OA出差申请单</div></div>
+    <div class="cal-cell"><div class="d">24</div><div class="cal-item task">出差材料/机酒预订</div><div class="cal-more">+1 更多</div></div>
+    <div class="cal-cell"><div class="d">25</div><div class="cal-item task">准备出差议程</div></div>
+
+    <div class="cal-cell"><div class="d">26</div><div class="cal-item trip">乌兹培训开班</div></div>
+    <div class="cal-cell today"><div class="d">27</div><div class="cal-item task">8项筹备待办</div><div class="cal-more">+7 更多</div></div>
+    <div class="cal-cell"><div class="d">28</div></div>
+    <div class="cal-cell"><div class="d">29</div></div>
+    <div class="cal-cell"><div class="d">30</div><div class="cal-item task">出差报销流程</div></div>
+    <div class="cal-cell"><div class="d">31</div></div>
+    <div class="cal-cell blank"></div>
+  </div>
+  <div class="cal-note">每格最多显示2条，多余的用"+N 更多"折叠，点击可展开当天详情——不再让长文字把格子撑得高低不齐。</div>
+
+  <!-- ============ 成长档案 v3 ============ -->
+  <div class="section-label"><h2>成长档案</h2><span class="desc">结果、判断和影响，周报、复盘、简历都从这取材</span></div>
+
+  <div class="g-stats">
+    <div class="c"><div class="num">12</div><div class="label">成长记录</div></div>
+    <div class="c"><div class="num">0</div><div class="label">简历要点</div></div>
+    <div class="c"><div class="num">6M</div><div class="label">六个月素材视角</div></div>
+  </div>
+
+  <div class="resume-base">
+    <div class="src">现有简历基线 · 来源：AIPM.docx，新增经历沿用"动作、范围、结果"的表达密度</div>
+    <div class="resume-line"><span>NTU · MSc Analytics</span><span class="r">GPA 4.63 / 5.00</span></div>
+    <div class="resume-line"><span>GDUFS · Economic Statistics</span><span class="r">GPA 3.90 / 4.00 · Top 4%</span></div>
+    <div class="resume-line"><span>DataStory · Data Analyst</span><span class="r">10+ dashboards · 50k+ reviews</span></div>
+    <div class="resume-line"><span>Data Analysis Studio</span><span class="r">30+ projects · 90% on-time</span></div>
+  </div>
+
+  <div class="cat-bar">
+    <div class="c on"><div class="num">7</div><div class="label">成果亮点</div></div>
+    <div class="c"><div class="num">4</div><div class="label">技能积累</div></div>
+    <div class="c"><div class="num">1</div><div class="label">复盘教训</div></div>
+    <div class="c"><div class="num">0</div><div class="label">证书培训</div></div>
+    <div class="c"><div class="num">0</div><div class="label">人脉资源</div></div>
+  </div>
+
+  <div class="panel">
+    <details class="g-entry">
+      <summary>
+        <div class="txt">
+          <div class="h">完成缪子技术评估的专家复核、英译与对外沟通</div>
+          <div class="c">7/15组织技术讨论并形成初稿，7/16按专家反馈定稿和英译，7/18回应Muru探索性研究追问</div>
+        </div>
+        <div class="meta"><span class="stamp active">成果亮点</span><span class="chip">安全检测多技术合作</span><span class="mono" style="color:var(--ink-faint)">07-16</span></div>
+      </summary>
+      <div class="g-entry-body">
+        <button class="btn small ghost edit-toggle" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button>
+        <div class="fold-edit">完整编辑表单（分类/关联项目/日期/细节）在这里，默认收起。</div>
+      </div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt">
+          <div class="h">完成北理工技术回复的中英双语质量核验与对外交付</div>
+          <div class="c">先判断是否真正答清客户需求，再查缺补漏、追问，7/15发新加坡</div>
+        </div>
+        <div class="meta"><span class="stamp active">成果亮点</span><span class="chip">电动汽车预测性维保</span><span class="mono" style="color:var(--ink-faint)">07-15</span></div>
+      </summary>
+      <div class="g-entry-body">
+        <button class="btn small ghost edit-toggle" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button>
+        <div class="fold-edit">完整编辑表单在这里，默认收起。</div>
+      </div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt">
+          <div class="h">问题清单要判断"回答了"和"答清楚了"是两回事</div>
+          <div class="c">太赫兹团队两轮回复都没给具体指标。教训：转发前先自己判断，当轮就追问</div>
+        </div>
+        <div class="meta"><span class="stamp wait">复盘教训</span><span class="chip">安全检测多技术合作</span><span class="mono" style="color:var(--ink-faint)">07-初</span></div>
+      </summary>
+      <div class="g-entry-body">
+        <button class="btn small ghost edit-toggle" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button>
+        <div class="fold-edit">完整编辑表单在这里，默认收起。</div>
+      </div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt">
+          <div class="h">掌握 OA 供应商新增与协议法务审批全流程</div>
+          <div class="c">战略协议+保密协议：团队审核→法务审批→双方盖章回寄→OA录入供应商</div>
+        </div>
+        <div class="meta"><span class="stamp done">技能积累</span><span class="chip">电动汽车预测性维保</span><span class="mono" style="color:var(--ink-faint)">07-06</span></div>
+      </summary>
+      <div class="g-entry-body">
+        <button class="btn small ghost edit-toggle" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button>
+        <div class="fold-edit">完整编辑表单在这里，默认收起。</div>
+      </div>
+    </details>
+  </div>
+  <div class="cal-note">每条记录默认只显示一句话摘要 + 分类图章 + 项目chip + 日期；"编辑"按钮点了才展开完整表单，不会像现在这样12条记录同时摊开12个表单。</div>
+
+</div>
+</body>
+</html>
