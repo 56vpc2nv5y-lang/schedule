@@ -13,10 +13,8 @@ import {
   GanttChartSquare,
   KanbanSquare,
   LayoutDashboard,
-  PlaneTakeoff,
   Settings,
   Sparkles,
-  Sun,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -33,9 +31,7 @@ type NavItem = {
 
 const navGroups: { label?: (t: Dict) => string; items: NavItem[] }[] = [
   {
-    items: [
-      { href: "/today", label: (t) => t.nav.today, icon: Sun },
-      { href: "/", label: (t) => t.nav.dashboard, icon: LayoutDashboard },
+    items: [      { href: "/", label: (t) => t.nav.dashboard, icon: LayoutDashboard },
     ],
   },
   {
@@ -49,9 +45,7 @@ const navGroups: { label?: (t: Dict) => string; items: NavItem[] }[] = [
   {
     label: (t) => t.nav.groupSchedule,
     items: [
-      { href: "/calendar", label: (t) => t.nav.calendar, icon: CalendarDays },
-      { href: "/receptions", label: (t) => t.nav.receptions, icon: PlaneTakeoff },
-    ],
+      { href: "/calendar", label: (t) => t.nav.calendar, icon: CalendarDays },    ],
   },
   {
     label: (t) => t.nav.groupLibrary,
