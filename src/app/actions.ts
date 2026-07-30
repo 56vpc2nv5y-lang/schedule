@@ -381,7 +381,11 @@ export async function updateTaskStatusAction(formData: FormData) {
       data: { done: status === TaskStatus.DONE },
       select: { receptionId: true },
     }).catch(() => null);
-    if (item) await syncReceptionChecklistTasks(item.receptionId);
+    if (item) {
+      await syncReceptionChecklistTasks(item.receptionId);
+      revalidatePath("/receptions");
+      revalidatePath("/receptions/" + item.receptionId);
+    }
   }
   if (
     task.sourceRefId &&
@@ -971,6 +975,25 @@ export async function setTaskStatusQuickAction(taskId: string, status: string) {
     data: { status: parsed },
     select: { projectId: true, title: true, source: true, sourceRefId: true },
   });
+  if (task.sourceRefId && task.source === TaskSource.TRAINING_CHECKLIST) {
+    await getPrisma().trainingChecklistItem.update({
+      where: { id: task.sourceRefId },
+      data: { done: parsed === TaskStatus.DONE },
+    }).catch(() => {});
+    if (task.projectId) await syncTrainingChecklistTasks(task.projectId);
+  }
+  if (task.sourceRefId && task.source === TaskSource.RECEPTION_CHECKLIST) {
+    const item = await getPrisma().receptionChecklistItem.update({
+      where: { id: task.sourceRefId },
+      data: { done: parsed === TaskStatus.DONE },
+      select: { receptionId: true },
+    }).catch(() => null);
+    if (item) {
+      await syncReceptionChecklistTasks(item.receptionId);
+      revalidatePath("/receptions");
+      revalidatePath("/receptions/" + item.receptionId);
+    }
+  }
   if (
     task.sourceRefId &&
     task.source === TaskSource.FEEDBACK_FOLLOW_UP &&

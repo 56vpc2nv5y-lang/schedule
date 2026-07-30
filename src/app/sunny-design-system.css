@@ -319,3 +319,29 @@ h3,
   .focus-bar,
   .sunny-kpi-grid { grid-template-columns: 1fr; }
 }
+
+.reception-panel { overflow: hidden; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+.recep-entry { border-top: 1px solid var(--hairline); }
+.recep-entry:first-child { border-top: 0; }
+.recep-entry > summary { list-style: none; cursor: pointer; }
+.recep-entry > summary::-webkit-details-marker { display: none; }
+.recep-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
+.recep-row .arrow { width: 9px; height: 9px; flex: none; border-right: 1.6px solid var(--ink-soft); border-bottom: 1.6px solid var(--ink-soft); transform: rotate(-45deg); transition: transform .15s ease; }
+.recep-entry[open] .recep-row .arrow { transform: rotate(45deg); }
+.recep-ring { display: grid; width: 42px; height: 42px; flex: none; place-items: center; border: 2px solid var(--hairline-cool); border-radius: 50%; color: var(--ink-soft); font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .02em; }
+.recep-ring[data-progress="zero"] { border-color: var(--status-danger); color: var(--status-danger); }
+.recep-ring[data-progress="full"] { border-color: var(--status-done); color: var(--status-done); }
+.recep-ring[data-progress="partial"] { border-color: var(--status-active); color: var(--status-active); }
+.recep-main { min-width: 0; flex: 1; }
+.recep-main .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 700; }
+.recep-main .d { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-faint); font-size: 11.5px; }
+.recep-body { padding: 0 16px 16px 81px; }
+.recep-body-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.recep-note { border-left: 3px solid var(--status-active); background: var(--surface-alt); padding: 10px 12px; font-size: 12.5px; line-height: 1.65; }
+.recep-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; border-top: 1px solid var(--hairline); margin-top: 14px; padding-top: 12px; }
+.inline-edit-body { margin-top: 10px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface-alt); padding: 12px; }
+@media (max-width: 720px) {
+  .recep-row { align-items: flex-start; gap: 10px; padding: 13px 12px; }
+  .recep-body { padding: 0 12px 14px 12px; }
+  .recep-body-grid { grid-template-columns: 1fr; }
+}

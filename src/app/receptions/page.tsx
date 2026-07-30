@@ -10,7 +10,6 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollapseCard } from "@/components/ui/collapse-card";
 import { StatusStamp, type StatusStampTone } from "@/components/ui/status-pill";
 import { receptionTypeMeta } from "@/lib/default-data";
@@ -36,6 +35,13 @@ function typeMeta(type: string) {
     receptionTypeMeta[type as keyof typeof receptionTypeMeta] ??
     receptionTypeMeta.VISIT
   );
+}
+
+function progressState(done: number, total: number) {
+  if (total <= 0) return "empty";
+  if (done === 0) return "zero";
+  if (done >= total) return "full";
+  return "partial";
 }
 
 export default async function ReceptionsPage({
@@ -70,9 +76,9 @@ export default async function ReceptionsPage({
   return (
     <AppShell>
       <PageHeader
-        eyebrow={t.receptions.eyebrow}
+        eyebrow="Reception / Trip"
         title={t.receptions.title}
-        description={t.receptions.desc}
+        description="完成度直接读取关联任务表；每条记录默认只显示摘要，编辑表单点击后才展开。"
         action={
           <Link href="/receptions?new=1#new">
             <Button>
@@ -84,22 +90,22 @@ export default async function ReceptionsPage({
       />
 
       {created === "reception" ? (
-        <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <div className="mb-5 rounded border border-[var(--status-done)] bg-[var(--status-done-bg)] p-4 text-sm text-[var(--status-done)]">
           {t.receptions.saved}
         </div>
       ) : null}
       {created === "reception-checklist" ? (
-        <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <div className="mb-5 rounded border border-[var(--status-done)] bg-[var(--status-done-bg)] p-4 text-sm text-[var(--status-done)]">
           {t.receptions.savedWithChecklist}
         </div>
       ) : null}
       {error === "missing-required" ? (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        <div className="mb-5 rounded border border-[var(--status-danger)] bg-[var(--status-danger-bg)] p-4 text-sm text-[var(--status-danger)]">
           {t.common.required}
         </div>
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <section className="reception-panel">
         {receptions.map((reception) => {
           const project = reception.projectId
             ? projectMap.get(reception.projectId)
@@ -110,71 +116,58 @@ export default async function ReceptionsPage({
             t.statuses.reception[
               reception.status as keyof typeof t.statuses.reception
             ] ?? reception.status;
+          const ringText =
+            reception.checklistTotal > 0
+              ? `${reception.checklistDone}/${reception.checklistTotal}`
+              : "—";
+          const progress = progressState(
+            reception.checklistDone,
+            reception.checklistTotal,
+          );
 
           return (
-            <Card key={reception.id}>
-              <CardHeader className="border-b border-border">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link href={`/receptions/${reception.id}`} className="group">
-                      <CardTitle className="flex items-center gap-2 group-hover:text-primary">
-                        <PlaneTakeoff
-                          className={`h-4 w-4 ${isTrip ? "text-amber-500" : "text-primary"}`}
-                        />
-                        {reception.title}
-                      </CardTitle>
-                    </Link>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <Badge tone={isTrip ? "waiting" : "info"}>{meta.label}</Badge>
-                      {project ? (
-                        <span className="text-xs text-muted-foreground">
-                          {pname(project)}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <StatusStamp tone={statusTone(reception.status)}>{statusLabel}</StatusStamp>
-                    {reception.checklistTotal > 0 ? (
-                      <Link
-                        href={`/receptions/${reception.id}`}
-                        className="progress-ring"
-                        style={{
-                          background: `conic-gradient(var(--status-active) ${Math.round((reception.checklistDone / reception.checklistTotal) * 100)}%, var(--hairline) 0)`,
-                        }}
-                        title={t.receptions.checklistProgress(reception.checklistDone, reception.checklistTotal)}
-                      >
-                        <span>{reception.checklistDone}/{reception.checklistTotal}</span>
-                      </Link>
-                    ) : (
-                      <Link
-                        href={`/receptions/${reception.id}`}
-                        className="text-xs text-muted-foreground hover:text-primary"
-                      >
-                        {t.receptions.openDetail}
-                      </Link>
-                    )}
+            <details key={reception.id} className="recep-entry">
+              <summary className="recep-row">
+                <span className="arrow" aria-hidden />
+                <span
+                  className="recep-ring"
+                  data-progress={progress}
+                  title={t.receptions.checklistProgress(
+                    reception.checklistDone,
+                    reception.checklistTotal,
+                  )}
+                >
+                  {ringText}
+                </span>
+                <div className="recep-main">
+                  <div className="t">{reception.title}</div>
+                  <div className="d">
+                    {reception.location || meta.label} · {rangeText(reception.startAt, reception.endAt)}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-4">
+                <div className="hidden shrink-0 flex-wrap items-center gap-2 md:flex">
+                  <Badge tone={isTrip ? "waiting" : "info"}>{meta.short}</Badge>
+                  {project ? <span className="chip">{pname(project)}</span> : null}
+                </div>
+                <StatusStamp tone={statusTone(reception.status)}>{statusLabel}</StatusStamp>
+              </summary>
+
+              <div className="recep-body">
                 {reception.purpose ? (
-                  <div className="rounded-lg bg-secondary/50 p-3 text-sm leading-6">
-                    {reception.purpose}
-                  </div>
+                  <div className="recep-note">{reception.purpose}</div>
                 ) : null}
-                <div className="grid gap-3 sm:grid-cols-2">
+
+                <div className="recep-body-grid mt-3">
                   <Info
                     icon={<MapPin className="h-3.5 w-3.5" />}
                     label={meta.locationLabel}
                     value={reception.location}
                   />
-                  <Info
-                    label={t.receptions.time}
-                    value={rangeText(reception.startAt, reception.endAt)}
-                  />
+                  <Info label={t.receptions.time} value={rangeText(reception.startAt, reception.endAt)} />
+                  <Info label="清单完成度" value={ringText} mono />
                 </div>
-                <div>
+
+                <div className="mt-3">
                   <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                     <Users className="h-3.5 w-3.5" />
                     {meta.peopleLabel}
@@ -196,7 +189,13 @@ export default async function ReceptionsPage({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 border-t border-border/60 pt-3">
+                <div className="recep-actions">
+                  <Link
+                    href={`/receptions/${reception.id}`}
+                    className="gen-btn inline-flex items-center gap-1"
+                  >
+                    打开清单 →
+                  </Link>
                   <InlineEdit label={t.common.edit}>
                     <form
                       action={updateReceptionAction}
@@ -315,17 +314,17 @@ export default async function ReceptionsPage({
                     <input type="hidden" name="id" value={reception.id} />
                     <button
                       type="submit"
-                      className="text-xs font-medium text-muted-foreground hover:text-red-600"
+                      className="text-xs font-medium text-muted-foreground hover:text-[var(--status-danger)]"
                     >
                       {t.common.delete}
                     </button>
                   </form>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </details>
           );
         })}
-      </div>
+      </section>
 
       <CollapseCard
         className="mt-5"
@@ -419,7 +418,7 @@ export default async function ReceptionsPage({
             </span>
           </label>
           <div className="flex flex-col justify-end gap-3 lg:col-span-2">
-            <label className="flex items-start gap-2 rounded-lg border border-border bg-secondary/30 p-3 text-sm">
+            <label className="flex items-start gap-2 rounded border border-border bg-secondary/30 p-3 text-sm">
               <input type="checkbox" name="checklist" className="mt-0.5" />
               <span>
                 <span className="font-medium">{t.receptions.fChecklist}</span>
@@ -443,18 +442,22 @@ function Info({
   icon,
   label,
   value,
+  mono,
 }: {
   icon?: React.ReactNode;
   label: string;
   value: string;
+  mono?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-border p-3">
+    <div className="rounded border border-border bg-secondary/20 p-3">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         {icon}
         {label}
       </div>
-      <div className="tnum mt-1 text-sm font-medium">{value || "—"}</div>
+      <div className={mono ? "tnum mt-1 text-sm font-semibold" : "mt-1 text-sm font-medium"}>
+        {value || "—"}
+      </div>
     </div>
   );
 }
