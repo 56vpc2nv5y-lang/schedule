@@ -24,10 +24,15 @@ enum StageStatus {
 }
 
 enum TaskStatus {
-  TODO
+  NOT_STARTED
   IN_PROGRESS
-  WAITING
+  SELF_CHECK
+  LEADER_REVIEW
+  WAITING_EXTERNAL
+  READY_TO_SEND
   DONE
+  TODO
+  WAITING
   OVERDUE
 }
 
@@ -111,7 +116,7 @@ enum DisplayMode {
   BILINGUAL
 }
 
-/// 项目：一个技术合作项目的主表
+/// 椤圭洰锛氫竴涓妧鏈悎浣滈」鐩殑涓昏〃
 model Project {
   id               String        @id @default(cuid())
   nameZh           String
@@ -149,11 +154,11 @@ model Project {
   @@index([projectTypeTagId])
 }
 
-/// 培训项目专用台账：通用 Project 之外的业务字段
+/// 鍩硅椤圭洰涓撶敤鍙拌处锛氶€氱敤 Project 涔嬪鐨勪笟鍔″瓧娈?
 model TrainingProfile {
   id                     String   @id @default(cuid())
   projectId              String   @unique
-  currentPhase           String   @default("课程大纲")
+  currentPhase           String   @default("璇剧▼澶х翰")
   clientContactName      String?
   clientContactInfo      String?
   topicSource            String?
@@ -201,7 +206,7 @@ model TrainingChecklistItem {
   @@index([trainingProfileId, section, sortOrder])
 }
 
-/// 联系人库：所有“人”的唯一数据源，别处只引用其 id
+/// 鑱旂郴浜哄簱锛氭墍鏈夆€滀汉鈥濈殑鍞竴鏁版嵁婧愶紝鍒鍙紩鐢ㄥ叾 id
 model Contact {
   id           String   @id @default(cuid())
   name         String
@@ -298,7 +303,7 @@ model StageTemplateItem {
   @@unique([templateId, sortOrder])
 }
 
-/// 项目阶段：按模板生成，可单独改期/改状态（甘特图拖动改这里）
+/// 椤圭洰闃舵锛氭寜妯℃澘鐢熸垚锛屽彲鍗曠嫭鏀规湡/鏀圭姸鎬侊紙鐢樼壒鍥炬嫋鍔ㄦ敼杩欓噷锛?
 model ProjectStage {
   id                   String      @id @default(cuid())
   projectId            String
@@ -322,6 +327,7 @@ model ProjectStage {
 
   @@unique([projectId, sortOrder])
   @@index([projectId, status])
+
 }
 
 model StageContact {
@@ -337,13 +343,16 @@ model StageContact {
 
 model Task {
   id          String     @id @default(cuid())
-  /// 可为空：不挂项目的个人/行政事务（报销、入职手续等）
+  /// 鍙负绌猴細涓嶆寕椤圭洰鐨勪釜浜?琛屾斂浜嬪姟锛堟姤閿€銆佸叆鑱屾墜缁瓑锛?
   projectId   String?
   stageId     String?
   typeTagId   String?
   title       String
   description String?
-  status      TaskStatus @default(TODO)
+  status      TaskStatus @default(NOT_STARTED)
+  waitingOn   String?
+  sendChannel String?
+  originalStatusNote String?
   priority    Priority   @default(MEDIUM)
   source      TaskSource @default(MANUAL)
   sourceRefId String?
@@ -434,7 +443,7 @@ model MeetingReviewRound {
   @@unique([reviewId, roundNo])
 }
 
-/// 出差/接待/展会安排（type 区分三类）
+/// 鍑哄樊/鎺ュ緟/灞曚細瀹夋帓锛坱ype 鍖哄垎涓夌被锛?
 model Reception {
   id        String          @id @default(cuid())
   projectId String?
@@ -454,18 +463,18 @@ model Reception {
   checklistItems ReceptionChecklistItem[]
 }
 
-/// 接待清单条目：按阶段（行前准备/抵达与现场/送行）跟踪每一项准备工作
+/// 鎺ュ緟娓呭崟鏉＄洰锛氭寜闃舵锛堣鍓嶅噯澶?鎶佃揪涓庣幇鍦?閫佽锛夎窡韪瘡涓€椤瑰噯澶囧伐浣?
 model ReceptionChecklistItem {
   id          String    @id @default(cuid())
   receptionId String
   reception   Reception @relation(fields: [receptionId], references: [id], onDelete: Cascade)
-  phase       String // 行前准备 / 抵达与现场 / 送行
+  phase       String // 琛屽墠鍑嗗 / 鎶佃揪涓庣幇鍦?/ 閫佽
   title       String
   done        Boolean   @default(false)
-  ownerId     String? // 引用 Contact id（松引用，可空）
+  ownerId     String? // 寮曠敤 Contact id锛堟澗寮曠敤锛屽彲绌猴級
   dueDate     String? // ISO yyyy-mm-dd
   note        String?
-  isMine      Boolean   @default(false) // 「我的」高亮
+  isMine      Boolean   @default(false) // 銆屾垜鐨勩€嶉珮浜?
   sortOrder   Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -532,8 +541,7 @@ model TextTemplate {
   updatedAt DateTime     @updatedAt
 }
 
-/// 运行时配置（登录密码、AI 密钥等）：优先读这里，回退到环境变量。
-/// 这样非技术用户可以在「设置」页改配置，不用碰 .env / Vercel 环境变量。
+/// 杩愯鏃堕厤缃紙鐧诲綍瀵嗙爜銆丄I 瀵嗛挜绛夛級锛氫紭鍏堣杩欓噷锛屽洖閫€鍒扮幆澧冨彉閲忋€?/// 杩欐牱闈炴妧鏈敤鎴峰彲浠ュ湪銆岃缃€嶉〉鏀归厤缃紝涓嶇敤纰?.env / Vercel 鐜鍙橀噺銆?
 model AppSetting {
   id        String   @id
   value     String
@@ -546,13 +554,13 @@ model AppPreference {
   updatedAt   DateTime    @updatedAt
 }
 
-/// 知识库：按主题积累专业知识（中微子/太赫兹/荧光检测…），可关联项目
+/// 鐭ヨ瘑搴擄細鎸変富棰樼Н绱笓涓氱煡璇嗭紙涓井瀛?澶但鍏?鑽у厜妫€娴嬧€︼級锛屽彲鍏宠仈椤圭洰
 model KnowledgeNote {
   id        String   @id @default(cuid())
-  topic     String // 主题/领域，如「太赫兹」「电动汽车维保」
+  topic     String // 涓婚/棰嗗煙锛屽銆屽お璧吂銆嶃€岀數鍔ㄦ苯杞︾淮淇濄€?
   title     String
-  content   String // 知识正文/要点/术语对照
-  url       String? // 外部资料链接
+  content   String // 鐭ヨ瘑姝ｆ枃/瑕佺偣/鏈瀵圭収
+  url       String? // 澶栭儴璧勬枡閾炬帴
   projectId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -563,24 +571,52 @@ model KnowledgeNote {
 }
 
 enum QuestionStatus {
-  OPEN // 待整理/待发出
-  SENT // 已发供应商，等回复
-  ANSWERED // 已回复，待我判断
-  UNCLEAR // 回复了但不清楚，需追问
-  NEED_MEETING // 需要开会讲清楚
-  CONFIRMED // 已确认关闭
+  ORGANIZING
+  TO_SUPPLIER
+  WAITING_SUPPLIER
+  EDITING_REVIEW
+  LEADER_REVIEW
+  TRANSLATION
+  TO_CLIENT
+  SENT_CLIENT
+  OPEN
+  SENT
+  ANSWERED
+  UNCLEAR
+  NEED_MEETING
+  CONFIRMED
 }
 
-/// 问题反馈清单：甲方提问→整理发供应商→判断回复→追问/开会→确认，逐条跟踪
+/// 闂鍙嶉娓呭崟锛氱敳鏂规彁闂啋鏁寸悊鍙戜緵搴斿晢鈫掑垽鏂洖澶嶁啋杩介棶/寮€浼氣啋纭锛岄€愭潯璺熻釜
 model FeedbackQuestion {
   id             String         @id @default(cuid())
   projectId      String
-  source         String         @default("甲方") // 甲方 / 供应商 / 我方
+  source         String         @default("鐢叉柟") // 鐢叉柟 / 渚涘簲鍟?/ 鎴戞柟
   question       String
   answer         String?
-  note           String? // 追问点/待确认点
+  note           String? // 杩介棶鐐?寰呯‘璁ょ偣
   followUpTaskId String?        @unique
-  status         QuestionStatus @default(OPEN)
+  status         QuestionStatus @default(ORGANIZING)
+  background     String?
+  supplierQuestion String?
+  supplierReply  String?
+  sunnyJudgment  String?
+  followUpLog    String?
+  finalReplyZh   String?
+  finalReplyEn   String?
+  internalNote   String?
+  ownerContactId String?
+  dueAt          DateTime?
+  questionAt     DateTime?
+  plannedSupplierSendAt DateTime?
+  supplierSentAt DateTime?
+  expectedReplyAt DateTime?
+  actualReplyAt  DateTime?
+  leaderReviewedAt DateTime?
+  translatedAt   DateTime?
+  clientSentAt   DateTime?
+  archivedAt     DateTime?
+  sendChannel    String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -588,20 +624,21 @@ model FeedbackQuestion {
   followUpTask Task?   @relation("FeedbackFollowUp", fields: [followUpTaskId], references: [id], onDelete: SetNull)
 
   @@index([projectId, status])
+  @@index([archivedAt])
 }
 
-/// 周计划时间块：日期 × 小时的日程（date 为空 = 每天重复的例行安排）
+/// 鍛ㄨ鍒掓椂闂村潡锛氭棩鏈?脳 灏忔椂鐨勬棩绋嬶紙date 涓虹┖ = 姣忓ぉ閲嶅鐨勪緥琛屽畨鎺掞級
 model ScheduleBlock {
   id           String    @id @default(cuid())
   title        String
-  date         DateTime? // 具体某天；null = 每日例行（起床/通勤/午休…）
-  startMin     Int // 从 0:00 起的分钟数，如 7:30 = 450
+  date         DateTime? // 鍏蜂綋鏌愬ぉ锛沶ull = 姣忔棩渚嬭锛堣捣搴?閫氬嫟/鍗堜紤鈥︼級
+  startMin     Int // 浠?0:00 璧风殑鍒嗛挓鏁帮紝濡?7:30 = 450
   endMin       Int
-  kind         String    @default("work") // routine 例行 / work 工作
-  location     String? // 地点
-  participants String? // 参与人（自由文本，逗号分隔）
-  note         String? // 备注 / 我的任务
-  projectId    String? // 可选关联项目
+  kind         String    @default("work") // routine 渚嬭 / work 宸ヤ綔
+  location     String? // 鍦扮偣
+  participants String? // 鍙備笌浜猴紙鑷敱鏂囨湰锛岄€楀彿鍒嗛殧锛?
+  note         String? // 澶囨敞 / 鎴戠殑浠诲姟
+  projectId    String? // 鍙€夊叧鑱旈」鐩?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -611,17 +648,17 @@ model ScheduleBlock {
 }
 
 enum MoneyKind {
-  SALARY // 工资到账
-  ADVANCE // 垫付（待报销）
-  REIMBURSED // 报销到账
-  OTHER // 其他收支
+  SALARY // 宸ヨ祫鍒拌处
+  ADVANCE // 鍨粯锛堝緟鎶ラ攢锛?
+  REIMBURSED // 鎶ラ攢鍒拌处
+  OTHER // 鍏朵粬鏀舵敮
 }
 
-/// 财务记录：工资、出差垫付、报销回款
+/// 璐㈠姟璁板綍锛氬伐璧勩€佸嚭宸灚浠樸€佹姤閿€鍥炴
 model MoneyRecord {
   id         String    @id @default(cuid())
   kind       MoneyKind @default(ADVANCE)
-  amount     Float // 金额（正数），方向由 kind 决定
+  amount     Float // 閲戦锛堟鏁帮級锛屾柟鍚戠敱 kind 鍐冲畾
   currency   String    @default("CNY")
   happenedAt DateTime  @default(now())
   note       String?
@@ -632,14 +669,14 @@ model MoneyRecord {
 }
 
 enum GrowthCategory {
-  ACHIEVEMENT // 成果亮点（可直接写进简历）
-  SKILL // 技能积累
-  LESSON // 复盘/教训
-  CERTIFICATE // 证书/培训
-  NETWORK // 人脉资源
+  ACHIEVEMENT // 鎴愭灉浜偣锛堝彲鐩存帴鍐欒繘绠€鍘嗭級
+  SKILL // 鎶€鑳界Н绱?
+  LESSON // 澶嶇洏/鏁欒
+  CERTIFICATE // 璇佷功/鍩硅
+  NETWORK // 浜鸿剦璧勬簮
 }
 
-/// 成长档案：为职业发展/跳槽积累素材，可选关联项目
+/// 鎴愰暱妗ｆ锛氫负鑱屼笟鍙戝睍/璺虫Ы绉疮绱犳潗锛屽彲閫夊叧鑱旈」鐩?
 model GrowthLog {
   id         String         @id @default(cuid())
   category   GrowthCategory @default(ACHIEVEMENT)
@@ -655,7 +692,7 @@ model GrowthLog {
   @@index([category])
 }
 
-/// 已确认的中英文简历要点：由 AI 对话或手工整理后收藏，可关联项目复用。
+/// 宸茬‘璁ょ殑涓嫳鏂囩畝鍘嗚鐐癸細鐢?AI 瀵硅瘽鎴栨墜宸ユ暣鐞嗗悗鏀惰棌锛屽彲鍏宠仈椤圭洰澶嶇敤銆?
 model ResumePoint {
   id         String   @id @default(cuid())
   title      String
@@ -672,12 +709,11 @@ model ResumePoint {
   @@index([updatedAt])
 }
 
-/// 通用资料库：公司模板、报销流程、接待讲解词等，不挂在具体项目下。
-/// 文件本体一般放在网盘/Drive，这里存分类 + 链接；也可选上传到 Storage。
+/// 閫氱敤璧勬枡搴擄細鍏徃妯℃澘銆佹姤閿€娴佺▼銆佹帴寰呰瑙ｈ瘝绛夛紝涓嶆寕鍦ㄥ叿浣撻」鐩笅銆?/// 鏂囦欢鏈綋涓€鑸斁鍦ㄧ綉鐩?Drive锛岃繖閲屽瓨鍒嗙被 + 閾炬帴锛涗篃鍙€変笂浼犲埌 Storage銆?
 model Resource {
   id        String   @id @default(cuid())
   name      String
-  category  String   @default("其他")
+  category  String   @default("鍏朵粬")
   url       String?
   note      String?
   important Boolean  @default(false)
