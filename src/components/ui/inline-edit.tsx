@@ -17,7 +17,7 @@ export function InlineEdit({
         <Pencil className="h-3 w-3" />
         {label}
       </summary>
-      <div className="mt-2 rounded-lg border border-border bg-secondary/30 p-3">
+      <div className="inline-edit-body">
         {children}
       </div>
     </details>
