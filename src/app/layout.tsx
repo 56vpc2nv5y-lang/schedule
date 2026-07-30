@@ -4,7 +4,7 @@ import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
 import "./gantt-skin.css";
 import "./comfort-skin.css";
-import "./sunny-tokens.css";
+import "./sunny-design-system.css";
 
 export const metadata: Metadata = {
   title: "Sunny 看板 / Project Tracker",

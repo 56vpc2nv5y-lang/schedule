@@ -1317,15 +1317,36 @@ async function setProjectStatus(projectId: string, status: ProjectStatus) {
       CANCELLED: "已取消",
       ARCHIVED: "已归档",
     };
-    await prisma.timelineEvent.create({
-      data: {
-        projectId,
-        entityType: "Project",
-        entityId: projectId,
-        action: "项目状态调整",
-        message: "项目“" + project.nameZh + "”状态调整为“" + statusLabel[status] + "”。",
-      },
+    const statusMessage = "项目“" + project.nameZh + "”状态调整为“" + statusLabel[status] + "”。";
+    const previousStatusEvent = await prisma.timelineEvent.findFirst({
+      where: { projectId, action: "项目状态调整" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, message: true, createdAt: true },
     });
+    const now = new Date();
+    const sameMinute =
+      previousStatusEvent &&
+      previousStatusEvent.createdAt.toISOString().slice(0, 16) ===
+        now.toISOString().slice(0, 16);
+
+    if (sameMinute) {
+      if (previousStatusEvent.message !== statusMessage) {
+        await prisma.timelineEvent.update({
+          where: { id: previousStatusEvent.id },
+          data: { message: statusMessage },
+        });
+      }
+    } else {
+      await prisma.timelineEvent.create({
+        data: {
+          projectId,
+          entityType: "Project",
+          entityId: projectId,
+          action: "项目状态调整",
+          message: statusMessage,
+        },
+      });
+    }
   }
 
   // Project.status is authoritative. Training only reflects that status; it never
@@ -1343,7 +1364,6 @@ async function setProjectStatus(projectId: string, status: ProjectStatus) {
   revalidatePath("/tasks");
   revalidatePath("/projects");
   revalidatePath("/calendar");
-  revalidatePath("/week");
   revalidatePath("/meeting-reviews");
   revalidatePath("/projects/" + projectId);
 }
@@ -1395,13 +1415,13 @@ export async function createWorkflowTasksAction(formData: FormData) {
 // ── 周计划时间块 ──────────────────────────────────────────
 
 export async function createScheduleBlockAction(formData: FormData) {
-  requireDatabase("/week");
+  requireDatabase("/today");
   const title = getString(formData, "title");
   const dateStr = getString(formData, "date"); // 空 = 每天例行
   const start = getString(formData, "start"); // HH:mm
   const end = getString(formData, "end");
   if (!title || !start || !end) {
-    redirect("/week?error=missing-required");
+    redirect("/today?error=missing-required");
   }
   const toMin = (v: string) => {
     const [h, m] = v.split(":").map(Number);
@@ -1423,20 +1443,20 @@ export async function createScheduleBlockAction(formData: FormData) {
       projectId: getString(formData, "projectId") || null,
     },
   });
-  revalidatePath("/week");
-  redirect("/week?created=block");
+  revalidatePath("/today");
+  redirect("/today?created=block");
 }
 
 // 点击时间块 → 编辑全部字段（主题/日期/时间/地点/参与人/我的任务/项目）
 export async function updateScheduleBlockAction(formData: FormData) {
-  requireDatabase("/week");
+  requireDatabase("/today");
   const id = getString(formData, "id");
   const title = getString(formData, "title");
   const dateStr = getString(formData, "date");
   const start = getString(formData, "start");
   const end = getString(formData, "end");
   if (!id || !title || !start || !end) {
-    redirect("/week?error=missing-required");
+    redirect("/today?error=missing-required");
   }
   const toMin = (v: string) => {
     const [h, m] = v.split(":").map(Number);
@@ -1457,8 +1477,8 @@ export async function updateScheduleBlockAction(formData: FormData) {
       projectId: getString(formData, "projectId") || null,
     },
   });
-  revalidatePath("/week");
-  redirect("/week?created=block");
+  revalidatePath("/today");
+  redirect("/today?created=block");
 }
 
 /** 拖动后落库：换天/改时间。dateStr 空串 = 保持例行 */
@@ -1483,7 +1503,7 @@ export async function moveScheduleBlockAction(
       endMin: Math.max(startMin + 15, Math.min(endMin, 1440)),
     },
   });
-  revalidatePath("/week");
+  revalidatePath("/today");
 }
 
 export async function deleteScheduleBlockAction(blockId: string) {
@@ -1491,7 +1511,7 @@ export async function deleteScheduleBlockAction(blockId: string) {
   await getPrisma()
     .scheduleBlock.delete({ where: { id: blockId } })
     .catch(() => {});
-  revalidatePath("/week");
+  revalidatePath("/today");
 }
 
 // ── 财务记录：工资 / 垫付 / 报销 ──────────────────────────

@@ -18,7 +18,7 @@ function notify(overdue: number, dueToday: number, receptions: number) {
     dueToday > 0 ? `${dueToday} 项今天截止` : "",
     receptions > 0 ? `${receptions} 场接待需准备` : "",
   ].filter(Boolean);
-  new Notification("Sunny 的今日工作提醒", {
+  new Notification("Sunny 今日提醒", {
     body: parts.length > 0 ? parts.join("，") : "今天没有到期或逾期事项。",
     icon: "/icon.svg",
     tag: `schedule-${dateKey()}`,
