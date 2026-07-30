@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunny 看板 · 项目全景（最终版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F3EC; --surface:#FFFFFF; --surface-alt:#FBF8F2;
+    --ink:#2B2E33; --ink-soft:#6C7178; --ink-faint:#9A9D9F;
+    --hairline:#E3DECF; --hairline-cool:#DAE0E3;
+    --accent-active:#3E6E71; --accent-active-bg:#E6EEEC;
+    --accent-wait:#B07C3F; --accent-wait-bg:#F3E8D6;
+    --accent-pause:#7C8590; --accent-pause-bg:#E9EAEA;
+    --accent-danger:#A24A3C; --accent-danger-bg:#F3E1DC;
+    --accent-done:#5C7A56; --accent-done-bg:#E6ECE1;
+  }
+  *{ box-sizing:border-box; } html,body{ margin:0; padding:0; }
+  body{ background:var(--bg); color:var(--ink); font-family:"Noto Sans SC",-apple-system,sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:960px; margin:0 auto; padding:28px 20px 100px; }
+  .mono{ font-family:"IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; font-size:11px; }
+  header.top{ padding-bottom:16px; margin-bottom:20px; border-bottom:2px solid var(--ink); display:flex; justify-content:space-between; align-items:flex-end; }
+  header.top h1{ font-family:"Noto Serif SC"; font-size:22px; margin:0 0 4px; font-weight:900; }
+  .btn{ font-family:"Noto Sans SC"; font-weight:600; font-size:12.5px; padding:7px 13px; border-radius:3px; border:1.5px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+
+  .stamp{ display:inline-flex; align-items:center; gap:5px; font-family:"IBM Plex Mono"; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:2px; border:1.2px solid currentColor; transform:rotate(-1.2deg); }
+  .stamp.active{ color:var(--accent-active); background:var(--accent-active-bg); }
+  .stamp.wait{ color:var(--accent-wait); background:var(--accent-wait-bg); }
+  .stamp.pause{ color:var(--accent-pause); background:var(--accent-pause-bg); }
+  .stamp.done{ color:var(--accent-done); background:var(--accent-done-bg); }
+  .stamp.danger{ color:var(--accent-danger); background:var(--accent-danger-bg); }
+  .chip{ font-size:10.5px; padding:2px 8px; border-radius:10px; background:var(--surface-alt); border:1px solid var(--hairline); color:var(--ink-soft); }
+
+  /* tabs：四类，不是三类 */
+  .tabs{ display:flex; gap:6px; }
+  .tab{ font-family:"Noto Serif SC"; font-weight:700; font-size:14px; padding:10px 18px 8px; background:var(--surface-alt); border:1px solid var(--hairline); border-bottom:none; border-radius:6px 6px 0 0; position:relative; top:1px; color:var(--ink-soft); cursor:pointer; }
+  .tab.on{ background:var(--surface); color:var(--ink); border-color:var(--ink); border-bottom:1px solid var(--surface); }
+  .tab .n{ font-family:"IBM Plex Mono"; font-size:10px; margin-left:5px; color:var(--ink-faint); }
+  .panel{ border:1px solid var(--ink); border-radius:0 6px 6px 6px; background:var(--surface); }
+  .tabpanel{ display:none; } .tabpanel.on{ display:block; }
+
+  /* 项目卡片 */
+  details.proj{ border-bottom:1px solid var(--hairline); }
+  details.proj:last-child{ border-bottom:none; }
+  details.proj summary{ list-style:none; cursor:pointer; padding:15px 18px; display:flex; align-items:center; gap:12px; }
+  details.proj summary::-webkit-details-marker{ display:none; }
+  details.proj summary .arrow{ width:8px; height:8px; border-right:1.6px solid var(--ink-soft); border-bottom:1.6px solid var(--ink-soft); transform:rotate(-45deg); transition:transform .15s; flex:none; }
+  details.proj[open] summary .arrow{ transform:rotate(45deg); }
+  .s-main{ flex:1; min-width:0; }
+  .s-main .t{ font-weight:600; font-size:14px; }
+  .s-main .region{ font-size:11px; color:var(--ink-faint); margin-left:6px; }
+  .s-main .next{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .s-meta{ flex:none; }
+
+  .body{ padding:0 18px 18px 40px; }
+
+  /* 核心：单行箭头式阶段管道 */
+  .flow{ display:flex; align-items:center; flex-wrap:wrap; gap:0; margin:6px 0 14px; font-size:12px; }
+  .flow .step{ display:flex; align-items:center; }
+  .flow .step .label{ padding:5px 10px; border-radius:2px; border:1px solid var(--hairline-cool); background:var(--surface-alt); color:var(--ink-faint); }
+  .flow .step.now .label{ border-color:var(--accent-active); color:var(--accent-active); background:var(--accent-active-bg); font-weight:700; }
+  .flow .step.done .label{ color:var(--accent-done); text-decoration:line-through; opacity:.6; background:transparent; border-style:dashed; }
+  .flow .arrow{ padding:0 6px; color:var(--ink-faint); font-family:"IBM Plex Mono"; }
+
+  .next-box{ padding:9px 11px; background:var(--surface-alt); border-left:3px solid var(--accent-active); font-size:12.5px; margin-bottom:10px; }
+  .fields{ display:flex; gap:16px; font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
+  .fields b{ color:var(--ink); }
+
+  /* 接待/展会：内联展开，不跳详情页 */
+  .recep-detail{ font-size:12.5px; color:var(--ink-soft); }
+  .recep-detail .row{ display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--hairline); }
+  .recep-detail .row:last-child{ border-bottom:none; }
+  .recep-detail .row .k{ width:70px; flex:none; color:var(--ink-faint); font-family:"IBM Plex Mono"; font-size:10px; }
+  .check{ margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+  .check .c{ font-size:12px; display:flex; gap:8px; align-items:center; }
+  .check .box{ width:12px; height:12px; border:1.3px solid var(--ink-faint); border-radius:2px; flex:none; }
+  .check .box.on{ background:var(--accent-done); border-color:var(--accent-done); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div><h1>手上的项目走到哪一步</h1><div class="mono">项目 / 培训 / 接待 / 展会 —— 四类各是各的</div></div>
+    <button class="btn">+ 新建</button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab on" data-t="proj">项目 <span class="n">02</span></div>
+    <div class="tab" data-t="train">培训 <span class="n">02</span></div>
+    <div class="tab" data-t="recep">接待 <span class="n">03</span></div>
+    <div class="tab" data-t="expo">展会 <span class="n">02</span></div>
+  </div>
+
+  <div class="panel">
+
+    <!-- ============ 项目 tab ============ -->
+    <div class="tabpanel on" id="p-proj">
+      <details class="proj" open>
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">安全检测多技术合作</span><span class="region">新加坡</span>
+            <div class="next">下一步：跟进 Muru 内部讨论与 GSafety 后续会议安排</div>
+          </div>
+          <div class="s-meta"><span class="stamp active">进行中</span></div>
+        </summary>
+        <div class="body">
+          <div class="flow">
+            <div class="step done"><span class="label">商机对接</span></div><span class="arrow">→</span>
+            <div class="step done"><span class="label">供应商匹配</span></div><span class="arrow">→</span>
+            <div class="step done"><span class="label">Scenario PPT</span></div><span class="arrow">→</span>
+            <div class="step done"><span class="label">三方会议</span></div><span class="arrow">→</span>
+            <div class="step now"><span class="label">问题反馈循环</span></div>
+          </div>
+          <div class="fields"><span>未完成任务 <b>1</b></span><span>等待反馈 <b>1</b></span></div>
+          <div class="next-box">下一步：跟进 Muru 内部讨论与 GSafety 后续会议安排</div>
+        </div>
+      </details>
+      <details class="proj">
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">电动汽车预测性维保</span><span class="region">新加坡</span>
+            <div class="next">下一步：暂无未完成任务 · 等待协议盖章回寄</div>
+          </div>
+          <div class="s-meta"><span class="stamp active">进行中</span></div>
+        </summary>
+        <div class="body">
+          <div class="flow">
+            <div class="step done"><span class="label">技术交流</span></div><span class="arrow">→</span>
+            <div class="step done"><span class="label">材料翻译核验</span></div><span class="arrow">→</span>
+            <div class="step now"><span class="label">合同签署</span></div>
+          </div>
+          <div class="next-box">下一步：暂无未完成任务 · 等待北理新源协议盖章回寄</div>
+        </div>
+      </details>
+    </div>
+
+    <!-- ============ 培训 tab ============ -->
+    <div class="tabpanel" id="p-train">
+      <details class="proj" open>
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">乌兹别克斯坦住建监察局赴华培训</span><span class="region">乌兹别克斯坦</span>
+            <div class="next">下一步：核对 7/26-8/6 培训议程与授课教师</div>
+          </div>
+          <div class="s-meta"><span class="stamp pause">暂停/重启复核</span></div>
+        </summary>
+        <div class="body">
+          <div class="flow">
+            <div class="step done"><span class="label">大纲</span></div><span class="arrow">→</span>
+            <div class="step done"><span class="label">核算成本</span></div><span class="arrow">→</span>
+            <div class="step done"><span class="label">报价</span></div><span class="arrow">→</span>
+            <div class="step done"><span class="label">合同</span></div><span class="arrow">→</span>
+            <div class="step done"><span class="label">筹备</span></div><span class="arrow">→</span>
+            <div class="step now"><span class="label">暂停复核</span></div>
+          </div>
+          <div class="fields"><span>未完成任务 <b>22</b></span><span>等待反馈 <b>14</b></span></div>
+          <div class="next-box">重启前必查：来华人员名单变更 / 培训老师时间 / 课件更新</div>
+        </div>
+      </details>
+      <details class="proj">
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">越南培训提案</span><span class="region">越南</span>
+            <div class="next">下一步：确认国际机票费用归属</div>
+          </div>
+          <div class="s-meta"><span class="stamp active">进行中</span></div>
+        </summary>
+        <div class="body">
+          <div class="flow">
+            <div class="step now"><span class="label">大纲</span></div><span class="arrow">→</span>
+            <div class="step"><span class="label">核算成本</span></div><span class="arrow">→</span>
+            <div class="step"><span class="label">报价</span></div><span class="arrow">→</span>
+            <div class="step"><span class="label">合同</span></div><span class="arrow">→</span>
+            <div class="step"><span class="label">筹备</span></div>
+          </div>
+          <div class="fields"><span>未完成任务 <b>18</b></span><span>等待反馈 <b>9</b></span></div>
+          <div class="next-box">下一步：确认国际机票费用归属</div>
+        </div>
+      </details>
+      <div class="mono" style="padding:10px 18px; color:var(--ink-faint);">这两个项目现在都归在"标准项目"里，需要给"项目类型"加一个"培训项目"值才能出现在这个tab——这是数据结构改动，记得让AI一起做。</div>
+    </div>
+
+    <!-- ============ 接待 tab：内联展开，不跳详情页 ============ -->
+    <div class="tabpanel" id="p-recep">
+      <details class="proj" open>
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">乌兹住建监察局 30 人赴华培训接待</span><span class="region">北京+合肥</span>
+            <div class="next">7/26 → 8/6</div>
+          </div>
+          <div class="s-meta"><span class="stamp danger">0/6 完成</span></div>
+        </summary>
+        <div class="body">
+          <div class="recep-detail">
+            <div class="row"><span class="k">地点</span>北京 + 合肥</div>
+            <div class="row"><span class="k">时间</span>2026-07-26 → 2026-08-06</div>
+          </div>
+          <div class="check">
+            <div class="c"><span class="box on"></span>完成 30 位官员清华入校报备</div>
+            <div class="c"><span class="box"></span>核对培训议程与授课教师</div>
+            <div class="c"><span class="box"></span>确认返京及住建部展厅参访</div>
+          </div>
+          <div class="next-box" style="border-color:var(--accent-danger)">完成度必须实时读取任务表数据——这里显示0/6但第一项报备实际已完成，说明数据没接对，这是bug不是设计。</div>
+        </div>
+      </details>
+      <details class="proj">
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">澳门工程学会理事长接待</span><span class="region">合肥</span>
+            <div class="next">6/28 → 7/2</div>
+          </div>
+          <div class="s-meta"><span class="stamp done">已完成</span></div>
+        </summary>
+        <div class="body">
+          <div class="recep-detail">
+            <div class="row"><span class="k">地点</span>合肥（科技馆/清华合肥院）</div>
+            <div class="row"><span class="k">嘉宾</span>澳门工程学会理事长</div>
+          </div>
+        </div>
+      </details>
+      <details class="proj">
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">11月新加坡局长参访</span><span class="region">北京+合肥</span>
+            <div class="next">11/10 → 11/14</div>
+          </div>
+          <div class="s-meta"><span class="stamp wait">计划中</span></div>
+        </summary>
+        <div class="body">
+          <div class="recep-detail">
+            <div class="row"><span class="k">地点</span>北京（高能所/亦庄/清华）+ 合肥</div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- ============ 展会 tab ============ -->
+    <div class="tabpanel" id="p-expo">
+      <details class="proj" open>
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">8月安全大会（兰州）</span><span class="region">兰州</span>
+            <div class="next">8/20 → 8/23</div>
+          </div>
+          <div class="s-meta"><span class="stamp wait">计划中</span></div>
+        </summary>
+        <div class="body">
+          <div class="recep-detail"><div class="row"><span class="k">安排</span>具体安排待定</div></div>
+        </div>
+      </details>
+      <details class="proj">
+        <summary>
+          <span class="arrow"></span>
+          <div class="s-main"><span class="t">11月合作伙伴来访邀请函</span><span class="region">其他</span>
+            <div class="next">待确认是否继续</div>
+          </div>
+          <div class="s-meta"><span class="stamp pause">暂停</span></div>
+        </summary>
+        <div class="body">
+          <div class="next-box" style="border-color:var(--accent-pause)">暂停中，没有"下一步"是有意的空白，不用催促。</div>
+        </div>
+      </details>
+    </div>
+
+  </div>
+
+</div>
+<script>
+  document.querySelectorAll('.tab').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(n){ n.classList.remove('on'); });
+      document.querySelectorAll('.tabpanel').forEach(function(n){ n.classList.remove('on'); });
+      el.classList.add('on');
+      document.getElementById('p-' + el.getAttribute('data-t')).classList.add('on');
+    });
+  });
+</script>
+</body>
+</html>

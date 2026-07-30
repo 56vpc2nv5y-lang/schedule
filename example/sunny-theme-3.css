@@ -1,0 +1,1093 @@
+/*
+ * Sunny OS · Theme 03 — Executive Cobalt
+ * Version: 1.0.0
+ * Scope: html[data-theme="sunny-third"]
+ *
+ * Design keywords:
+ * professional / compact / international business / action-oriented / low-noise
+ */
+
+html[data-theme="sunny-third"] {
+  /* ---------- Foundation ---------- */
+  --s3-bg: #f4f6f8;
+  --s3-surface: #ffffff;
+  --s3-surface-soft: #f9fafb;
+  --s3-surface-strong: #eef2f6;
+  --s3-text: #172033;
+  --s3-text-soft: #435066;
+  --s3-muted: #6b7689;
+  --s3-faint: #98a2b3;
+  --s3-border: #dde3ea;
+  --s3-border-strong: #cbd4df;
+
+  /* ---------- Brand ---------- */
+  --s3-primary: #2f5bff;
+  --s3-primary-hover: #2449d8;
+  --s3-primary-soft: #edf1ff;
+  --s3-primary-border: #cfd8ff;
+  --s3-ink: #172033;
+  --s3-nav: #172033;
+  --s3-nav-soft: #222d42;
+  --s3-nav-muted: #93a0b5;
+
+  /* ---------- Business type colors ---------- */
+  --s3-project: #2f5bff;
+  --s3-project-soft: #edf1ff;
+  --s3-project-text: #2144bd;
+
+  --s3-training: #7653e8;
+  --s3-training-soft: #f1edff;
+  --s3-training-text: #5b3bc1;
+
+  --s3-reception: #16835f;
+  --s3-reception-soft: #e8f6f0;
+  --s3-reception-text: #11684d;
+
+  --s3-expo: #c86812;
+  --s3-expo-soft: #fff0df;
+  --s3-expo-text: #9f4a07;
+
+  /* ---------- Workflow status colors ---------- */
+  --s3-status-idle: #667085;
+  --s3-status-progress: #2563eb;
+  --s3-status-check: #7c3aed;
+  --s3-status-leader: #b42371;
+  --s3-status-waiting: #b77908;
+  --s3-status-send: #0f766e;
+  --s3-status-done: #15803d;
+  --s3-status-danger: #c43d4c;
+
+  --s3-danger-soft: #fff0f2;
+  --s3-warning-soft: #fff6df;
+  --s3-success-soft: #eaf7ee;
+  --s3-info-soft: #edf5ff;
+
+  /* ---------- Geometry ---------- */
+  --s3-sidebar-width: 232px;
+  --s3-sidebar-collapsed: 78px;
+  --s3-topbar-height: 72px;
+  --s3-content-max: 1540px;
+  --s3-radius-xs: 7px;
+  --s3-radius-sm: 9px;
+  --s3-radius-md: 12px;
+  --s3-radius-lg: 15px;
+  --s3-radius-pill: 999px;
+
+  /* ---------- Spacing ---------- */
+  --s3-space-1: 4px;
+  --s3-space-2: 8px;
+  --s3-space-3: 12px;
+  --s3-space-4: 16px;
+  --s3-space-5: 20px;
+  --s3-space-6: 24px;
+  --s3-space-7: 28px;
+  --s3-space-8: 32px;
+
+  /* ---------- Elevation ---------- */
+  --s3-shadow-sm: 0 2px 8px rgba(24, 32, 51, 0.05);
+  --s3-shadow-md: 0 12px 30px rgba(24, 32, 51, 0.08);
+  --s3-shadow-drawer: -20px 0 55px rgba(12, 20, 36, 0.18);
+
+  /* ---------- Typography ---------- */
+  --s3-font: Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --s3-font-size-xs: 11px;
+  --s3-font-size-sm: 12px;
+  --s3-font-size-md: 14px;
+  --s3-font-size-lg: 16px;
+  --s3-font-size-xl: 22px;
+  --s3-line-tight: 1.25;
+  --s3-line-normal: 1.5;
+
+  color-scheme: light;
+}
+
+/* ---------- Reset / base ---------- */
+html[data-theme="sunny-third"],
+html[data-theme="sunny-third"] body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--s3-bg);
+  color: var(--s3-text);
+  font-family: var(--s3-font);
+  font-size: var(--s3-font-size-md);
+  line-height: var(--s3-line-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html[data-theme="sunny-third"] * {
+  box-sizing: border-box;
+}
+
+html[data-theme="sunny-third"] button,
+html[data-theme="sunny-third"] input,
+html[data-theme="sunny-third"] select,
+html[data-theme="sunny-third"] textarea {
+  font: inherit;
+}
+
+html[data-theme="sunny-third"] button {
+  cursor: pointer;
+}
+
+html[data-theme="sunny-third"] a {
+  color: inherit;
+}
+
+html[data-theme="sunny-third"] :focus-visible {
+  outline: 3px solid rgba(47, 91, 255, 0.25);
+  outline-offset: 2px;
+}
+
+/* ---------- App shell ---------- */
+html[data-theme="sunny-third"] .app,
+html[data-theme="sunny-third"] .s3-app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--s3-sidebar-width) minmax(0, 1fr);
+}
+
+html[data-theme="sunny-third"] .main,
+html[data-theme="sunny-third"] .s3-main {
+  min-width: 0;
+}
+
+html[data-theme="sunny-third"] .sidebar,
+html[data-theme="sunny-third"] .s3-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 21px 15px;
+  background: var(--s3-nav);
+  color: #dbe3ef;
+}
+
+html[data-theme="sunny-third"] .brand,
+html[data-theme="sunny-third"] .s3-brand {
+  padding: 2px 10px 19px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+html[data-theme="sunny-third"] .brand small,
+html[data-theme="sunny-third"] .s3-brand small {
+  display: block;
+  margin-top: 5px;
+  color: var(--s3-nav-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+html[data-theme="sunny-third"] .nav-label,
+html[data-theme="sunny-third"] .s3-nav-label {
+  padding: 17px 10px 7px;
+  color: #7f8ba1;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+html[data-theme="sunny-third"] .nav a,
+html[data-theme="sunny-third"] .s3-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 3px 0;
+  padding: 10px 12px;
+  border-radius: var(--s3-radius-sm);
+  color: #c9d1dd;
+  text-decoration: none;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+html[data-theme="sunny-third"] .nav a:hover,
+html[data-theme="sunny-third"] .nav a.active,
+html[data-theme="sunny-third"] .s3-nav a:hover,
+html[data-theme="sunny-third"] .s3-nav a.active {
+  background: var(--s3-nav-soft);
+  color: #ffffff;
+}
+
+html[data-theme="sunny-third"] .nav i,
+html[data-theme="sunny-third"] .s3-nav i {
+  width: 18px;
+  text-align: center;
+  font-style: normal;
+}
+
+html[data-theme="sunny-third"] .topbar,
+html[data-theme="sunny-third"] .s3-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: var(--s3-topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--s3-border);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(9px);
+}
+
+html[data-theme="sunny-third"] .content,
+html[data-theme="sunny-third"] .s3-content {
+  width: 100%;
+  max-width: var(--s3-content-max);
+  margin: 0 auto;
+  padding: 24px 28px 48px;
+}
+
+/* ---------- Typography ---------- */
+html[data-theme="sunny-third"] .page-title,
+html[data-theme="sunny-third"] .s3-page-title {
+  color: var(--s3-text);
+  font-size: var(--s3-font-size-xl);
+  font-weight: 790;
+  line-height: var(--s3-line-tight);
+  letter-spacing: -0.02em;
+}
+
+html[data-theme="sunny-third"] .page-sub,
+html[data-theme="sunny-third"] .s3-page-sub {
+  margin-top: 4px;
+  color: var(--s3-muted);
+  font-size: var(--s3-font-size-sm);
+}
+
+html[data-theme="sunny-third"] .section-title,
+html[data-theme="sunny-third"] .card-title,
+html[data-theme="sunny-third"] .s3-section-title {
+  color: var(--s3-text);
+  font-size: var(--s3-font-size-lg);
+  font-weight: 780;
+  letter-spacing: -0.01em;
+}
+
+html[data-theme="sunny-third"] .section-sub,
+html[data-theme="sunny-third"] .card-sub,
+html[data-theme="sunny-third"] .s3-section-sub {
+  margin-top: 3px;
+  color: var(--s3-muted);
+  font-size: var(--s3-font-size-sm);
+}
+
+html[data-theme="sunny-third"] .muted { color: var(--s3-muted); }
+html[data-theme="sunny-third"] .faint { color: var(--s3-faint); }
+html[data-theme="sunny-third"] .small { font-size: var(--s3-font-size-sm); }
+html[data-theme="sunny-third"] .tiny { font-size: var(--s3-font-size-xs); }
+html[data-theme="sunny-third"] .strong { font-weight: 760; }
+
+/* ---------- Layout helpers ---------- */
+html[data-theme="sunny-third"] .row,
+html[data-theme="sunny-third"] .s3-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+html[data-theme="sunny-third"] .between { justify-content: space-between; }
+html[data-theme="sunny-third"] .wrap { flex-wrap: wrap; }
+html[data-theme="sunny-third"] .stack { display: flex; flex-direction: column; gap: 10px; }
+html[data-theme="sunny-third"] .mt { margin-top: 16px; }
+
+html[data-theme="sunny-third"] .grid12,
+html[data-theme="sunny-third"] .s3-grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+
+html[data-theme="sunny-third"] .s3 { grid-column: span 3; }
+html[data-theme="sunny-third"] .s4 { grid-column: span 4; }
+html[data-theme="sunny-third"] .s5 { grid-column: span 5; }
+html[data-theme="sunny-third"] .s6 { grid-column: span 6; }
+html[data-theme="sunny-third"] .s7 { grid-column: span 7; }
+html[data-theme="sunny-third"] .s8 { grid-column: span 8; }
+html[data-theme="sunny-third"] .s9 { grid-column: span 9; }
+html[data-theme="sunny-third"] .s12 { grid-column: span 12; }
+
+/* ---------- Cards / surfaces ---------- */
+html[data-theme="sunny-third"] .card,
+html[data-theme="sunny-third"] .s3-card {
+  overflow: hidden;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-lg);
+  background: var(--s3-surface);
+  box-shadow: var(--s3-shadow-sm);
+}
+
+html[data-theme="sunny-third"] .card-head,
+html[data-theme="sunny-third"] .s3-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--s3-border);
+}
+
+html[data-theme="sunny-third"] .card-body,
+html[data-theme="sunny-third"] .s3-card-body {
+  padding: 16px 18px;
+}
+
+html[data-theme="sunny-third"] .soft-panel,
+html[data-theme="sunny-third"] .s3-soft-panel {
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-md);
+  background: var(--s3-surface-soft);
+  padding: 14px;
+}
+
+html[data-theme="sunny-third"] .divider {
+  height: 1px;
+  margin: 14px 0;
+  background: var(--s3-border);
+}
+
+/* ---------- Buttons ---------- */
+html[data-theme="sunny-third"] .btn,
+html[data-theme="sunny-third"] .s3-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-sm);
+  background: var(--s3-surface);
+  color: var(--s3-text);
+  font-weight: 680;
+  text-decoration: none;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+html[data-theme="sunny-third"] .btn:hover,
+html[data-theme="sunny-third"] .s3-btn:hover {
+  border-color: var(--s3-border-strong);
+  background: var(--s3-surface-soft);
+}
+
+html[data-theme="sunny-third"] .btn:active,
+html[data-theme="sunny-third"] .s3-btn:active {
+  transform: translateY(1px);
+}
+
+html[data-theme="sunny-third"] .btn.primary,
+html[data-theme="sunny-third"] .s3-btn.is-primary {
+  border-color: var(--s3-primary);
+  background: var(--s3-primary);
+  color: #ffffff;
+}
+
+html[data-theme="sunny-third"] .btn.primary:hover,
+html[data-theme="sunny-third"] .s3-btn.is-primary:hover {
+  border-color: var(--s3-primary-hover);
+  background: var(--s3-primary-hover);
+}
+
+html[data-theme="sunny-third"] .btn.dark,
+html[data-theme="sunny-third"] .s3-btn.is-dark {
+  border-color: var(--s3-ink);
+  background: var(--s3-ink);
+  color: #ffffff;
+}
+
+html[data-theme="sunny-third"] .btn.sm,
+html[data-theme="sunny-third"] .s3-btn.is-small {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: var(--s3-font-size-sm);
+}
+
+html[data-theme="sunny-third"] .btn.icon,
+html[data-theme="sunny-third"] .s3-btn.is-icon {
+  width: 38px;
+  padding: 0;
+}
+
+/* ---------- Inputs ---------- */
+html[data-theme="sunny-third"] .search,
+html[data-theme="sunny-third"] .s3-search {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-sm);
+  background: var(--s3-surface);
+}
+
+html[data-theme="sunny-third"] .search input,
+html[data-theme="sunny-third"] .s3-search input {
+  width: 100%;
+  min-width: 180px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--s3-text);
+}
+
+html[data-theme="sunny-third"] .select,
+html[data-theme="sunny-third"] .field input,
+html[data-theme="sunny-third"] .field select,
+html[data-theme="sunny-third"] .field textarea,
+html[data-theme="sunny-third"] .s3-input,
+html[data-theme="sunny-third"] .s3-select,
+html[data-theme="sunny-third"] .s3-textarea {
+  width: 100%;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-sm);
+  background: var(--s3-surface);
+  color: var(--s3-text);
+}
+
+html[data-theme="sunny-third"] .select,
+html[data-theme="sunny-third"] .s3-select {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+html[data-theme="sunny-third"] .field input,
+html[data-theme="sunny-third"] .field select,
+html[data-theme="sunny-third"] .field textarea,
+html[data-theme="sunny-third"] .s3-input,
+html[data-theme="sunny-third"] .s3-textarea {
+  padding: 10px;
+}
+
+html[data-theme="sunny-third"] .field textarea,
+html[data-theme="sunny-third"] .s3-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+html[data-theme="sunny-third"] .field label,
+html[data-theme="sunny-third"] .s3-field-label {
+  color: var(--s3-text-soft);
+  font-size: var(--s3-font-size-sm);
+  font-weight: 720;
+}
+
+/* ---------- Metrics ---------- */
+html[data-theme="sunny-third"] .metric-grid,
+html[data-theme="sunny-third"] .s3-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+html[data-theme="sunny-third"] .metric,
+html[data-theme="sunny-third"] .s3-metric {
+  padding: 14px 15px;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-md);
+  background: var(--s3-surface);
+}
+
+html[data-theme="sunny-third"] .metric .v,
+html[data-theme="sunny-third"] .s3-metric-value {
+  font-size: 25px;
+  font-weight: 820;
+  letter-spacing: -0.03em;
+}
+
+html[data-theme="sunny-third"] .metric .l,
+html[data-theme="sunny-third"] .s3-metric-label {
+  margin-top: 4px;
+  color: var(--s3-muted);
+  font-size: var(--s3-font-size-sm);
+}
+
+/* ---------- Pills / tags ---------- */
+html[data-theme="sunny-third"] .pill,
+html[data-theme="sunny-third"] .s3-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: var(--s3-radius-pill);
+  font-size: var(--s3-font-size-xs);
+  font-weight: 720;
+}
+
+html[data-theme="sunny-third"] .pill.blue,
+html[data-theme="sunny-third"] .type-project,
+html[data-theme="sunny-third"] .s3-type-project {
+  background: var(--s3-project-soft);
+  color: var(--s3-project-text);
+}
+
+html[data-theme="sunny-third"] .pill.purple,
+html[data-theme="sunny-third"] .type-training,
+html[data-theme="sunny-third"] .s3-type-training {
+  background: var(--s3-training-soft);
+  color: var(--s3-training-text);
+}
+
+html[data-theme="sunny-third"] .pill.green,
+html[data-theme="sunny-third"] .type-reception,
+html[data-theme="sunny-third"] .s3-type-reception {
+  background: var(--s3-reception-soft);
+  color: var(--s3-reception-text);
+}
+
+html[data-theme="sunny-third"] .pill.orange,
+html[data-theme="sunny-third"] .type-expo,
+html[data-theme="sunny-third"] .s3-type-expo {
+  background: var(--s3-expo-soft);
+  color: var(--s3-expo-text);
+}
+
+html[data-theme="sunny-third"] .pill.red,
+html[data-theme="sunny-third"] .status-danger {
+  background: var(--s3-danger-soft);
+  color: var(--s3-status-danger);
+}
+
+html[data-theme="sunny-third"] .pill.yellow,
+html[data-theme="sunny-third"] .status-waiting {
+  background: var(--s3-warning-soft);
+  color: var(--s3-status-waiting);
+}
+
+html[data-theme="sunny-third"] .pill.gray,
+html[data-theme="sunny-third"] .status-idle {
+  background: var(--s3-surface-strong);
+  color: var(--s3-status-idle);
+}
+
+html[data-theme="sunny-third"] .status-progress { background: var(--s3-info-soft); color: var(--s3-status-progress); }
+html[data-theme="sunny-third"] .status-check { background: var(--s3-training-soft); color: var(--s3-status-check); }
+html[data-theme="sunny-third"] .status-leader { background: #fff0f7; color: var(--s3-status-leader); }
+html[data-theme="sunny-third"] .status-send { background: #e8f7f5; color: var(--s3-status-send); }
+html[data-theme="sunny-third"] .status-done { background: var(--s3-success-soft); color: var(--s3-status-done); }
+
+/* ---------- Tabs ---------- */
+html[data-theme="sunny-third"] .tabs,
+html[data-theme="sunny-third"] .s3-tabs {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+html[data-theme="sunny-third"] .tab,
+html[data-theme="sunny-third"] .s3-tab {
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-sm);
+  background: var(--s3-surface);
+  color: var(--s3-text-soft);
+  white-space: nowrap;
+}
+
+html[data-theme="sunny-third"] .tab.active,
+html[data-theme="sunny-third"] .s3-tab.is-active {
+  border-color: var(--s3-ink);
+  background: var(--s3-ink);
+  color: #ffffff;
+}
+
+/* ---------- Lists / task rows ---------- */
+html[data-theme="sunny-third"] .task-item,
+html[data-theme="sunny-third"] .s3-list-row {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 13px 0;
+  border-bottom: 1px solid #edf0f4;
+}
+
+html[data-theme="sunny-third"] .task-item:last-child,
+html[data-theme="sunny-third"] .s3-list-row:last-child {
+  border-bottom: 0;
+}
+
+html[data-theme="sunny-third"] .priority,
+html[data-theme="sunny-third"] .s3-priority-bar {
+  width: 7px;
+  min-height: 54px;
+  border-radius: var(--s3-radius-pill);
+  background: var(--s3-status-danger);
+}
+
+html[data-theme="sunny-third"] .task-title,
+html[data-theme="sunny-third"] .s3-row-title {
+  color: var(--s3-text);
+  font-weight: 760;
+  line-height: 1.42;
+}
+
+html[data-theme="sunny-third"] .task-next,
+html[data-theme="sunny-third"] .s3-row-detail {
+  margin-top: 7px;
+  color: var(--s3-text-soft);
+  font-size: var(--s3-font-size-sm);
+  line-height: 1.5;
+}
+
+/* ---------- Progress ---------- */
+html[data-theme="sunny-third"] .progress,
+html[data-theme="sunny-third"] .s3-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--s3-radius-pill);
+  background: #edf1f5;
+}
+
+html[data-theme="sunny-third"] .progress span,
+html[data-theme="sunny-third"] .s3-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--s3-primary);
+}
+
+/* ---------- Table ---------- */
+html[data-theme="sunny-third"] .s3-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-lg);
+  background: var(--s3-surface);
+}
+
+html[data-theme="sunny-third"] .s3-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+html[data-theme="sunny-third"] .s3-table th,
+html[data-theme="sunny-third"] .s3-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #edf0f4;
+  text-align: left;
+  vertical-align: middle;
+}
+
+html[data-theme="sunny-third"] .s3-table th {
+  background: var(--s3-surface-soft);
+  color: var(--s3-muted);
+  font-size: var(--s3-font-size-xs);
+  font-weight: 780;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+html[data-theme="sunny-third"] .s3-table tr:last-child td {
+  border-bottom: 0;
+}
+
+html[data-theme="sunny-third"] .s3-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+/* ---------- Kanban ---------- */
+html[data-theme="sunny-third"] .s3-kanban {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+html[data-theme="sunny-third"] .s3-kanban-column {
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-lg);
+  background: #eef2f6;
+}
+
+html[data-theme="sunny-third"] .s3-kanban-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--s3-text-soft);
+  font-size: var(--s3-font-size-sm);
+  font-weight: 760;
+}
+
+html[data-theme="sunny-third"] .s3-kanban-card {
+  margin-top: 10px;
+  padding: 13px;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-md);
+  background: var(--s3-surface);
+  box-shadow: var(--s3-shadow-sm);
+}
+
+html[data-theme="sunny-third"] .s3-kanban-card:first-of-type { margin-top: 0; }
+html[data-theme="sunny-third"] .s3-kanban-card:hover { border-color: var(--s3-border-strong); }
+
+/* ---------- Calendar ---------- */
+html[data-theme="sunny-third"] .s3-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-lg);
+  background: var(--s3-surface);
+}
+
+html[data-theme="sunny-third"] .s3-calendar-weekday {
+  padding: 10px 8px;
+  border-right: 1px solid var(--s3-border);
+  border-bottom: 1px solid var(--s3-border);
+  background: var(--s3-surface-soft);
+  color: var(--s3-muted);
+  font-size: var(--s3-font-size-xs);
+  font-weight: 760;
+  text-align: center;
+}
+
+html[data-theme="sunny-third"] .s3-calendar-day {
+  min-height: 132px;
+  padding: 9px;
+  border-right: 1px solid var(--s3-border);
+  border-bottom: 1px solid var(--s3-border);
+  background: var(--s3-surface);
+}
+
+html[data-theme="sunny-third"] .s3-calendar-day.is-today {
+  background: #f7f9ff;
+  box-shadow: inset 0 0 0 2px var(--s3-primary-border);
+}
+
+html[data-theme="sunny-third"] .s3-calendar-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: var(--s3-radius-pill);
+  color: var(--s3-text-soft);
+  font-size: var(--s3-font-size-sm);
+  font-weight: 760;
+}
+
+html[data-theme="sunny-third"] .s3-calendar-day.is-today .s3-calendar-date {
+  background: var(--s3-primary);
+  color: #ffffff;
+}
+
+html[data-theme="sunny-third"] .s3-calendar-event {
+  display: block;
+  margin-top: 6px;
+  padding: 5px 7px;
+  border-left: 3px solid currentColor;
+  border-radius: 6px;
+  font-size: var(--s3-font-size-xs);
+  font-weight: 680;
+  line-height: 1.35;
+}
+
+html[data-theme="sunny-third"] .s3-calendar-event.project { color: var(--s3-project-text); background: var(--s3-project-soft); }
+html[data-theme="sunny-third"] .s3-calendar-event.training { color: var(--s3-training-text); background: var(--s3-training-soft); }
+html[data-theme="sunny-third"] .s3-calendar-event.reception { color: var(--s3-reception-text); background: var(--s3-reception-soft); }
+html[data-theme="sunny-third"] .s3-calendar-event.expo { color: var(--s3-expo-text); background: var(--s3-expo-soft); }
+
+/* ---------- Contact layout ---------- */
+html[data-theme="sunny-third"] .s3-contact-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(280px, 0.9fr) minmax(360px, 1.3fr);
+  gap: 14px;
+  align-items: start;
+}
+
+html[data-theme="sunny-third"] .s3-contact-list {
+  overflow: hidden;
+  border: 1px solid var(--s3-border);
+  border-radius: var(--s3-radius-lg);
+  background: var(--s3-surface);
+}
+
+html[data-theme="sunny-third"] .s3-contact-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 12px 13px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+html[data-theme="sunny-third"] .s3-contact-item.is-active {
+  background: var(--s3-primary-soft);
+}
+
+html[data-theme="sunny-third"] .avatar,
+html[data-theme="sunny-third"] .s3-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #dfe7ff;
+  color: #2144bd;
+  font-weight: 800;
+}
+
+/* ---------- Drawer / modal ---------- */
+html[data-theme="sunny-third"] .drawer,
+html[data-theme="sunny-third"] .s3-drawer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+html[data-theme="sunny-third"] .drawer.open,
+html[data-theme="sunny-third"] .s3-drawer.is-open {
+  display: block;
+}
+
+html[data-theme="sunny-third"] .backdrop,
+html[data-theme="sunny-third"] .s3-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 18, 30, 0.34);
+}
+
+html[data-theme="sunny-third"] .drawer-panel,
+html[data-theme="sunny-third"] .s3-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(720px, 94vw);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--s3-surface);
+  box-shadow: var(--s3-shadow-drawer);
+}
+
+html[data-theme="sunny-third"] .drawer-head,
+html[data-theme="sunny-third"] .s3-drawer-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--s3-border);
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(8px);
+}
+
+html[data-theme="sunny-third"] .drawer-body,
+html[data-theme="sunny-third"] .s3-drawer-body {
+  padding: 20px 22px 48px;
+}
+
+html[data-theme="sunny-third"] .close,
+html[data-theme="sunny-third"] .s3-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--s3-radius-sm);
+  background: var(--s3-surface-strong);
+  color: var(--s3-text);
+}
+
+html[data-theme="sunny-third"] .form-grid,
+html[data-theme="sunny-third"] .s3-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+html[data-theme="sunny-third"] .field,
+html[data-theme="sunny-third"] .s3-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+html[data-theme="sunny-third"] .field.full,
+html[data-theme="sunny-third"] .s3-field.is-full {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Empty state ---------- */
+html[data-theme="sunny-third"] .empty,
+html[data-theme="sunny-third"] .s3-empty {
+  padding: 38px;
+  text-align: center;
+  color: var(--s3-muted);
+}
+
+/* ---------- Density mode ---------- */
+html[data-theme="sunny-third"][data-density="compact"] .content,
+html[data-theme="sunny-third"][data-density="compact"] .s3-content {
+  padding-top: 18px;
+}
+
+html[data-theme="sunny-third"][data-density="compact"] .card-head,
+html[data-theme="sunny-third"][data-density="compact"] .s3-card-head {
+  padding: 13px 15px;
+}
+
+html[data-theme="sunny-third"][data-density="compact"] .card-body,
+html[data-theme="sunny-third"][data-density="compact"] .s3-card-body {
+  padding: 13px 15px;
+}
+
+html[data-theme="sunny-third"][data-density="compact"] .task-item,
+html[data-theme="sunny-third"][data-density="compact"] .s3-list-row {
+  padding: 10px 0;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  html[data-theme="sunny-third"] .app,
+  html[data-theme="sunny-third"] .s3-app {
+    grid-template-columns: var(--s3-sidebar-collapsed) minmax(0, 1fr);
+  }
+
+  html[data-theme="sunny-third"] .sidebar,
+  html[data-theme="sunny-third"] .s3-sidebar {
+    padding: 18px 10px;
+  }
+
+  html[data-theme="sunny-third"] .brand,
+  html[data-theme="sunny-third"] .s3-brand {
+    padding: 4px 0 17px;
+    text-align: center;
+    font-size: 0;
+  }
+
+  html[data-theme="sunny-third"] .brand::before,
+  html[data-theme="sunny-third"] .s3-brand::before {
+    content: "S";
+    font-size: 22px;
+  }
+
+  html[data-theme="sunny-third"] .brand small,
+  html[data-theme="sunny-third"] .nav-label,
+  html[data-theme="sunny-third"] .nav a span,
+  html[data-theme="sunny-third"] .s3-brand small,
+  html[data-theme="sunny-third"] .s3-nav-label,
+  html[data-theme="sunny-third"] .s3-nav a span {
+    display: none;
+  }
+
+  html[data-theme="sunny-third"] .nav a,
+  html[data-theme="sunny-third"] .s3-nav a {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  html[data-theme="sunny-third"] .s3,
+  html[data-theme="sunny-third"] .s4,
+  html[data-theme="sunny-third"] .s5,
+  html[data-theme="sunny-third"] .s6,
+  html[data-theme="sunny-third"] .s7,
+  html[data-theme="sunny-third"] .s8,
+  html[data-theme="sunny-third"] .s9 {
+    grid-column: span 12;
+  }
+
+  html[data-theme="sunny-third"] .metric-grid,
+  html[data-theme="sunny-third"] .s3-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  html[data-theme="sunny-third"] .s3-kanban {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+
+  html[data-theme="sunny-third"] .s3-contact-layout {
+    grid-template-columns: 190px minmax(260px, 0.9fr) minmax(320px, 1.2fr);
+  }
+}
+
+@media (max-width: 820px) {
+  html[data-theme="sunny-third"] .app,
+  html[data-theme="sunny-third"] .s3-app {
+    display: block;
+  }
+
+  html[data-theme="sunny-third"] .sidebar,
+  html[data-theme="sunny-third"] .s3-sidebar {
+    display: none;
+  }
+
+  html[data-theme="sunny-third"] .topbar,
+  html[data-theme="sunny-third"] .s3-topbar {
+    padding: 12px 16px;
+  }
+
+  html[data-theme="sunny-third"] .content,
+  html[data-theme="sunny-third"] .s3-content {
+    padding: 15px 15px 40px;
+  }
+
+  html[data-theme="sunny-third"] .page-title,
+  html[data-theme="sunny-third"] .s3-page-title {
+    font-size: 19px;
+  }
+
+  html[data-theme="sunny-third"] .grid12,
+  html[data-theme="sunny-third"] .s3-grid-12 {
+    gap: 12px;
+  }
+
+  html[data-theme="sunny-third"] .form-grid,
+  html[data-theme="sunny-third"] .s3-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-theme="sunny-third"] .field.full,
+  html[data-theme="sunny-third"] .s3-field.is-full {
+    grid-column: auto;
+  }
+
+  html[data-theme="sunny-third"] .search,
+  html[data-theme="sunny-third"] .s3-search {
+    width: 100%;
+  }
+
+  html[data-theme="sunny-third"] .search input,
+  html[data-theme="sunny-third"] .s3-search input {
+    min-width: 0;
+  }
+
+  html[data-theme="sunny-third"] .s3-kanban,
+  html[data-theme="sunny-third"] .s3-contact-layout {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-theme="sunny-third"] .s3-calendar {
+    display: block;
+    border: 0;
+    background: transparent;
+  }
+
+  html[data-theme="sunny-third"] .s3-calendar-weekday {
+    display: none;
+  }
+
+  html[data-theme="sunny-third"] .s3-calendar-day {
+    min-height: auto;
+    margin-bottom: 10px;
+    border: 1px solid var(--s3-border);
+    border-radius: var(--s3-radius-md);
+  }
+
+  html[data-theme="sunny-third"] .drawer-panel,
+  html[data-theme="sunny-third"] .s3-drawer-panel {
+    width: 100%;
+  }
+}

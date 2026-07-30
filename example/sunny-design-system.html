@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunny 看板 · 设计系统组件库（唯一真源）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     这个文件是全站唯一的样式真源。
+     其他任何页面都不应该重新定义 --bg / --ink / .stamp / .card 等，
+     而应该 import 或复制这一份，然后只在页面级别写"这一页特有的布局"。
+     ============================================================ */
+
+  :root{
+    /* 方案A：默认暖白 */
+    --bg:#F6F3EC; --surface:#FFFFFF; --surface-alt:#FBF8F2;
+    --ink:#2B2E33; --ink-soft:#6C7178; --ink-faint:#9A9D9F;
+    --hairline:#E3DECF; --hairline-cool:#DAE0E3;
+    --accent-active:#3E6E71; --accent-active-bg:#E6EEEC;
+    --accent-wait:#B07C3F; --accent-wait-bg:#F3E8D6;
+    --accent-pause:#7C8590; --accent-pause-bg:#E9EAEA;
+    --accent-danger:#A24A3C; --accent-danger-bg:#F3E1DC;
+    --accent-done:#5C7A56; --accent-done-bg:#E6ECE1;
+    --radius-sm:2px; --radius-md:4px; --radius-lg:6px;
+  }
+  /* 方案C：古风公文，切换时只需要在 <body> 上加 class="skin-c" */
+  body.skin-c{
+    --bg:#EDE3D2; --surface:#F7F1E4; --surface-alt:#F1E8D6;
+    --ink:#2A2118; --ink-soft:#6B5D4A; --ink-faint:#8F8069;
+    --hairline:#C9B896; --hairline-cool:#D6C9A8;
+    --accent-active:#B33A2E; --accent-active-bg:#F1DAD2;
+    --accent-wait:#9C7A34; --accent-wait-bg:#ECDFC0;
+    --accent-pause:#746B5A; --accent-pause-bg:#E2D9C3;
+    --accent-danger:#6B1F16; --accent-danger-bg:#E4CEC5;
+    --accent-done:#4B6B4A; --accent-done-bg:#DCE5D6;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans SC",-apple-system,sans-serif; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:960px; margin:0 auto; padding:30px 20px 100px; }
+  .mono{ font-family:"IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; font-size:11px; }
+  h1.page-title{ font-family:"Noto Serif SC"; font-weight:900; font-size:24px; margin:0 0 6px; }
+  .demo-block{ margin:36px 0; }
+  .demo-block h2{ font-family:"Noto Serif SC"; font-size:15px; margin:0 0 12px; padding-bottom:8px; border-bottom:2px solid var(--ink); }
+  .demo-note{ font-size:11.5px; color:var(--ink-faint); margin-top:8px; }
+  .demo-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+  /* ========== 组件1：图章 stamp（唯一的状态展示方式，全站通用） ========== */
+  .stamp{
+    display:inline-flex; align-items:center; gap:5px;
+    font-family:"IBM Plex Mono"; font-size:10.5px; font-weight:600;
+    letter-spacing:.06em; text-transform:uppercase;
+    padding:3px 8px; border-radius:var(--radius-sm);
+    border:1.3px solid currentColor; transform:rotate(-1.2deg);
+  }
+  .stamp.active{ color:var(--accent-active); background:var(--accent-active-bg); }
+  .stamp.wait{ color:var(--accent-wait); background:var(--accent-wait-bg); }
+  .stamp.pause{ color:var(--accent-pause); background:var(--accent-pause-bg); }
+  .stamp.done{ color:var(--accent-done); background:var(--accent-done-bg); }
+  .stamp.danger{ color:var(--accent-danger); background:var(--accent-danger-bg); }
+  /* 状态值到 stamp 类名的映射规则，写死在这里，所有页面复用同一套映射：
+     计划中/待发出/待处理        → wait
+     已确认/进行中/已发供应商     → active
+     暂停/PAUSED/近期未排期      → pause
+     已完成/已确认/已闭环        → done
+     已逾期/需追问/需开会讲解     → danger
+  */
+
+  /* ========== 组件2：chip 小标签（分类/项目名，不是状态） ========== */
+  .chip{ font-size:10.5px; padding:2px 9px; border-radius:12px; background:var(--surface-alt); border:1px solid var(--hairline); color:var(--ink-soft); }
+
+  /* ========== 组件3：panel / card 通用容器 ========== */
+  .panel{ border:1px solid var(--hairline); border-radius:var(--radius-lg); background:var(--surface); }
+  .card{ border:1px solid var(--hairline); border-radius:var(--radius-lg); background:var(--surface); padding:16px 18px; }
+  .row{ display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--hairline); }
+  .row:last-child{ border-bottom:none; }
+
+  /* ========== 组件4：KPI 统计格（首页/日历/成长档案统计条通用） ========== */
+  .kpi-bar{ display:grid; gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:var(--radius-md); overflow:hidden; }
+  .kpi-cell{ background:var(--surface); padding:14px 16px; }
+  .kpi-cell .num{ font-family:"Noto Serif SC"; font-size:24px; font-weight:700; }
+  .kpi-cell .sub{ font-size:10.5px; color:var(--ink-faint); margin-top:2px; }
+  .kpi-cell .label{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
+  .kpi-cell.danger .num{ color:var(--accent-danger); }
+
+  /* ========== 组件5：按钮 ========== */
+  .btn{ font-family:"Noto Sans SC"; font-weight:600; font-size:13px; padding:8px 14px; border-radius:var(--radius-sm); border:1.5px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  .btn.ghost{ background:transparent; color:var(--ink); }
+  .btn.small{ font-size:11.5px; padding:5px 10px; }
+
+  /* ========== 组件6：折叠卡片（项目看板、出差接待、成长档案编辑区都用这个模式） ==========
+     规则：任何"编辑表单"必须默认收起。<details> 收起时只显示 summary 里的摘要信息，
+     点击才展开完整表单。绝对不允许列表里每一项的编辑表单同时展开。 */
+  details.fold{ border-bottom:1px solid var(--hairline); }
+  details.fold:last-child{ border-bottom:none; }
+  details.fold summary{ list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:center; gap:12px; }
+  details.fold summary::-webkit-details-marker{ display:none; }
+  details.fold summary .arrow{ width:8px; height:8px; border-right:1.6px solid var(--ink-soft); border-bottom:1.6px solid var(--ink-soft); transform:rotate(-45deg); transition:transform .15s; flex:none; }
+  details.fold[open] summary .arrow{ transform:rotate(45deg); }
+  details.fold summary .title{ font-weight:600; font-size:13.5px; }
+  details.fold summary .meta{ margin-left:auto; display:flex; gap:8px; align-items:center; }
+  .fold-body{ padding:0 18px 18px 38px; font-size:12.5px; color:var(--ink-soft); }
+  .fold-body .edit-btn{ margin-top:10px; }
+  .fold-edit{ margin-top:12px; padding:14px; background:var(--surface-alt); border:1px dashed var(--hairline-cool); border-radius:var(--radius-md); display:none; }
+  .fold-edit.show{ display:block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="page-title">设计系统组件库</h1>
+  <div class="mono" style="color:var(--ink-soft)">全站唯一真源 · 其他页面只写布局，不重复定义组件</div>
+
+  <div class="demo-block">
+    <h2>1 · 图章状态（stamp）</h2>
+    <div class="demo-row">
+      <span class="stamp active">进行中</span>
+      <span class="stamp wait">计划中</span>
+      <span class="stamp pause">暂停</span>
+      <span class="stamp done">已完成</span>
+      <span class="stamp danger">已逾期</span>
+    </div>
+    <div class="demo-note">全站任何"状态"字段，无论来自项目、任务、接待、纪要，展示时都只能用这五种 stamp，不允许再造新样式。</div>
+  </div>
+
+  <div class="demo-block">
+    <h2>2 · chip 分类标签（区别于状态）</h2>
+    <div class="demo-row"><span class="chip">安全检测多技术合作</span><span class="chip">技能积累</span><span class="chip">个人事务</span></div>
+    <div class="demo-note">chip 用于项目名、分类名这种"标签"，不代表状态，所以不用图章样式。</div>
+  </div>
+
+  <div class="demo-block">
+    <h2>3 · KPI 统计条</h2>
+    <div class="kpi-bar" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi-cell"><div class="num">4</div><div class="sub">覆盖 2 个地区</div><div class="label">进行中项目</div></div>
+      <div class="kpi-cell"><div class="num">47</div><div class="sub">其中 4 件个人杂事</div><div class="label">未完成任务</div></div>
+      <div class="kpi-cell"><div class="num">26</div><div class="sub">等甲方/供应商回复</div><div class="label">等待反馈</div></div>
+      <div class="kpi-cell danger"><div class="num">8</div><div class="sub">需要今天处理</div><div class="label">已逾期</div></div>
+    </div>
+    <div class="demo-note">首页、日历、成长档案顶部的统计条，都用这一个组件，只改 grid-template-columns 的格数。</div>
+  </div>
+
+  <div class="demo-block">
+    <h2>4 · 折叠卡片 + 编辑按需展开（修复接待/成长档案的核心规则）</h2>
+    <div class="panel">
+      <details class="fold">
+        <summary>
+          <span class="arrow"></span>
+          <span class="title">澳门工程学会理事长接待（合肥）</span>
+          <span class="meta"><span class="stamp done">已完成</span></span>
+        </summary>
+        <div class="fold-body">
+          议程、桌牌、饭店酒店、车辆路线、接机送机、伴手礼全流程 · 2026-06-28 → 07-02
+          <div>
+            <button class="btn small ghost edit-btn" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button>
+            <div class="fold-edit">
+              这里才是完整表单（类型/状态/关联项目/相关人员……），默认不显示，点"编辑"才出现。
+              一个列表页里，任意时刻最多只应该有一个这样的表单处于展开状态。
+            </div>
+          </div>
+        </div>
+      </details>
+      <details class="fold">
+        <summary>
+          <span class="arrow"></span>
+          <span class="title">乌兹住建监察局 30 人赴华培训接待</span>
+          <span class="meta"><span class="stamp danger">0/6·数据未同步</span></span>
+        </summary>
+        <div class="fold-body">
+          完成度必须读取任务表实时数据，不能是独立字段——这一条已经反馈三次了，这次必须查代码。
+        </div>
+      </details>
+    </div>
+    <div class="demo-note">现在接待和成长档案页面的问题就是：所有记录的编辑表单同时展开，导致页面又长又乱。改成这个折叠模式后，默认只看摘要，需要改的时候才点开。</div>
+  </div>
+
+  <div class="demo-block">
+    <h2>5 · 字体与间距规范</h2>
+    <div style="font-family:'Noto Serif SC'; font-weight:900; font-size:20px;">标题用 Noto Serif SC</div>
+    <div style="margin-top:6px;">正文用 Noto Sans SC，行高 1.55</div>
+    <div class="mono" style="margin-top:6px; color:var(--ink-soft);">标签/日期/编号用 IBM Plex Mono 全大写</div>
+  </div>
+
+</div>
+</body>
+</html>

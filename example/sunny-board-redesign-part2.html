@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunny 工作台 · 设计原型（续）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F6F3EC; --surface: #FFFFFF; --surface-alt: #FBF8F2;
+    --ink: #2B2E33; --ink-soft: #6C7178; --ink-faint: #9A9D9F;
+    --hairline: #E3DECF; --hairline-cool: #DAE0E3;
+    --accent-active: #3E6E71; --accent-active-bg: #E6EEEC;
+    --accent-wait: #B07C3F; --accent-wait-bg: #F3E8D6;
+    --accent-pause: #7C8590; --accent-pause-bg: #E9EAEA;
+    --accent-danger: #A24A3C; --accent-danger-bg: #F3E1DC;
+    --accent-done: #5C7A56; --accent-done-bg: #E6ECE1;
+    --radius: 3px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background:var(--bg); color:var(--ink); font-family:"Noto Sans SC",-apple-system,sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:980px; margin:0 auto; padding:28px 20px 100px; }
+  .mono{ font-family:"IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; font-size:11px; }
+  header.top{ display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:20px; margin-bottom:8px; border-bottom:2px solid var(--ink); }
+  .brand h1{ font-family:"Noto Serif SC"; font-weight:900; font-size:26px; margin:0 0 4px; }
+  .brand .mono{ color:var(--ink-soft); }
+  .section-label{ display:flex; align-items:baseline; gap:10px; margin:40px 0 14px; }
+  .section-label .num{ font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-faint); }
+  .section-label h2{ font-family:"Noto Serif SC"; font-size:19px; margin:0; font-weight:700; }
+  .section-label .desc{ font-size:12.5px; color:var(--ink-soft); margin-left:auto; }
+  .stamp{ display:inline-flex; align-items:center; gap:5px; font-family:"IBM Plex Mono"; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:2px; border:1.3px solid currentColor; transform:rotate(-1.2deg); }
+  .stamp.active{ color:var(--accent-active); background:var(--accent-active-bg); }
+  .stamp.wait{ color:var(--accent-wait); background:var(--accent-wait-bg); }
+  .stamp.pause{ color:var(--accent-pause); background:var(--accent-pause-bg); }
+  .stamp.done{ color:var(--accent-done); background:var(--accent-done-bg); }
+  .stamp.danger{ color:var(--accent-danger); background:var(--accent-danger-bg); }
+  .chip{ font-size:11px; padding:3px 8px; border-radius:12px; background:var(--surface-alt); border:1px solid var(--hairline); color:var(--ink-soft); cursor:pointer; }
+  .chip.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .btn{ font-family:"Noto Sans SC"; font-weight:600; font-size:13.5px; padding:9px 16px; border-radius:var(--radius); border:1.5px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  .btn.ghost{ background:transparent; color:var(--ink); }
+  .panel{ border:1px solid var(--ink); border-radius:6px; background:var(--surface); padding:4px; }
+  .note{ font-size:11.5px; color:var(--ink-faint); margin-top:6px; }
+
+  /* ---------- 任务列表 ---------- */
+  .filter-row{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .task-row{ display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--hairline); }
+  .task-row:last-child{ border-bottom:none; }
+  .task-row .box{ width:15px; height:15px; border:1.5px solid var(--ink-soft); border-radius:2px; flex:none; }
+  .task-row.overdue .box{ border-color:var(--accent-danger); }
+  .task-main{ flex:1; min-width:0; }
+  .task-main .t{ font-size:13.5px; }
+  .task-main .src{ font-size:11px; color:var(--ink-faint); margin-top:3px; font-family:"IBM Plex Mono"; letter-spacing:.02em; }
+  .task-due{ font-size:11.5px; color:var(--ink-faint); flex:none; width:76px; text-align:right; }
+  .task-due.late{ color:var(--accent-danger); font-weight:600; }
+  .group-head{ padding:10px 18px; font-family:"Noto Serif SC"; font-weight:700; font-size:13px; color:var(--ink-soft); background:var(--surface-alt); border-bottom:1px solid var(--hairline); }
+
+  /* ---------- 联系人库 ---------- */
+  .merge-banner{ display:flex; align-items:center; gap:12px; padding:13px 16px; margin-bottom:14px; background:var(--accent-wait-bg); border:1px solid var(--accent-wait); border-radius:4px; font-size:12.5px; }
+  .merge-banner b{ color:var(--accent-wait); }
+  .merge-banner .btn{ margin-left:auto; padding:6px 14px; font-size:12px; background:var(--accent-wait); border-color:var(--accent-wait); }
+  .contact-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .contact-card{ border:1px solid var(--hairline); border-radius:4px; background:var(--surface); padding:16px; }
+  .contact-card .head{ display:flex; align-items:center; justify-content:space-between; }
+  .contact-card .name{ font-weight:700; font-size:14.5px; }
+  .contact-card .role{ font-size:10.5px; margin-top:6px; }
+  .contact-card .meta{ margin-top:12px; font-size:11.5px; color:var(--ink-soft); display:flex; justify-content:space-between; }
+  .contact-card .projects{ margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; }
+
+  /* ---------- 周计划 ---------- */
+  .week-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:6px; overflow:hidden; }
+  .week-col{ background:var(--surface); min-height:220px; padding:10px 8px; }
+  .week-col .dh{ font-family:"IBM Plex Mono"; font-size:10.5px; color:var(--ink-faint); text-align:center; margin-bottom:8px; }
+  .week-col .dh b{ display:block; font-family:"Noto Serif SC"; font-size:15px; color:var(--ink); }
+  .week-item{ font-size:10.5px; padding:5px 6px; border-radius:2px; margin-bottom:5px; border-left:2.5px solid; }
+  .week-item.proj{ background:var(--accent-active-bg); border-color:var(--accent-active); color:var(--accent-active); }
+  .week-item.admin{ background:var(--accent-pause-bg); border-color:var(--accent-pause); color:var(--ink-soft); }
+  .week-item.free{ background:var(--surface-alt); border-color:var(--hairline-cool); color:var(--ink-faint); font-style:italic; }
+  .week-col.today{ background:var(--surface-alt); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>Sunny 工作台</h1>
+      <div class="mono">设计原型（续）· 任务 / 联系人 / 周计划</div>
+    </div>
+  </header>
+
+  <!-- 任务列表 -->
+  <div class="section-label">
+    <span class="num">07</span>
+    <h2>任务列表：所有待办的唯一入口</h2>
+    <span class="desc">不管来自项目阶段、接待清单还是纪要，都汇总到这一张表</span>
+  </div>
+
+  <div class="filter-row">
+    <span class="chip on">全部 18</span>
+    <span class="chip">项目任务 11</span>
+    <span class="chip">个人/行政 4</span>
+    <span class="chip">来自接待清单 2</span>
+    <span class="chip">来自纪要 1</span>
+  </div>
+
+  <div class="panel">
+    <div class="group-head">今日 / 已逾期</div>
+    <div class="task-row overdue">
+      <div class="box"></div>
+      <div class="task-main">
+        <div class="t">完成下半年度工作预测定稿并向 Leader 汇报</div>
+        <div class="src">来源：手动新建 · 个人/行政</div>
+      </div>
+      <div class="task-due late">逾期 7 天</div>
+    </div>
+    <div class="task-row overdue">
+      <div class="box"></div>
+      <div class="task-main">
+        <div class="t">收集并核对 30 位官员的清华入校报备信息</div>
+        <div class="src">来源：接待清单 · 乌兹培训接待</div>
+      </div>
+      <div class="task-due late">逾期 4 天</div>
+    </div>
+
+    <div class="group-head">项目阶段待办</div>
+    <div class="task-row">
+      <div class="box"></div>
+      <div class="task-main">
+        <div class="t">确认越南培训国内 / 国际机票费用归属</div>
+        <div class="src">来源：项目阶段 · 越南培训提案 / 筹备</div>
+      </div>
+      <div class="task-due">08-02</div>
+    </div>
+    <div class="task-row">
+      <div class="box"></div>
+      <div class="task-main">
+        <div class="t">跟进 Muru 内部讨论与 GSafety 后续会议安排</div>
+        <div class="src">来源：项目阶段 · 安全检测多技术合作 / 反馈循环</div>
+      </div>
+      <div class="task-due">今天</div>
+    </div>
+
+    <div class="group-head">来自纪要的追问</div>
+    <div class="task-row">
+      <div class="box"></div>
+      <div class="task-main">
+        <div class="t">向 Muru 追问：GSafety 是否愿意作为探索性研究继续推进</div>
+        <div class="src">来源：纪要 R2 · 安全检测多技术合作</div>
+      </div>
+      <div class="task-due">--</div>
+    </div>
+  </div>
+  <div class="note">每一行都标了"来源"，点进去能直接跳回它原本所在的项目阶段 / 接待记录 / 纪要条目，不是孤立的一条任务。</div>
+
+  <!-- 联系人库 -->
+  <div class="section-label">
+    <span class="num">08</span>
+    <h2>联系人库：同一个人只有一条记录</h2>
+    <span class="desc">按角色分类，标出涉及的项目数，重复线索会被主动提示</span>
+  </div>
+
+  <div class="merge-banner">
+    <span>检测到 <b>曹诗嘉（Shijia）</b> 出现在 4 个项目和 2 条接待记录中，若与你此前提到的"施嘉姐"是同一人，请确认是否已合并。</span>
+    <button class="btn">去核实</button>
+  </div>
+
+  <div class="contact-grid">
+    <div class="contact-card">
+      <div class="head">
+        <span class="name">曹诗嘉（Shijia）</span>
+        <span class="stamp active">我方团队</span>
+      </div>
+      <div class="meta"><span>关联项目 4</span><span>最近联系 07-23</span></div>
+      <div class="projects"><span class="chip">安全检测多技术合作</span><span class="chip">越南培训提案</span></div>
+    </div>
+    <div class="contact-card">
+      <div class="head">
+        <span class="name">Peh Mu Ru（Muru）</span>
+        <span class="stamp wait">甲方</span>
+      </div>
+      <div class="meta"><span>关联项目 2</span><span>最近联系 07-16</span></div>
+      <div class="projects"><span class="chip">安全检测多技术合作</span></div>
+    </div>
+    <div class="contact-card">
+      <div class="head">
+        <span class="name">Farrukhbek</span>
+        <span class="stamp wait">甲方</span>
+      </div>
+      <div class="meta"><span>关联项目 1</span><span>最近联系 07-20</span></div>
+      <div class="projects"><span class="chip">乌兹别克斯坦赴华培训</span></div>
+    </div>
+    <div class="contact-card">
+      <div class="head">
+        <span class="name">樊星明</span>
+        <span class="stamp pause">专家 / 我方顾问</span>
+      </div>
+      <div class="meta"><span>关联项目 1</span><span>最近联系 07-16</span></div>
+      <div class="projects"><span class="chip">安全检测多技术合作</span></div>
+    </div>
+  </div>
+
+  <!-- 周计划 -->
+  <div class="section-label">
+    <span class="num">09</span>
+    <h2>周计划：项目、行政、机动一眼分清</h2>
+    <span class="desc">同一套颜色语言，从今日视图延续过来</span>
+  </div>
+
+  <div class="week-grid">
+    <div class="week-col"><div class="dh">周一<b>28</b></div>
+      <div class="week-item admin">下半年度预测定稿</div>
+      <div class="week-item proj">越南机票归属确认</div>
+    </div>
+    <div class="week-col today"><div class="dh">周二<b>29</b></div>
+      <div class="week-item proj">Muru 会议安排跟进</div>
+      <div class="week-item free">机动</div>
+    </div>
+    <div class="week-col"><div class="dh">周三<b>30</b></div>
+      <div class="week-item proj">合肥院合同法务审核</div>
+    </div>
+    <div class="week-col"><div class="dh">周四<b>31</b></div>
+      <div class="week-item free">机动</div>
+    </div>
+    <div class="week-col"><div class="dh">周五<b>01</b></div>
+      <div class="week-item admin">周报整理</div>
+      <div class="week-item proj">北理工协议跟进</div>
+    </div>
+    <div class="week-col"><div class="dh">周六<b>02</b></div>
+      <div class="week-item free">休息</div>
+    </div>
+    <div class="week-col"><div class="dh">周日<b>03</b></div>
+      <div class="week-item free">休息</div>
+    </div>
+  </div>
+  <div class="note">深绿 = 项目任务，灰色 = 行政/个人事务，浅色斜体 = 机动/空档——机动块是故意留白的，不用塞满。</div>
+
+</div>
+</body>
+</html>

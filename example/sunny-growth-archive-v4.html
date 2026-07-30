@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunny 工作台 · 成长档案 v4（双轨 + 真实数据）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F3EC; --surface:#FFFFFF; --surface-alt:#FBF8F2;
+    --ink:#2B2E33; --ink-soft:#6C7178; --ink-faint:#9A9D9F;
+    --hairline:#E3DECF; --hairline-cool:#DAE0E3;
+    --accent-active:#3E6E71; --accent-active-bg:#E6EEEC;
+    --accent-wait:#B07C3F; --accent-wait-bg:#F3E8D6;
+    --accent-pause:#7C8590; --accent-pause-bg:#E9EAEA;
+    --accent-danger:#A24A3C; --accent-danger-bg:#F3E1DC;
+    --accent-done:#5C7A56; --accent-done-bg:#E6ECE1;
+  }
+  *{ box-sizing:border-box; } html,body{ margin:0; padding:0; }
+  body{ background:var(--bg); color:var(--ink); font-family:"Noto Sans SC",-apple-system,sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:980px; margin:0 auto; padding:28px 20px 100px; }
+  .mono{ font-family:"IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; font-size:11px; }
+  header.top{ padding-bottom:16px; margin-bottom:22px; border-bottom:2px solid var(--ink); }
+  header.top h1{ font-family:"Noto Serif SC"; font-size:24px; margin:0 0 6px; font-weight:900; }
+  header.top .sub{ font-size:13px; color:var(--ink-soft); }
+  .stamp{ display:inline-flex; align-items:center; gap:5px; font-family:"IBM Plex Mono"; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:2px; border:1.2px solid currentColor; transform:rotate(-1.2deg); }
+  .stamp.active{ color:var(--accent-active); background:var(--accent-active-bg); }
+  .stamp.wait{ color:var(--accent-wait); background:var(--accent-wait-bg); }
+  .stamp.pause{ color:var(--accent-pause); background:var(--accent-pause-bg); }
+  .stamp.done{ color:var(--accent-done); background:var(--accent-done-bg); }
+  .chip{ font-size:10.5px; padding:2px 8px; border-radius:10px; background:var(--surface-alt); border:1px solid var(--hairline); color:var(--ink-soft); }
+  .btn{ font-family:"Noto Sans SC"; font-weight:600; font-size:12.5px; padding:7px 13px; border-radius:3px; border:1.5px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  .btn.ghost{ background:transparent; color:var(--ink); }
+  .btn.small{ font-size:11px; padding:5px 10px; }
+
+  /* ---- 双轨进度 ---- */
+  .plan-card{ border:1px solid var(--ink); border-radius:6px; background:var(--surface); padding:18px 20px; margin-bottom:24px; }
+  .plan-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .plan-head h2{ font-family:"Noto Serif SC"; font-size:15px; margin:0; }
+  .plan-progress{ height:9px; background:var(--surface-alt); border:1px solid var(--hairline); border-radius:5px; overflow:hidden; margin-bottom:8px; }
+  .plan-progress .fill{ height:100%; width:33%; background:var(--accent-active); }
+  .plan-note{ font-size:11.5px; color:var(--ink-faint); }
+  .week-bars{ display:flex; align-items:flex-end; gap:8px; height:52px; margin-top:14px; }
+  .week-bars .wb{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .week-bars .bar{ width:100%; background:var(--accent-active-bg); border:1px solid var(--accent-active); border-radius:2px 2px 0 0; }
+  .week-bars .bar.short{ background:var(--accent-wait-bg); border-color:var(--accent-wait); }
+  .week-bars .lb{ font-size:9.5px; color:var(--ink-faint); font-family:"IBM Plex Mono"; }
+
+  /* ---- 统计条 ---- */
+  .g-stats{ display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:4px; overflow:hidden; margin-bottom:20px; }
+  .g-stats .c{ background:var(--surface); padding:12px 10px; text-align:center; }
+  .g-stats .c .num{ font-family:"Noto Serif SC"; font-size:20px; font-weight:700; }
+  .g-stats .c .label{ font-size:10px; color:var(--ink-faint); margin-top:2px; }
+
+  /* ---- 简历基线 ---- */
+  .resume-base{ border:1px solid var(--hairline); border-radius:6px; background:var(--surface); padding:16px 18px; margin-bottom:24px; }
+  .resume-base .src{ font-size:11px; color:var(--ink-faint); margin-bottom:10px; }
+  .resume-line{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--hairline); font-size:12.5px; }
+  .resume-line:last-child{ border-bottom:none; }
+  .resume-line .r{ color:var(--ink-soft); font-family:"IBM Plex Mono"; font-size:10.5px; }
+
+  /* ---- tabs ---- */
+  .tabs{ display:flex; gap:6px; }
+  .tab{ font-family:"Noto Serif SC"; font-weight:700; font-size:13px; padding:9px 16px 7px; background:var(--surface-alt); border:1px solid var(--hairline); border-bottom:none; border-radius:6px 6px 0 0; position:relative; top:1px; color:var(--ink-soft); cursor:pointer; }
+  .tab.on{ background:var(--surface); color:var(--ink); border-color:var(--ink); border-bottom:1px solid var(--surface); }
+  .tabpanel{ display:none; border:1px solid var(--ink); border-radius:0 6px 6px 6px; background:var(--surface); }
+  .tabpanel.on{ display:block; }
+
+  /* ---- 折叠条目（现有赛道/数据分析赛道通用） ---- */
+  details.g-entry{ border-bottom:1px solid var(--hairline); }
+  details.g-entry:last-child{ border-bottom:none; }
+  details.g-entry summary{ list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:flex-start; gap:12px; }
+  details.g-entry summary::-webkit-details-marker{ display:none; }
+  details.g-entry .txt{ flex:1; }
+  details.g-entry .h{ font-size:13.5px; font-weight:600; }
+  details.g-entry .c{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
+  details.g-entry .meta{ display:flex; gap:8px; align-items:center; flex:none; }
+  .g-entry-body{ padding:0 18px 16px; }
+  .fold-edit{ margin-top:10px; padding:12px; background:var(--surface-alt); border:1px dashed var(--hairline-cool); border-radius:4px; font-size:11.5px; color:var(--ink-faint); display:none; }
+  .fold-edit.show{ display:block; }
+
+  /* ---- 技能矩阵 ---- */
+  .skill-row{ display:flex; align-items:center; gap:14px; padding:12px 18px; border-bottom:1px solid var(--hairline); }
+  .skill-row:last-child{ border-bottom:none; }
+  .skill-row .name{ width:170px; font-size:13px; flex:none; }
+  .skill-row .dots{ display:flex; gap:5px; }
+  .skill-row .dots i{ width:11px; height:11px; border-radius:50%; border:1.3px solid var(--accent-active); display:inline-block; }
+  .skill-row .dots i.on{ background:var(--accent-active); }
+  .skill-row .note{ margin-left:auto; font-size:11px; color:var(--ink-faint); }
+
+  /* ---- 简历弹药库 ---- */
+  .bullet{ margin:16px 18px; border:1px solid var(--hairline); border-radius:4px; background:var(--surface-alt); padding:13px 15px; }
+  .bullet .top-row{ display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+  .bullet .top-row b{ font-size:12px; }
+  .bullet .text{ font-size:12.5px; line-height:1.6; }
+  .bullet .copy{ margin-top:9px; font-family:"IBM Plex Mono"; font-size:10px; border:1px solid var(--ink); background:transparent; padding:4px 9px; border-radius:2px; cursor:pointer; }
+  .chat-entry{ margin:16px 18px 18px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>成长档案</h1>
+    <div class="sub">不是工作日志，是<b>为跳槽或晋升准备的实证材料</b>——现有12条真实记录和简历基线都在，只是重新按"现有赛道"和"目标赛道"分了类。</div>
+  </header>
+
+  <div class="plan-card">
+    <div class="plan-head"><h2>六个月双轨计划</h2><span class="stamp active">第 2 / 6 月</span></div>
+    <div class="plan-progress"><div class="fill"></div></div>
+    <div class="plan-note">现有岗位深耕 + 悄悄为数据分析方向做技能储备，目标每周投入 10 小时以上</div>
+    <div class="week-bars">
+      <div class="wb"><div class="bar" style="height:70%"></div><div class="lb">W1·8h</div></div>
+      <div class="wb"><div class="bar" style="height:100%"></div><div class="lb">W2·11h</div></div>
+      <div class="wb"><div class="bar" style="height:85%"></div><div class="lb">W3·9h</div></div>
+      <div class="wb"><div class="bar short" style="height:55%"></div><div class="lb">W4·6h</div></div>
+    </div>
+  </div>
+
+  <div class="g-stats">
+    <div class="c"><div class="num">12</div><div class="label">成长记录</div></div>
+    <div class="c"><div class="num">7</div><div class="label">成果亮点</div></div>
+    <div class="c"><div class="num">4</div><div class="label">技能积累</div></div>
+    <div class="c"><div class="num">1</div><div class="label">复盘教训</div></div>
+    <div class="c"><div class="num">0</div><div class="label">简历要点</div></div>
+  </div>
+
+  <div class="resume-base">
+    <div class="src">现有简历基线 · 来源：AIPM.docx</div>
+    <div class="resume-line"><span>NTU · MSc Analytics</span><span class="r">GPA 4.63 / 5.00</span></div>
+    <div class="resume-line"><span>GDUFS · Economic Statistics</span><span class="r">GPA 3.90 / 4.00 · Top 4%</span></div>
+    <div class="resume-line"><span>DataStory · Data Analyst</span><span class="r">10+ dashboards · 50k+ reviews</span></div>
+    <div class="resume-line"><span>Data Analysis Studio</span><span class="r">30+ projects · 90% on-time</span></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" data-t="current">现有赛道成果</div>
+    <div class="tab" data-t="target">数据分析赛道储备</div>
+    <div class="tab" data-t="matrix">技能矩阵</div>
+    <div class="tab" data-t="bullets">简历弹药库</div>
+  </div>
+
+  <div class="tabpanel on" id="tab-current">
+    <details class="g-entry" open>
+      <summary>
+        <div class="txt"><div class="h">完成缪子技术评估的专家复核、英译与对外沟通</div>
+        <div class="c">7/15组织技术讨论并形成初稿，7/16按专家反馈定稿和英译，7/18回应Muru探索性研究追问</div></div>
+        <div class="meta"><span class="stamp active">成果亮点</span><span class="chip">安全检测多技术合作</span><span class="mono" style="color:var(--ink-faint)">07-16</span></div>
+      </summary>
+      <div class="g-entry-body"><button class="btn small ghost" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button><div class="fold-edit">完整表单默认收起，点编辑才展开。</div></div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt"><div class="h">独立执行 5 天外宾接待全流程（澳门工程学会+新加坡理工）</div>
+        <div class="c">议程、桌牌、饭店酒店、车辆路线、接机送机、伴手礼全链路无差错</div></div>
+        <div class="meta"><span class="stamp active">成果亮点</span><span class="chip">出差/接待</span><span class="mono" style="color:var(--ink-faint)">07-01</span></div>
+      </summary>
+      <div class="g-entry-body"><button class="btn small ghost" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button><div class="fold-edit">完整表单默认收起，点编辑才展开。</div></div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt"><div class="h">掌握 OA 供应商新增与协议法务审批全流程</div>
+        <div class="c">战略协议+保密协议：团队审核→法务审批→双方盖章回寄→OA 录入供应商</div></div>
+        <div class="meta"><span class="stamp done">技能积累</span><span class="chip">电动汽车预测性维保</span><span class="mono" style="color:var(--ink-faint)">07-06</span></div>
+      </summary>
+      <div class="g-entry-body"><button class="btn small ghost" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button><div class="fold-edit">完整表单默认收起，点编辑才展开。</div></div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt"><div class="h">问题清单要判断"回答了"和"答清楚了"是两回事</div>
+        <div class="c">太赫兹团队两轮回复都没给具体指标。教训：转发前先自己判断，不清楚当轮就追问</div></div>
+        <div class="meta"><span class="stamp wait">复盘教训</span><span class="chip">安全检测多技术合作</span><span class="mono" style="color:var(--ink-faint)">07-初</span></div>
+      </summary>
+      <div class="g-entry-body"><button class="btn small ghost" onclick="this.nextElementSibling.classList.toggle('show')">编辑</button><div class="fold-edit">完整表单默认收起，点编辑才展开。</div></div>
+    </details>
+  </div>
+
+  <div class="tabpanel" id="tab-target">
+    <details class="g-entry" open>
+      <summary>
+        <div class="txt"><div class="h">预算约束下的 Uplift Modeling 毕业论文</div>
+        <div class="c">X5 RetailHero 数据集，完整pipeline+交互式仪表盘，通过 DeepSeek API 实现 Agentic AI 工具调用</div></div>
+        <div class="meta"><span class="chip">SQL</span><span class="chip">建模</span><span class="chip">Agentic AI</span></div>
+      </summary>
+      <div class="g-entry-body">适用材料：数据分析岗位简历 / 技术面试作品集</div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt"><div class="h">个人成长追踪网页应用</div>
+        <div class="c">Firebase 实时同步 + DeepSeek AI 集成 + 中国薪资税务计算功能，独立设计实现</div></div>
+        <div class="meta"><span class="chip">全栈开发</span><span class="chip">API集成</span></div>
+      </summary>
+      <div class="g-entry-body">适用材料：作品集 / 面试"业余项目"环节</div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt"><div class="h">VELA 塔罗牌应用</div>
+        <div class="c">MediaPipe手势识别，78张牌组内容，多主题皮肤系统</div></div>
+        <div class="meta"><span class="chip">交互设计</span><span class="chip">产品化</span></div>
+      </summary>
+      <div class="g-entry-body">适用材料：作品集 / 体现产品设计能力</div>
+    </details>
+    <details class="g-entry">
+      <summary>
+        <div class="txt"><div class="h">"诗签"应用概念设计</div>
+        <div class="c">日记转古典诗词的产品概念和线框图</div></div>
+        <div class="meta"><span class="chip">产品设计</span><span class="chip">线框图</span></div>
+      </summary>
+      <div class="g-entry-body">适用材料：差异化亮点 / 产品思维佐证</div>
+    </details>
+  </div>
+
+  <div class="tabpanel" id="tab-matrix">
+    <div class="skill-row"><div class="name">SQL</div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div><div class="note">此前主力技能，需保持手感</div></div>
+    <div class="skill-row"><div class="name">建模 / 机器学习</div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><div class="note">论文覆盖，缺工业级项目经验</div></div>
+    <div class="skill-row"><div class="name">数据可视化 / 仪表盘</div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div><div class="note">论文+侧项目都在验证</div></div>
+    <div class="skill-row"><div class="name">Agentic AI / LLM工具调用</div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><div class="note">已实践，属加分项</div></div>
+    <div class="skill-row"><div class="name">产品 / 线框设计</div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div><div class="note">VELA、诗签两个项目在积累</div></div>
+  </div>
+
+  <div class="tabpanel" id="tab-bullets">
+    <div class="bullet">
+      <div class="top-row"><b>数据分析岗位 · 项目经验</b></div>
+      <div class="text">基于 X5 RetailHero 数据集，独立搭建预算约束下的 Uplift Modeling 全流程 pipeline，产出交互式仪表盘，并通过 DeepSeek API 实现 Agentic AI 工具调用。</div>
+      <button class="copy">复制</button>
+    </div>
+    <div class="bullet">
+      <div class="top-row"><b>晋升答辩 · 项目管理能力</b></div>
+      <div class="text">独立主导国际安全检测合作项目中的多方问题反馈循环，协调两个技术供应商团队与境外客户之间的多轮沟通，独立完成中英文纪要整理与闭环跟进。</div>
+      <button class="copy">复制</button>
+    </div>
+    <div class="chat-entry"><button class="btn ghost">在对话中润色 → 简历对话</button></div>
+  </div>
+
+</div>
+<script>
+  document.querySelectorAll('.tab').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(n){ n.classList.remove('on'); });
+      document.querySelectorAll('.tabpanel').forEach(function(n){ n.classList.remove('on'); });
+      el.classList.add('on');
+      document.getElementById('tab-' + el.getAttribute('data-t')).classList.add('on');
+    });
+  });
+  document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var t = btn.parentElement.querySelector('.text').innerText;
+      navigator.clipboard && navigator.clipboard.writeText(t);
+      btn.innerText = '已复制'; setTimeout(function(){ btn.innerText = '复制'; },1200);
+    });
+  });
+</script>
+</body>
+</html>

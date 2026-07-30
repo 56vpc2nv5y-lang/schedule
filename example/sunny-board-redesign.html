@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunny 工作台 · 设计原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F6F3EC;
+    --surface: #FFFFFF;
+    --surface-alt: #FBF8F2;
+    --ink: #2B2E33;
+    --ink-soft: #6C7178;
+    --ink-faint: #9A9D9F;
+    --hairline: #E3DECF;
+    --hairline-cool: #DAE0E3;
+    --accent-active: #3E6E71;
+    --accent-active-bg: #E6EEEC;
+    --accent-wait: #B07C3F;
+    --accent-wait-bg: #F3E8D6;
+    --accent-pause: #7C8590;
+    --accent-pause-bg: #E9EAEA;
+    --accent-danger: #A24A3C;
+    --accent-danger-bg: #F3E1DC;
+    --accent-done: #5C7A56;
+    --accent-done-bg: #E6ECE1;
+    --radius: 3px;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans SC", -apple-system, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap{ max-width: 980px; margin: 0 auto; padding: 28px 20px 100px; }
+
+  /* ---------- eyebrow / stamp text ---------- */
+  .mono{
+    font-family: "IBM Plex Mono", monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+
+  /* ---------- header ---------- */
+  header.top{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    padding-bottom: 20px; margin-bottom: 22px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .brand h1{
+    font-family:"Noto Serif SC"; font-weight:900; font-size: 26px;
+    margin:0 0 4px 0; letter-spacing: 0.01em;
+  }
+  .brand .mono{ color: var(--ink-soft); }
+  .top-actions{ display:flex; align-items:center; gap:14px; }
+  .skin-dots{ display:flex; gap:6px; }
+  .skin-dots span{ width:11px; height:11px; border-radius:50%; display:inline-block; border:1px solid rgba(0,0,0,.15); cursor:pointer; }
+  .skin-dots span.d1{ background:#EDE7D8; }
+  .skin-dots span.d2{ background:#D9E2E6; }
+  .skin-dots span.d3{ background:#EFE6DE; }
+  .skin-dots span.on{ outline:2px solid var(--ink); outline-offset:2px; }
+  .btn{
+    font-family:"Noto Sans SC"; font-weight:600; font-size: 13.5px;
+    padding: 9px 16px; border-radius: var(--radius); border: 1.5px solid var(--ink);
+    background: var(--ink); color: #fff; cursor:pointer;
+  }
+  .btn.ghost{ background: transparent; color: var(--ink); }
+
+  /* ---------- section label ---------- */
+  .section-label{
+    display:flex; align-items:baseline; gap:10px; margin: 40px 0 14px;
+  }
+  .section-label .num{ font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-faint); }
+  .section-label h2{ font-family:"Noto Serif SC"; font-size:19px; margin:0; font-weight:700; }
+  .section-label .desc{ font-size:12.5px; color:var(--ink-soft); margin-left:auto; }
+
+  /* ---------- 今日聚焦 ---------- */
+  .focus-bar{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:1px;
+    background: var(--hairline); border:1px solid var(--hairline);
+    border-radius: var(--radius); overflow:hidden;
+  }
+  .focus-cell{ background: var(--surface); padding: 16px 18px; }
+  .focus-cell .num{ font-family:"Noto Serif SC"; font-size: 30px; font-weight:700; line-height:1; }
+  .focus-cell .label{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
+  .focus-cell.danger .num{ color: var(--accent-danger); }
+
+  .today-list{ margin-top:14px; border:1px solid var(--hairline); border-radius: var(--radius); background:var(--surface); }
+  .today-row{
+    display:flex; align-items:center; gap:12px; padding:11px 16px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .today-row:last-child{ border-bottom:none; }
+  .today-row .box{ width:15px; height:15px; border:1.5px solid var(--ink-soft); border-radius:2px; flex:none; }
+  .today-row .title{ font-size:13.5px; flex:1; }
+  .today-row .src{ font-size:11.5px; color:var(--ink-faint); }
+
+  /* ---------- tag / stamp ---------- */
+  .stamp{
+    display:inline-flex; align-items:center; gap:5px;
+    font-family:"IBM Plex Mono"; font-size:10.5px; font-weight:600;
+    letter-spacing:0.06em; text-transform:uppercase;
+    padding: 3px 8px; border-radius:2px; border:1.3px solid currentColor;
+    transform: rotate(-1.2deg);
+  }
+  .stamp.active{ color:var(--accent-active); background:var(--accent-active-bg); }
+  .stamp.wait{ color:var(--accent-wait); background:var(--accent-wait-bg); }
+  .stamp.pause{ color:var(--accent-pause); background:var(--accent-pause-bg); }
+  .stamp.done{ color:var(--accent-done); background:var(--accent-done-bg); }
+  .stamp.danger{ color:var(--accent-danger); background:var(--accent-danger-bg); }
+
+  .chip{
+    font-size:11px; padding:3px 8px; border-radius:12px; background:var(--surface-alt);
+    border:1px solid var(--hairline); color:var(--ink-soft);
+  }
+
+  /* ---------- category tabs (folder tabs) ---------- */
+  .tabs{ display:flex; gap:6px; }
+  .tab{
+    font-family:"Noto Serif SC"; font-weight:700; font-size:14px;
+    padding: 10px 20px 8px; background: var(--surface-alt);
+    border: 1px solid var(--hairline); border-bottom:none;
+    border-radius: 6px 6px 0 0; position:relative; top:1px;
+    color: var(--ink-soft);
+  }
+  .tab.on{ background: var(--surface); color:var(--ink); border-color:var(--ink); border-bottom:1px solid var(--surface); }
+  .tab .n{ font-family:"IBM Plex Mono"; font-size:11px; margin-left:6px; color:var(--ink-faint); }
+
+  .panel{ border:1px solid var(--ink); border-radius: 0 6px 6px 6px; background:var(--surface); padding: 4px; }
+
+  /* ---------- project card / accordion ---------- */
+  details.project{
+    border-bottom: 1px solid var(--hairline);
+  }
+  details.project:last-child{ border-bottom:none; }
+  details.project summary{
+    list-style:none; cursor:pointer; padding: 16px 18px;
+    display:flex; align-items:center; gap:14px;
+  }
+  details.project summary::-webkit-details-marker{ display:none; }
+  details.project summary .arrow{
+    width:9px; height:9px; border-right:1.6px solid var(--ink-soft); border-bottom:1.6px solid var(--ink-soft);
+    transform: rotate(-45deg); transition: transform .15s ease; flex:none;
+  }
+  details.project[open] summary .arrow{ transform: rotate(45deg); }
+  details.project summary .title{ font-weight:600; font-size:14.5px; }
+  details.project summary .region{ font-size:11.5px; color:var(--ink-faint); }
+  details.project summary .stage-line{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  details.project summary .main{ flex:1; min-width:0; }
+  details.project summary .meta{ display:flex; align-items:center; gap:10px; flex:none; }
+
+  .project-body{ padding: 0 18px 20px 41px; }
+  .pipeline{ display:flex; gap:6px; flex-wrap:wrap; margin: 6px 0 16px; }
+  .pipeline .step{
+    font-size:11.5px; padding:6px 10px; border-radius:2px; border:1px solid var(--hairline-cool);
+    background: var(--surface-alt); color: var(--ink-faint);
+  }
+  .pipeline .step.now{ border-color:var(--accent-active); color:var(--accent-active); background:var(--accent-active-bg); font-weight:600; }
+  .pipeline .step.done{ color:var(--accent-done); text-decoration: line-through; text-decoration-color: var(--accent-done); opacity:.75; }
+
+  .loop-tasks{ display:flex; flex-direction:column; gap:8px; }
+  .loop-task{ display:flex; align-items:center; gap:10px; font-size:13px; }
+  .loop-task .who{ color:var(--ink-soft); font-size:11.5px; }
+  .loop-task .sub{ margin-left:auto; }
+  .sub-chip{ font-size:10.5px; padding:2px 8px; border-radius:10px; }
+  .sub-chip.ask{ background:var(--accent-wait-bg); color:var(--accent-wait); }
+  .sub-chip.review{ background:var(--accent-active-bg); color:var(--accent-active); }
+  .sub-chip.followup{ background:var(--accent-danger-bg); color:var(--accent-danger); }
+
+  .next-step{
+    margin-top:14px; padding:10px 12px; background:var(--surface-alt);
+    border-left: 3px solid var(--accent-active); font-size:12.5px;
+  }
+  .next-step b{ color: var(--accent-active); }
+
+  /* ---------- training template ---------- */
+  .train-card{ border:1px solid var(--hairline); border-radius:6px; background:var(--surface); padding:20px 22px; position:relative; overflow:hidden; }
+  .train-card .stamp.pause{ position:absolute; top:18px; right:20px; font-size:12px; padding:5px 12px; transform: rotate(-4deg); }
+  .train-steps{ display:flex; align-items:center; margin: 18px 0 6px; }
+  .train-steps .s{ flex:1; text-align:center; position:relative; }
+  .train-steps .s .dot{ width:11px; height:11px; border-radius:50%; background:var(--hairline-cool); margin:0 auto 6px; border:2px solid var(--surface); box-shadow:0 0 0 1.5px var(--ink-faint); }
+  .train-steps .s.past .dot{ box-shadow:0 0 0 1.5px var(--accent-done); background:var(--accent-done); }
+  .train-steps .s.now .dot{ box-shadow:0 0 0 1.5px var(--accent-pause); background:var(--accent-pause); }
+  .train-steps .s .lb{ font-size:11px; color:var(--ink-soft); }
+  .train-steps .s::before{
+    content:""; position:absolute; top:5px; left:-50%; width:100%; height:2px; background:var(--hairline-cool); z-index:-1;
+  }
+  .train-steps .s:first-child::before{ display:none; }
+  .train-steps .s.past::before{ background:var(--accent-done); }
+
+  .recheck{ margin-top:16px; border:1px dashed var(--accent-pause); border-radius:4px; padding:14px 16px; background: var(--accent-pause-bg); }
+  .recheck .h{ font-weight:700; font-size:12.5px; color:var(--accent-pause); margin-bottom:8px; }
+  .recheck ul{ margin:0; padding-left:18px; font-size:12.5px; }
+  .recheck li{ margin-bottom:4px; }
+
+  .field-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin-top:16px; }
+  .field-grid .f{ background:var(--surface-alt); border:1px solid var(--hairline); border-radius:3px; padding:10px 12px; }
+  .field-grid .f .k{ font-size:10.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em; font-family:"IBM Plex Mono"; }
+  .field-grid .f .v{ font-size:13px; margin-top:3px; }
+
+  /* ---------- reception / expo rows ---------- */
+  .recep-row{ display:flex; align-items:center; gap:14px; padding:14px 16px; border-bottom:1px solid var(--hairline); }
+  .recep-row:last-child{ border-bottom:none; }
+  .recep-ring{
+    width:38px; height:38px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+    font-family:"IBM Plex Mono"; font-size:10.5px; font-weight:600; border:2px solid var(--hairline-cool); color: var(--ink-soft);
+  }
+  .recep-ring.zero{ border-color: var(--accent-danger); color:var(--accent-danger); }
+  .recep-ring.full{ border-color: var(--accent-done); color:var(--accent-done); }
+  .recep-main{ flex:1; }
+  .recep-main .t{ font-weight:600; font-size:13.5px; }
+  .recep-main .d{ font-size:11.5px; color:var(--ink-faint); margin-top:2px; }
+
+  /* ---------- meeting reviews ---------- */
+  .mr-row{ display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--hairline); }
+  .mr-row:last-child{ border-bottom:none; }
+  .mr-round{ font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-faint); width:34px; flex:none; }
+  .mr-q{ flex:1; font-size:13px; }
+  .mr-q .p{ font-size:11px; color:var(--ink-faint); margin-top:2px; }
+  .gen-btn{
+    font-family:"IBM Plex Mono"; font-size:11px; padding:6px 10px; border:1px solid var(--ink); border-radius:2px;
+    background:transparent; color:var(--ink); cursor:pointer; flex:none;
+  }
+
+  /* ---------- contact merge ---------- */
+  .merge-banner{
+    display:flex; align-items:center; gap:12px; padding: 13px 16px; margin-bottom:14px;
+    background: var(--accent-wait-bg); border:1px solid var(--accent-wait); border-radius:4px; font-size:12.5px;
+  }
+  .merge-banner b{ color:var(--accent-wait); }
+  .merge-banner .btn{ margin-left:auto; padding:6px 14px; font-size:12px; background:var(--accent-wait); border-color:var(--accent-wait); }
+
+  /* ---------- footer sync ---------- */
+  footer.sync{
+    margin-top:56px; padding-top:16px; border-top:1px solid var(--hairline);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  footer.sync .mono{ color:var(--ink-faint); }
+
+  .note{
+    font-size:11.5px; color:var(--ink-faint); margin-top:6px;
+  }
+
+  @media (max-width: 720px){
+    .field-grid{ grid-template-columns: 1fr 1fr; }
+    .focus-bar{ grid-template-columns: 1fr; }
+    details.project summary{ flex-wrap:wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>Sunny 工作台</h1>
+      <div class="mono">个人工作操作台 · 2026-07-27（周一）</div>
+    </div>
+    <div class="top-actions">
+      <div class="skin-dots" title="皮肤切换，仅用色点区分">
+        <span class="d1 on"></span><span class="d2"></span><span class="d3"></span>
+      </div>
+      <button class="btn ghost">说一句 → AI 拆任务</button>
+      <button class="btn">记个待办</button>
+    </div>
+  </header>
+
+  <!-- 1. 今日聚焦：10秒内知道现在该干什么 -->
+  <div class="section-label">
+    <span class="num">01</span>
+    <h2>今日聚焦</h2>
+    <span class="desc">只回答一个问题：现在最该干什么</span>
+  </div>
+
+  <div class="focus-bar">
+    <div class="focus-cell">
+      <div class="num">3</div>
+      <div class="label">现在该做（项目任务）</div>
+    </div>
+    <div class="focus-cell">
+      <div class="num">3</div>
+      <div class="label">等对方回复（不占用你）</div>
+    </div>
+    <div class="focus-cell danger">
+      <div class="num">2</div>
+      <div class="label">已逾期，需要今天处理</div>
+    </div>
+  </div>
+
+  <div class="today-list">
+    <div class="today-row">
+      <div class="box"></div>
+      <div class="title">跟进 Muru 内部讨论与 GSafety 后续会议安排</div>
+      <span class="stamp active">项目</span>
+      <span class="src">安全检测多技术合作</span>
+    </div>
+    <div class="today-row">
+      <div class="box"></div>
+      <div class="title">确认越南培训国内/国际机票费用归属</div>
+      <span class="stamp active">培训</span>
+      <span class="src">越南培训提案</span>
+    </div>
+    <div class="today-row">
+      <div class="box" style="border-color:var(--accent-danger)"></div>
+      <div class="title">完成下半年度工作预测定稿并向 Leader 汇报</div>
+      <span class="stamp danger">逾期 7 天</span>
+      <span class="src">个人 / 行政</span>
+    </div>
+  </div>
+  <div class="note">行政事务与项目任务分组显示，逾期项目任务和逾期行政事务不互相稀释优先级。</div>
+
+  <!-- 2. 四类业务分区 -->
+  <div class="section-label">
+    <span class="num">02</span>
+    <h2>四类业务，一套外壳</h2>
+    <span class="desc">项目 / 培训 / 接待 / 展会共用同一套卡片结构，只有内容不同</span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on">项目 <span class="n">04</span></div>
+    <div class="tab">培训 <span class="n">02</span></div>
+    <div class="tab">接待 <span class="n">05</span></div>
+    <div class="tab">展会 <span class="n">01</span></div>
+  </div>
+
+  <div class="panel">
+    <!-- project 1 -->
+    <details class="project" open>
+      <summary>
+        <span class="arrow"></span>
+        <div class="main">
+          <span class="title">安全检测多技术合作</span>
+          <span class="region">· 新加坡 HTX</span>
+          <div class="stage-line">当前：问题反馈循环（多团队） · 并行 1 项</div>
+        </div>
+        <div class="meta">
+          <span class="stamp active">进行中</span>
+        </div>
+      </summary>
+      <div class="project-body">
+        <div class="pipeline">
+          <span class="step done">商机/需求对接</span>
+          <span class="step done">供应商匹配</span>
+          <span class="step done">Scenario Analysis PPT</span>
+          <span class="step done">三方会议（两轮）</span>
+          <span class="step now">问题反馈循环（多团队）</span>
+        </div>
+        <div class="loop-tasks">
+          <div class="loop-task">
+            <span class="who">太赫兹团队</span> 误报率 / 通行速度数据
+            <span class="sub"><span class="sub-chip ask">等待供应商回复</span></span>
+          </div>
+          <div class="loop-task">
+            <span class="who">Muru</span> 缪子探索性研究后续讨论
+            <span class="sub"><span class="sub-chip followup">已追问，待回复</span></span>
+          </div>
+          <div class="loop-task">
+            <span class="who">Sunny</span> 复核荧光团队第二轮回复
+            <span class="sub"><span class="sub-chip review">待你核验</span></span>
+          </div>
+        </div>
+        <div class="next-step">下一步：<b>跟进 Muru 内部讨论与 GSafety 后续会议安排</b></div>
+      </div>
+    </details>
+
+    <!-- project 2 -->
+    <details class="project">
+      <summary>
+        <span class="arrow"></span>
+        <div class="main">
+          <span class="title">电动汽车预测性维保</span>
+          <span class="region">· 新加坡 HTX / 北理工</span>
+          <div class="stage-line">当前：合同签署</div>
+        </div>
+        <div class="meta">
+          <span class="stamp active">进行中</span>
+        </div>
+      </summary>
+      <div class="project-body">
+        <div class="pipeline">
+          <span class="step done">技术交流</span>
+          <span class="step done">材料翻译与核验</span>
+          <span class="step now">合同签署</span>
+        </div>
+        <div class="next-step">下一步：暂无未完成任务 · 等待北理新源协议盖章回寄</div>
+      </div>
+    </details>
+
+    <!-- project 3 paused -->
+    <details class="project">
+      <summary>
+        <span class="arrow"></span>
+        <div class="main">
+          <span class="title">SIT 后续合作跟进</span>
+          <span class="region">· 新加坡理工大学</span>
+          <div class="stage-line">当前：暂停 · 等待对方确认会面时间</div>
+        </div>
+        <div class="meta">
+          <span class="stamp pause">暂停</span>
+        </div>
+      </summary>
+      <div class="project-body">
+        <div class="pipeline">
+          <span class="step done">接待支持</span>
+          <span class="step now" style="border-color:var(--accent-pause); color:var(--accent-pause); background:var(--accent-pause-bg);">等待重启</span>
+        </div>
+        <div class="next-step" style="border-color:var(--accent-pause)">暂停期间不生成新排期，仅保留"等待对方确认"这一条待跟进。</div>
+      </div>
+    </details>
+
+    <!-- project 4 paused -->
+    <details class="project">
+      <summary>
+        <span class="arrow"></span>
+        <div class="main">
+          <span class="title">11 月合作伙伴来访邀请函</span>
+          <span class="region">· 多国客户</span>
+          <div class="stage-line">当前：暂停 · 待确认是否继续</div>
+        </div>
+        <div class="meta">
+          <span class="stamp pause">暂停</span>
+        </div>
+      </summary>
+      <div class="project-body">
+        <div class="next-step" style="border-color:var(--accent-pause)">下一步：无——这是有意的空白，暂停项目不应该被"下一步"催促。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- 3. 培训模板 -->
+  <div class="section-label">
+    <span class="num">03</span>
+    <h2>培训项目：专属模板</h2>
+    <span class="desc">不是线性项目管理，而是"大纲→成本→报价→合同→筹备"+ 暂停分支</span>
+  </div>
+
+  <div class="train-card">
+    <span class="stamp pause">暂停 / 重启复核</span>
+    <div class="mono" style="color:var(--ink-soft)">乌兹别克斯坦住建监察局赴华培训 · 北京 + 合肥</div>
+
+    <div class="train-steps">
+      <div class="s past"><div class="dot"></div><div class="lb">大纲</div></div>
+      <div class="s past"><div class="dot"></div><div class="lb">核算成本</div></div>
+      <div class="s past"><div class="dot"></div><div class="lb">报价</div></div>
+      <div class="s past"><div class="dot"></div><div class="lb">合同</div></div>
+      <div class="s past"><div class="dot"></div><div class="lb">筹备</div></div>
+      <div class="s now"><div class="dot"></div><div class="lb">暂停复核</div></div>
+    </div>
+
+    <div class="field-grid">
+      <div class="f"><div class="k">客户对接人</div><div class="v">Farrukhbek</div></div>
+      <div class="f"><div class="k">主题 / 时长</div><div class="v">建筑监管与公共服务 · 7/26–8/6</div></div>
+      <div class="f"><div class="k">费用归属</div><div class="v">北京酒店：对方出</div></div>
+      <div class="f"><div class="k">报备状态</div><div class="v">30 人清华报备已提交</div></div>
+      <div class="f"><div class="k">合同状态</div><div class="v">内部合同已归档 · 客户合同待续</div></div>
+      <div class="f"><div class="k">暂停原因</div><div class="v">客户 postpone</div></div>
+    </div>
+
+    <div class="recheck">
+      <div class="h">重启前必查（暂停期间只提醒这三项，其余原排期自动隐藏）</div>
+      <ul>
+        <li>来华培训人员名单是否有变更</li>
+        <li>培训老师时间是否仍可行</li>
+        <li>课件是否需要更新确认</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 4. 接待 / 展会 -->
+  <div class="section-label">
+    <span class="num">04</span>
+    <h2>接待 / 展会：完成度是真实的</h2>
+    <span class="desc">清单进度直接读取任务表，不再单独计数</span>
+  </div>
+
+  <div class="panel">
+    <div class="recep-row">
+      <div class="recep-ring zero">0/6</div>
+      <div class="recep-main">
+        <div class="t">乌兹住建监察局 30 人赴华培训接待</div>
+        <div class="d">北京 + 合肥 · 07-26 → 08-06</div>
+      </div>
+      <span class="stamp pause">已确认</span>
+    </div>
+    <div class="recep-row">
+      <div class="recep-ring">2/4</div>
+      <div class="recep-main">
+        <div class="t">11 月新加坡局长参访（北京 + 合肥）</div>
+        <div class="d">高能所 / 亦庄 / 清华 + 合肥 · 11-10 → 11-14</div>
+      </div>
+      <span class="stamp wait">计划中</span>
+    </div>
+    <div class="recep-row">
+      <div class="recep-ring full">6/6</div>
+      <div class="recep-main">
+        <div class="t">澳门工程学会理事长接待（合肥）</div>
+        <div class="d">合肥 · 06-28 → 07-02</div>
+      </div>
+      <span class="stamp done">已完成</span>
+    </div>
+  </div>
+
+  <!-- 5. 纪要与问题 -->
+  <div class="section-label">
+    <span class="num">05</span>
+    <h2>纪要与问题：记完不断线</h2>
+    <span class="desc">每条待追问的问题都能一键变成任务，回填状态</span>
+  </div>
+
+  <div class="panel">
+    <div class="mr-row">
+      <span class="mr-round">R2</span>
+      <div class="mr-q">缪子异常检测是否作为探索性研究继续推进
+        <div class="p">发给 Muru · 2026-07-17</div>
+      </div>
+      <span class="stamp wait">待追问</span>
+      <button class="gen-btn">生成任务 →</button>
+    </div>
+    <div class="mr-row">
+      <span class="mr-round">R1</span>
+      <div class="mr-q">车辆数据出境合规问题是否有正式答复
+        <div class="p">发给 HTX 对接人 · 2026-06-30</div>
+      </div>
+      <span class="stamp danger">需开会讲解</span>
+      <button class="gen-btn">生成任务 →</button>
+    </div>
+    <div class="mr-row">
+      <span class="mr-round">R3</span>
+      <div class="mr-q">太赫兹误报率与吞吐数据补充
+        <div class="p">樊星明 · 已回复</div>
+      </div>
+      <span class="stamp done">已闭环</span>
+    </div>
+  </div>
+
+  <!-- 6. 联系人去重 -->
+  <div class="section-label">
+    <span class="num">06</span>
+    <h2>联系人库：同一个人只有一条记录</h2>
+    <span class="desc">称呼不同不代表两个人</span>
+  </div>
+
+  <div class="merge-banner">
+    <span>检测到可能重复的联系人：<b>曹诗嘉（Shijia）</b> 与 <b>施嘉姐</b>，两者出现在相同的项目和接待记录中。</span>
+    <button class="btn">合并为一条</button>
+  </div>
+
+  <footer class="sync">
+    <span class="mono">状态来源：单一字段 · 全站统一读取</span>
+    <span class="mono">最近同步 2026-07-27 11:24</span>
+  </footer>
+
+</div>
+</body>
+</html>

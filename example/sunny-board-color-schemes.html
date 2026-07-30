@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunny 工作台 · 三套配色方案对比</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* ===== 方案A：默认（低饱和暖白 + 图章） ===== */
+  body{
+    --bg:#F6F3EC; --surface:#FFFFFF; --surface-alt:#FBF8F2;
+    --ink:#2B2E33; --ink-soft:#6C7178; --ink-faint:#9A9D9F;
+    --hairline:#E3DECF; --hairline-cool:#DAE0E3;
+    --accent-active:#3E6E71; --accent-active-bg:#E6EEEC;
+    --accent-wait:#B07C3F; --accent-wait-bg:#F3E8D6;
+    --accent-pause:#7C8590; --accent-pause-bg:#E9EAEA;
+    --accent-danger:#A24A3C; --accent-danger-bg:#F3E1DC;
+    --accent-done:#5C7A56; --accent-done-bg:#E6ECE1;
+    --head-font:"Noto Serif SC"; --head-weight:700;
+    --stamp-radius:2px; --stamp-rotate:-1.2deg; --stamp-fill:transparent;
+    --card-radius:4px; --card-border:1px solid var(--hairline);
+    margin:0; padding:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans SC",-apple-system,sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased;
+    transition: background .2s ease;
+  }
+
+  /* ===== 方案B：Outlook 风格（冷灰蓝 + 扁平色块） ===== */
+  body.skin-b{
+    --bg:#F3F5F7; --surface:#FFFFFF; --surface-alt:#EEF2F5;
+    --ink:#1F2A37; --ink-soft:#5B6B7C; --ink-faint:#8C99A6;
+    --hairline:#DDE3E9; --hairline-cool:#D3DBE2;
+    --accent-active:#2F5F8A; --accent-active-bg:#DCE7F0;
+    --accent-wait:#A9791E; --accent-wait-bg:#F1E6CC;
+    --accent-pause:#8891A0; --accent-pause-bg:#E6E9EC;
+    --accent-danger:#B3413A; --accent-danger-bg:#F3DEDB;
+    --accent-done:#3E7A52; --accent-done-bg:#DFEBE3;
+    --head-font:"Noto Sans SC"; --head-weight:700;
+    --stamp-radius:10px; --stamp-rotate:0deg; --stamp-fill:1;
+    --card-radius:6px; --card-border:1px solid var(--hairline);
+  }
+
+  /* ===== 方案C：古风公文（宣纸 + 朱印） ===== */
+  body.skin-c{
+    --bg:#EDE3D2; --surface:#F7F1E4; --surface-alt:#F1E8D6;
+    --ink:#2A2118; --ink-soft:#6B5D4A; --ink-faint:#8F8069;
+    --hairline:#C9B896; --hairline-cool:#D6C9A8;
+    --accent-active:#B33A2E; --accent-active-bg:#F1DAD2;
+    --accent-wait:#9C7A34; --accent-wait-bg:#ECDFC0;
+    --accent-pause:#746B5A; --accent-pause-bg:#E2D9C3;
+    --accent-danger:#6B1F16; --accent-danger-bg:#E4CEC5;
+    --accent-done:#4B6B4A; --accent-done-bg:#DCE5D6;
+    --head-font:"Noto Serif SC"; --head-weight:900;
+    --stamp-radius:2px; --stamp-rotate:-4deg; --stamp-fill:1;
+    --card-radius:2px; --card-border:1.5px solid var(--hairline);
+  }
+  body.skin-c .wrap{ background-image: radial-gradient(circle at 20% 10%, rgba(0,0,0,.015) 0, transparent 40%), radial-gradient(circle at 80% 60%, rgba(0,0,0,.02) 0, transparent 45%); }
+  body.skin-c header.top{ border-bottom:3px double var(--ink) !important; }
+  body.skin-c .panel, body.skin-c .push-card{ border-width:1.5px !important; }
+
+  *{ box-sizing:border-box; }
+  .wrap{ max-width:920px; margin:0 auto; padding:28px 20px 90px; }
+  .mono{ font-family:"IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; font-size:11px; }
+
+  /* switcher */
+  .switcher{ position:sticky; top:0; z-index:10; background:var(--surface); border-bottom:1px solid var(--hairline); padding:12px 20px; display:flex; gap:8px; align-items:center; }
+  .switcher .opt{ font-family:"Noto Sans SC"; font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px; border:1.3px solid var(--hairline); background:var(--surface-alt); color:var(--ink-soft); cursor:pointer; }
+  .switcher .opt.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .switcher .lbl{ margin-left:auto; font-size:11.5px; color:var(--ink-faint); }
+
+  header.top{ display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:18px; margin:24px 0 22px; border-bottom:2px solid var(--ink); }
+  header.top h1{ font-family:var(--head-font); font-weight:var(--head-weight); font-size:24px; margin:0 0 4px; }
+  .top-actions{ display:flex; gap:10px; }
+  .btn{ font-family:"Noto Sans SC"; font-weight:600; font-size:13px; padding:8px 14px; border-radius:calc(var(--card-radius) - 1px); border:1.5px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  .btn.ghost{ background:transparent; color:var(--ink); }
+
+  .section-label{ display:flex; align-items:baseline; gap:10px; margin:32px 0 12px; }
+  .section-label h2{ font-family:var(--head-font); font-weight:var(--head-weight); font-size:17px; margin:0; }
+  .section-label .desc{ font-size:12px; color:var(--ink-soft); margin-left:auto; }
+
+  .stamp{
+    display:inline-flex; align-items:center; gap:5px; font-family:"IBM Plex Mono"; font-size:10px; font-weight:600;
+    letter-spacing:.06em; text-transform:uppercase; padding:3px 9px; border-radius:var(--stamp-radius);
+    border:1.2px solid currentColor; transform:rotate(var(--stamp-rotate));
+  }
+  .stamp.active{ color:var(--accent-active); background:var(--accent-active-bg); }
+  .stamp.wait{ color:var(--accent-wait); background:var(--accent-wait-bg); }
+  .stamp.pause{ color:var(--accent-pause); background:var(--accent-pause-bg); }
+  .stamp.done{ color:var(--accent-done); background:var(--accent-done-bg); }
+  .stamp.danger{ color:var(--accent-danger); background:var(--accent-danger-bg); }
+  /* Outlook 风格：扁平实心色块，不描边不旋转 */
+  body.skin-b .stamp{ border:none; }
+  body.skin-b .stamp.active{ background:var(--accent-active); color:#fff; }
+  body.skin-b .stamp.wait{ background:var(--accent-wait); color:#fff; }
+  body.skin-b .stamp.pause{ background:var(--accent-pause); color:#fff; }
+  body.skin-b .stamp.done{ background:var(--accent-done); color:#fff; }
+  body.skin-b .stamp.danger{ background:var(--accent-danger); color:#fff; }
+  /* 古风：图章质感，实心朱印 + 白字 */
+  body.skin-c .stamp{ font-family:"Noto Serif SC"; font-weight:700; letter-spacing:.15em; }
+  body.skin-c .stamp.active{ background:var(--accent-active); color:#F7F1E4; border-color:var(--accent-active); }
+  body.skin-c .stamp.danger{ background:var(--accent-danger); color:#F7F1E4; border-color:var(--accent-danger); }
+
+  .kpi-bar{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--hairline); border:var(--card-border); border-radius:var(--card-radius); overflow:hidden; }
+  .kpi-cell{ background:var(--surface); padding:16px 18px; }
+  .kpi-cell .num{ font-family:var(--head-font); font-weight:var(--head-weight); font-size:27px; }
+  .kpi-cell .sub{ font-size:11px; color:var(--ink-faint); margin-top:2px; }
+  .kpi-cell .label{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
+  .kpi-cell.danger .num{ color:var(--accent-danger); }
+
+  .push-card{ border:var(--card-border); border-radius:var(--card-radius); background:var(--surface); padding:16px 18px; margin-bottom:12px; }
+  .push-card .head{ display:flex; align-items:center; gap:10px; }
+  .push-card .head b{ font-family:var(--head-font); font-weight:var(--head-weight); font-size:15px; }
+  .push-card .head .region{ font-size:11px; color:var(--ink-faint); }
+  .push-card .head .stamp{ margin-left:auto; }
+  .push-card .fields{ display:flex; gap:18px; margin-top:8px; font-size:12px; color:var(--ink-soft); }
+  .push-card .fields b{ color:var(--ink); }
+  .push-card .next{ margin-top:10px; padding:8px 10px; background:var(--surface-alt); border-left:3px solid var(--accent-active); font-size:12.5px; }
+
+  .panel{ border:var(--card-border); border-radius:var(--card-radius); background:var(--surface); }
+  .row{ display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--hairline); font-size:13px; }
+  .row:last-child{ border-bottom:none; }
+  .row .box{ width:14px; height:14px; border:1.4px solid var(--ink-soft); border-radius:2px; flex:none; }
+
+  .swatch-note{ margin-top:14px; padding:14px 16px; background:var(--surface-alt); border:1px dashed var(--hairline-cool); border-radius:var(--card-radius); font-size:12px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+  <div class="switcher">
+    <span class="opt on" data-skin="">A · 默认暖白</span>
+    <span class="opt" data-skin="skin-b">B · Outlook 风格</span>
+    <span class="opt" data-skin="skin-c">C · 古风公文</span>
+    <span class="lbl mono">点击切换，内容完全相同，只变视觉</span>
+  </div>
+
+  <div class="wrap">
+
+    <header class="top">
+      <div><h1>工作台</h1><div class="mono">2026-07-27 · 三套皮肤共用同一套组件结构</div></div>
+      <div class="top-actions"><button class="btn ghost">记个待办</button><button class="btn">新建项目</button></div>
+    </header>
+
+    <div class="kpi-bar">
+      <div class="kpi-cell"><div class="num">4</div><div class="sub">覆盖 2 个地区</div><div class="label">进行中项目</div></div>
+      <div class="kpi-cell"><div class="num">47</div><div class="sub">其中 4 件个人杂事</div><div class="label">未完成任务</div></div>
+      <div class="kpi-cell"><div class="num">26</div><div class="sub">等甲方 / 供应商回复</div><div class="label">等待反馈</div></div>
+      <div class="kpi-cell danger"><div class="num">8</div><div class="sub">需要今天处理</div><div class="label">已逾期</div></div>
+    </div>
+
+    <div class="section-label"><h2>正在推进</h2></div>
+    <div class="push-card">
+      <div class="head"><b>安全检测多技术合作</b><span class="region">· 新加坡</span><span class="stamp active">进行中</span></div>
+      <div class="fields"><span>未完成任务 <b>1</b> 件</span><span>等待外部反馈 <b>1</b> 项</span></div>
+      <div class="next">下一步：跟进 Muru 内部讨论与 GSafety 后续会议安排</div>
+    </div>
+    <div class="push-card">
+      <div class="head"><b>乌兹别克斯坦赴华培训</b><span class="region">· 乌兹别克斯坦</span><span class="stamp pause">暂停 / 重启复核</span></div>
+      <div class="fields"><span>暂停原因：客户 postpone</span></div>
+    </div>
+    <div class="push-card">
+      <div class="head"><b>下半年度工作预测</b><span class="region">· 个人事务</span><span class="stamp danger">已逾期 7 天</span></div>
+    </div>
+
+    <div class="section-label"><h2>别忘了这些</h2></div>
+    <div class="panel">
+      <div class="row"><div class="box"></div>完成清华大学、住建部等单位报备<span class="stamp wait" style="margin-left:auto">待处理</span></div>
+      <div class="row"><div class="box"></div>Scenario Analysis PPT 终稿核对<span class="stamp done" style="margin-left:auto">已完成</span></div>
+    </div>
+
+    <div class="swatch-note" id="skin-desc">
+      <b>方案A · 默认暖白</b> —— 低饱和暖白背景 + 图章式状态标签，安静、不抢内容，适合每天长时间盯着看。这是我们之前一直在用的方向。
+    </div>
+
+  </div>
+
+<script>
+  var descs = {
+    "": "<b>方案A · 默认暖白</b> —— 低饱和暖白背景 + 图章式状态标签，安静、不抢内容，适合每天长时间盯着看。这是我们之前一直在用的方向。",
+    "skin-b": "<b>方案B · Outlook 风格</b> —— 冷灰蓝背景、扁平实心色块标签（不描边不旋转），更接近你熟悉的企业办公软件质感，适合你希望看起来更\"正式办公\"、少一点手作感的场景。状态标签直接用实心色块代替图章，识别速度更快，但少了一点\"档案感\"。",
+    "skin-c": "<b>方案C · 古风公文</b> —— 宣纸底色 + 朱红图章质感，标题用更重的衬线字重，边框用双线模拟公文纸。这个方向和你的工作内容本身（报备、盖章、涉外公文）呼应最强，但风格更重、更有主张，长时间使用需要你自己判断会不会觉得腻。"
+  };
+  document.querySelectorAll('.switcher .opt').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.querySelectorAll('.switcher .opt').forEach(function(n){ n.classList.remove('on'); });
+      el.classList.add('on');
+      var skin = el.getAttribute('data-skin');
+      document.body.className = skin;
+      document.getElementById('skin-desc').innerHTML = descs[skin];
+    });
+  });
+</script>
+</body>
+</html>
