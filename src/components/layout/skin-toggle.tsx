@@ -44,11 +44,7 @@ export function SkinToggle() {
   }
 
   return (
-    <div className="skin-toggle rounded-lg border border-border bg-card p-2.5">
-      <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <Palette className="h-3.5 w-3.5" />
-        皮肤
-      </div>
+    <div className="skin-toggle inline-flex items-center rounded-lg border border-border bg-card p-2.5">
       <div className="flex items-center gap-2">
         {SKINS.map((option) => {
           const meta = SKIN_META[option];
