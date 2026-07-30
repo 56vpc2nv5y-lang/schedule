@@ -59,7 +59,7 @@ function getDate(formData: FormData, key: string) {
   return value ? parseDateKey(value) : undefined;
 }
 
-// datetime-local 输入返回 "YYYY-MM-DDTHH:mm"，按本地时间解析
+// datetime-local 杈撳叆杩斿洖 "YYYY-MM-DDTHH:mm"锛屾寜鏈湴鏃堕棿瑙ｆ瀽
 function getDateTime(formData: FormData, key: string) {
   const value = getString(formData, key);
   return value ? parseDateTimeInput(value) : undefined;
@@ -136,8 +136,8 @@ export async function initializeDefaultsAction() {
   await Promise.all([
     ...regions.map((name) => ensureTag(TagType.REGION, name)),
     ...taskTypes.map((name) => ensureTag(TagType.TASK_TYPE, name)),
-    ensureTag(TagType.PROJECT_TYPE, "标准项目"),
-    ensureTag(TagType.PROJECT_TYPE, "接待/展会专项"),
+    ensureTag(TagType.PROJECT_TYPE, "鏍囧噯椤圭洰"),
+    ensureTag(TagType.PROJECT_TYPE, "鎺ュ緟/灞曚細涓撻」"),
     ...contactRoles.map((name) => ensureContactRole(name)),
     ...fileTypes.map((name) => ensureFileType(name)),
   ]);
@@ -213,7 +213,7 @@ export async function createProjectAction(formData: FormData) {
 
   const [regionTag, projectTypeTag, template] = await Promise.all([
     ensureTag(TagType.REGION, regionName),
-    ensureTag(TagType.PROJECT_TYPE, projectTypeName || "标准项目"),
+    ensureTag(TagType.PROJECT_TYPE, projectTypeName || "鏍囧噯椤圭洰"),
     ensureStageTemplate(),
   ]);
 
@@ -290,7 +290,7 @@ export async function createProjectAction(formData: FormData) {
 export async function createTaskAction(formData: FormData) {
   requireDatabase("/tasks");
 
-  // projectId 可为空：不挂项目的个人/行政事务（报销、入职手续等）
+  // projectId 鍙负绌猴細涓嶆寕椤圭洰鐨勪釜浜?琛屾斂浜嬪姟锛堟姤閿€銆佸叆鑱屾墜缁瓑锛?
   const projectId = getString(formData, "projectId");
   const title = getString(formData, "title");
   const description = getString(formData, "description");
@@ -305,7 +305,7 @@ export async function createTaskAction(formData: FormData) {
 
   const typeTag = await ensureTag(
     TagType.TASK_TYPE,
-    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "项目",
+    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "椤圭洰",
   );
 
   await getPrisma().task.create({
@@ -404,7 +404,7 @@ export async function updateTaskStatusAction(formData: FormData) {
         projectId: task.projectId,
         entityType: "Task",
         entityId: taskId,
-        action: "任务完成",
+        action: "浠诲姟瀹屾垚",
         message: `任务「${task.title}」已标记完成。`,
       },
     });
@@ -438,7 +438,7 @@ export async function deleteTaskAction(formData: FormData) {
   revalidatePath("/calendar");
 }
 
-// 编辑任务：标题 / 所属项目 / 类型 / 优先级 / 截止 / 负责人
+// 缂栬緫浠诲姟锛氭爣棰?/ 鎵€灞為」鐩?/ 绫诲瀷 / 浼樺厛绾?/ 鎴 / 璐熻矗浜?
 export async function updateTaskAction(formData: FormData) {
   requireDatabase("/tasks");
 
@@ -455,7 +455,7 @@ export async function updateTaskAction(formData: FormData) {
   const priority = parsePriority(getString(formData, "priority"));
   const typeTag = await ensureTag(
     TagType.TASK_TYPE,
-    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "项目",
+    taskTypes.includes(typeName as (typeof taskTypes)[number]) ? typeName : "椤圭洰",
   );
 
   const previous = await getPrisma().task.findUnique({
@@ -526,13 +526,13 @@ async function createFileRecord(params: {
     data: {
       projectId: params.projectId,
       entityType: "ProjectFile",
-      action: "文件入库",
+      action: "鏂囦欢鍏ュ簱",
       message: `文件库新增「${params.name}」。`,
     },
   });
 }
 
-// 方式一：只登记文件名 + 外部链接（网盘 / OneDrive / Google Drive 等）
+// 鏂瑰紡涓€锛氬彧鐧昏鏂囦欢鍚?+ 澶栭儴閾炬帴锛堢綉鐩?/ OneDrive / Google Drive 绛夛級
 export async function createFileLinkAction(formData: FormData) {
   requireDatabase("/projects");
 
@@ -595,7 +595,7 @@ export async function deleteFileAction(formData: FormData) {
   redirect(`/projects/${projectId}`);
 }
 
-// 方式二：把文件本体上传到 Supabase Storage，自动生成访问链接后入库
+// 鏂瑰紡浜岋細鎶婃枃浠舵湰浣撲笂浼犲埌 Supabase Storage锛岃嚜鍔ㄧ敓鎴愯闂摼鎺ュ悗鍏ュ簱
 export async function uploadFileAction(formData: FormData) {
   requireDatabase("/projects");
 
@@ -693,13 +693,13 @@ export async function createReceptionAction(formData: FormData) {
         projectId,
         entityType: "Reception",
         entityId: reception.id,
-        action: type === "BUSINESS_TRIP" ? "出差安排" : "接待安排",
+        action: type === "BUSINESS_TRIP" ? "鍑哄樊瀹夋帓" : "鎺ュ緟瀹夋帓",
         message: `新增「${title}」。`,
       },
     });
   }
 
-  // 行前清单：勾选后按开始时间自动生成一组准备任务
+  // 琛屽墠娓呭崟锛氬嬀閫夊悗鎸夊紑濮嬫椂闂磋嚜鍔ㄧ敓鎴愪竴缁勫噯澶囦换鍔?
   const wantChecklist = getString(formData, "checklist") === "on";
   if (wantChecklist) {
     await getPrisma().receptionChecklistItem.createMany({
@@ -722,7 +722,7 @@ export async function createReceptionAction(formData: FormData) {
   );
 }
 
-// ── 接待清单（SOP） ───────────────────────────────────────
+// 鈹€鈹€ 鎺ュ緟娓呭崟锛圫OP锛?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 function revalidateReception(receptionId: string) {
   revalidatePath(`/receptions/${receptionId}`);
@@ -758,7 +758,7 @@ export async function addReceptionChecklistItemAction(
   await getPrisma().receptionChecklistItem.create({
     data: {
       receptionId,
-      phase: phase || "行前准备",
+      phase: phase || "琛屽墠鍑嗗",
       title: title.trim(),
       sortOrder: count,
     },
@@ -777,7 +777,7 @@ export async function deleteReceptionChecklistItemAction(
   revalidateReception(receptionId);
 }
 
-/** 一键套用内置「外方来访」模板：把模板 items 展开成该接待的清单 */
+/** 涓€閿鐢ㄥ唴缃€屽鏂规潵璁裤€嶆ā鏉匡細鎶婃ā鏉?items 灞曞紑鎴愯鎺ュ緟鐨勬竻鍗?*/
 export async function applyReceptionChecklistTemplateAction(receptionId: string) {
   if (!isDatabaseConfigured()) return;
   const existing = await getPrisma().receptionChecklistItem.count({
@@ -799,7 +799,7 @@ export async function createResourceAction(formData: FormData) {
   requireDatabase("/resources");
 
   const name = getString(formData, "name");
-  const category = getString(formData, "category") || "其他";
+  const category = getString(formData, "category") || "鍏朵粬";
   const url = getString(formData, "url");
   const note = getString(formData, "note");
   const important = getString(formData, "important") === "on";
@@ -827,7 +827,7 @@ export async function uploadResourceAction(formData: FormData) {
 
   const file = formData.get("file");
   const name = getString(formData, "name");
-  const category = getString(formData, "category") || "其他";
+  const category = getString(formData, "category") || "鍏朵粬";
   const note = getString(formData, "note");
   const important = getString(formData, "important") === "on";
 
@@ -871,7 +871,7 @@ export async function updateResourceAction(formData: FormData) {
     where: { id },
     data: {
       name,
-      category: getString(formData, "category") || "其他",
+      category: getString(formData, "category") || "鍏朵粬",
       url: getString(formData, "url") || null,
       note: getString(formData, "note") || null,
       important: getString(formData, "important") === "on",
@@ -889,8 +889,8 @@ export async function deleteResourceAction(formData: FormData) {
   redirect("/resources");
 }
 
-// ── 拖动改期：甘特图阶段、日历任务/接待 ────────────────────────
-// 这些动作直接接收参数（不是表单），供客户端拖动结束后调用。
+// 鈹€鈹€ 鎷栧姩鏀规湡锛氱敇鐗瑰浘闃舵銆佹棩鍘嗕换鍔?鎺ュ緟 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 杩欎簺鍔ㄤ綔鐩存帴鎺ユ敹鍙傛暟锛堜笉鏄〃鍗曪級锛屼緵瀹㈡埛绔嫋鍔ㄧ粨鏉熷悗璋冪敤銆?
 
 export async function updateStageScheduleAction(
   stageId: string,
@@ -913,7 +913,7 @@ export async function updateStageScheduleAction(
       projectId: stage.projectId,
       entityType: "ProjectStage",
       entityId: stageId,
-      action: "阶段改期",
+      action: "闃舵鏀规湡",
       message: `阶段「${stage.name}」计划时间调整为 ${startISO} 至 ${endISO}。`,
     },
   });
@@ -964,8 +964,8 @@ export async function moveReceptionAction(
   revalidatePath("/receptions");
 }
 
-// ── 右键快捷操作（日历 / 甘特图 / 任务行）─────────────────
-// 直接接收参数供客户端事件调用，不走表单。
+// 鈹€鈹€ 鍙抽敭蹇嵎鎿嶄綔锛堟棩鍘?/ 鐢樼壒鍥?/ 浠诲姟琛岋級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 鐩存帴鎺ユ敹鍙傛暟渚涘鎴风浜嬩欢璋冪敤锛屼笉璧拌〃鍗曘€?
 
 export async function setTaskStatusQuickAction(taskId: string, status: string) {
   if (!isDatabaseConfigured()) return;
@@ -1011,7 +1011,7 @@ export async function setTaskStatusQuickAction(taskId: string, status: string) {
         projectId: task.projectId,
         entityType: "Task",
         entityId: taskId,
-        action: "任务完成",
+        action: "浠诲姟瀹屾垚",
         message: `任务「${task.title}」已标记完成。`,
       },
     });
@@ -1085,7 +1085,7 @@ export async function setStageStatusQuickAction(
   revalidatePath(`/projects/${stage.projectId}`);
 }
 
-// ── 一键推进：完成当前阶段，下一阶段进入进行中 ────────────
+// 鈹€鈹€ 涓€閿帹杩涳細瀹屾垚褰撳墠闃舵锛屼笅涓€闃舵杩涘叆杩涜涓?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function advanceStageAction(formData: FormData) {
   const projectId = getString(formData, "projectId");
@@ -1141,11 +1141,11 @@ export async function advanceStageAction(formData: FormData) {
   redirect(`/projects/${projectId}?updated=advanced`);
 }
 
-// ── 知识库 ────────────────────────────────────────────────
+// 鈹€鈹€ 鐭ヨ瘑搴?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function createKnowledgeNoteAction(formData: FormData) {
   requireDatabase("/knowledge");
-  const topic = getString(formData, "topic") || "其他";
+  const topic = getString(formData, "topic") || "鍏朵粬";
   const title = getString(formData, "title");
   const content = getString(formData, "content");
   const url = getString(formData, "url");
@@ -1177,7 +1177,7 @@ export async function updateKnowledgeNoteAction(formData: FormData) {
   await getPrisma().knowledgeNote.update({
     where: { id },
     data: {
-      topic: getString(formData, "topic") || "其他",
+      topic: getString(formData, "topic") || "鍏朵粬",
       title,
       content,
       url: getString(formData, "url") || null,
@@ -1197,7 +1197,7 @@ export async function deleteKnowledgeNoteAction(formData: FormData) {
   revalidatePath("/knowledge");
 }
 
-// ── 问题反馈清单：逐条跟踪甲方/供应商问答 ──────────────────
+// 鈹€鈹€ 闂鍙嶉娓呭崟锛氶€愭潯璺熻釜鐢叉柟/渚涘簲鍟嗛棶绛?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 function parseQuestionStatus(value: string): QuestionStatus {
   return (Object.values(QuestionStatus) as string[]).includes(value)
@@ -1209,7 +1209,7 @@ export async function createFeedbackQuestionAction(formData: FormData) {
   requireDatabase("/meeting-reviews");
   const projectId = getString(formData, "projectId");
   const question = getString(formData, "question");
-  const source = getString(formData, "source") || "甲方";
+  const source = getString(formData, "source") || "鐢叉柟";
   if (!projectId || !question) {
     redirect("/meeting-reviews?error=missing-required");
   }
@@ -1321,7 +1321,7 @@ export async function deleteFeedbackQuestionAction(formData: FormData) {
   revalidatePath("/meeting-reviews");
 }
 
-// ── 项目看板拖拽改状态 ────────────────────────────────────
+// 鈹€鈹€ 椤圭洰鐪嬫澘鎷栨嫿鏀圭姸鎬?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 async function setProjectStatus(projectId: string, status: ProjectStatus) {
   const prisma = getPrisma();
@@ -1342,9 +1342,12 @@ async function setProjectStatus(projectId: string, status: ProjectStatus) {
     };
     const statusMessage = "项目“" + project.nameZh + "”状态调整为“" + statusLabel[status] + "”。";
     const previousStatusEvent = await prisma.timelineEvent.findFirst({
-      where: { projectId, action: "项目状态调整" },
+      where: {
+        projectId,
+        OR: [{ action: "项目状态调整" }, { action: "项目状态" }],
+      },
       orderBy: { createdAt: "desc" },
-      select: { id: true, message: true, createdAt: true },
+      select: { id: true, action: true, message: true, createdAt: true },
     });
     const now = new Date();
     const sameMinute =
@@ -1353,12 +1356,10 @@ async function setProjectStatus(projectId: string, status: ProjectStatus) {
         now.toISOString().slice(0, 16);
 
     if (sameMinute) {
-      if (previousStatusEvent.message !== statusMessage) {
-        await prisma.timelineEvent.update({
-          where: { id: previousStatusEvent.id },
-          data: { message: statusMessage },
-        });
-      }
+      await prisma.timelineEvent.update({
+        where: { id: previousStatusEvent.id },
+        data: { action: "项目状态调整", message: statusMessage },
+      });
     } else {
       await prisma.timelineEvent.create({
         data: {
@@ -1416,7 +1417,7 @@ export async function createWorkflowTasksAction(formData: FormData) {
   const template = workflowTemplates.find((item) => item.key === key);
   if (!template) redirect("/tasks");
 
-  const typeTag = await ensureTag(TagType.TASK_TYPE, "项目");
+  const typeTag = await ensureTag(TagType.TASK_TYPE, "椤圭洰");
   await getPrisma().task.createMany({
     data: template!.items.map((item) => ({
       projectId: projectId || null,
@@ -1435,12 +1436,12 @@ export async function createWorkflowTasksAction(formData: FormData) {
   redirect(`/tasks?created=workflow-${template!.items.length}`);
 }
 
-// ── 周计划时间块 ──────────────────────────────────────────
+// 鈹€鈹€ 鍛ㄨ鍒掓椂闂村潡 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function createScheduleBlockAction(formData: FormData) {
   requireDatabase("/today");
   const title = getString(formData, "title");
-  const dateStr = getString(formData, "date"); // 空 = 每天例行
+  const dateStr = getString(formData, "date"); // 绌?= 姣忓ぉ渚嬭
   const start = getString(formData, "start"); // HH:mm
   const end = getString(formData, "end");
   if (!title || !start || !end) {
@@ -1470,7 +1471,7 @@ export async function createScheduleBlockAction(formData: FormData) {
   redirect("/today?created=block");
 }
 
-// 点击时间块 → 编辑全部字段（主题/日期/时间/地点/参与人/我的任务/项目）
+// 鐐瑰嚮鏃堕棿鍧?鈫?缂栬緫鍏ㄩ儴瀛楁锛堜富棰?鏃ユ湡/鏃堕棿/鍦扮偣/鍙備笌浜?鎴戠殑浠诲姟/椤圭洰锛?
 export async function updateScheduleBlockAction(formData: FormData) {
   requireDatabase("/today");
   const id = getString(formData, "id");
@@ -1504,7 +1505,7 @@ export async function updateScheduleBlockAction(formData: FormData) {
   redirect("/today?created=block");
 }
 
-/** 拖动后落库：换天/改时间。dateStr 空串 = 保持例行 */
+/** 鎷栧姩鍚庤惤搴擄細鎹㈠ぉ/鏀规椂闂淬€俤ateStr 绌轰覆 = 淇濇寔渚嬭 */
 export async function moveScheduleBlockAction(
   blockId: string,
   dateStr: string,
@@ -1520,7 +1521,7 @@ export async function moveScheduleBlockAction(
   await getPrisma().scheduleBlock.update({
     where: { id: blockId },
     data: {
-      // 例行块拖动只改时间不改日期；有日期的块可以换天
+      // 渚嬭鍧楁嫋鍔ㄥ彧鏀规椂闂翠笉鏀规棩鏈燂紱鏈夋棩鏈熺殑鍧楀彲浠ユ崲澶?
       date: block.date ? parseDateKey(dateStr) : null,
       startMin: Math.max(0, Math.min(startMin, 1425)),
       endMin: Math.max(startMin + 15, Math.min(endMin, 1440)),
@@ -1537,7 +1538,7 @@ export async function deleteScheduleBlockAction(blockId: string) {
   revalidatePath("/today");
 }
 
-// ── 财务记录：工资 / 垫付 / 报销 ──────────────────────────
+// 鈹€鈹€ 璐㈠姟璁板綍锛氬伐璧?/ 鍨粯 / 鎶ラ攢 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 function parseMoneyKind(value: string): MoneyKind {
   return (Object.values(MoneyKind) as string[]).includes(value)
@@ -1562,7 +1563,7 @@ export async function createMoneyRecordAction(formData: FormData) {
   redirect("/money?created=record");
 }
 
-/** 垫付 → 报销到账（一键回款） */
+/** 鍨粯 鈫?鎶ラ攢鍒拌处锛堜竴閿洖娆撅級 */
 export async function markReimbursedAction(formData: FormData) {
   requireDatabase("/money");
   const id = getString(formData, "id");
@@ -1605,7 +1606,7 @@ export async function updateMoneyRecordAction(formData: FormData) {
   redirect("/money?created=record");
 }
 
-// ── 编辑历史数据：成长档案 / 联系人 / 接待 ─────────────────
+// 鈹€鈹€ 缂栬緫鍘嗗彶鏁版嵁锛氭垚闀挎。妗?/ 鑱旂郴浜?/ 鎺ュ緟 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function updateGrowthLogAction(formData: FormData) {
   requireDatabase("/growth");
@@ -1658,7 +1659,7 @@ export async function deleteContactAction(formData: FormData) {
   requireDatabase("/contacts");
   const id = getString(formData, "id");
   if (id) {
-    // 有引用时 onDelete: Restrict 会报错，catch 掉给出提示
+    // 鏈夊紩鐢ㄦ椂 onDelete: Restrict 浼氭姤閿欙紝catch 鎺夌粰鍑烘彁绀?
     try {
       await getPrisma().contact.delete({ where: { id } });
     } catch {
@@ -1694,7 +1695,7 @@ export async function updateReceptionAction(formData: FormData) {
   });
   revalidatePath("/receptions");
   revalidatePath("/calendar");
-  redirect("/receptions?created=reception");
+  redirect("/projects?tab=reception&created=reception");
 }
 
 export async function deleteReceptionFormAction(formData: FormData) {
@@ -1705,10 +1706,10 @@ export async function deleteReceptionFormAction(formData: FormData) {
   }
   revalidatePath("/receptions");
   revalidatePath("/calendar");
-  redirect("/receptions");
+  redirect("/projects?tab=reception");
 }
 
-// ── AI 提示词模板（存 TextTemplate 表）─────────────────────
+// 鈹€鈹€ AI 鎻愮ず璇嶆ā鏉匡紙瀛?TextTemplate 琛級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function createPromptTemplateAction(formData: FormData) {
   requireDatabase("/assistant");
@@ -1733,13 +1734,13 @@ export async function deletePromptTemplateAction(formData: FormData) {
   revalidatePath("/assistant");
 }
 
-// ── 登录 / 退出 ───────────────────────────────────────────
+// 鈹€鈹€ 鐧诲綍 / 閫€鍑?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function loginAction(formData: FormData) {
   const expected = await getEffectivePassword();
-  // 没设密码：不启用保护，直接进
+  // 娌¤瀵嗙爜锛氫笉鍚敤淇濇姢锛岀洿鎺ヨ繘
   if (!expected) {
-    redirect("/today");
+    redirect("/");
   }
 
   const password = getString(formData, "password");
@@ -1748,24 +1749,24 @@ export async function loginAction(formData: FormData) {
   }
 
   const store = await cookies();
-  // cookie 里存密码哈希而非明文；改密码后所有旧 cookie 立即失效
+  // cookie 閲屽瓨瀵嗙爜鍝堝笇鑰岄潪鏄庢枃锛涙敼瀵嗙爜鍚庢墍鏈夋棫 cookie 绔嬪嵆澶辨晥
   store.set(AUTH_COOKIE, passwordCookieValue(expected), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
-  redirect("/today");
+  redirect("/");
 }
 
-// ── 运行时配置：登录密码 / AI Key 存数据库，免改 .env ─────
+// 鈹€鈹€ 杩愯鏃堕厤缃細鐧诲綍瀵嗙爜 / AI Key 瀛樻暟鎹簱锛屽厤鏀?.env 鈹€鈹€鈹€鈹€鈹€
 
 export async function saveAppPasswordAction(formData: FormData) {
   requireDatabase("/settings");
   const password = getString(formData, "password");
   await setDbSetting(SETTING_KEYS.password, password);
 
-  // 改密码后当前会话也要重新登录（除非清空了密码）
+  // 鏀瑰瘑鐮佸悗褰撳墠浼氳瘽涔熻閲嶆柊鐧诲綍锛堥櫎闈炴竻绌轰簡瀵嗙爜锛?
   const store = await cookies();
   if (password) {
     store.set(AUTH_COOKIE, passwordCookieValue(password), {
@@ -1794,7 +1795,7 @@ export async function logoutAction() {
   redirect("/login");
 }
 
-// ── 项目阶段在线编辑（计划日期 / 状态）──────────────────
+// 鈹€鈹€ 椤圭洰闃舵鍦ㄧ嚎缂栬緫锛堣鍒掓棩鏈?/ 鐘舵€侊級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 function parseStageStatus(value: string): StageStatus {
   return (Object.values(StageStatus) as string[]).includes(value)
@@ -1830,7 +1831,7 @@ export async function updateStageAction(formData: FormData) {
       projectId: stage.projectId,
       entityType: "ProjectStage",
       entityId: stageId,
-      action: "阶段编辑",
+      action: "闃舵缂栬緫",
       message: `阶段「${stage.name}」已更新计划时间/状态。`,
     },
   });
@@ -1843,11 +1844,11 @@ export async function updateStageAction(formData: FormData) {
 }
 
 const TRAINING_PHASES = [
-  "课程大纲",
-  "核算成本",
-  "报价",
-  "合同签署 / 招标采购",
-  "筹备",
+  "璇剧▼澶х翰",
+  "鏍哥畻鎴愭湰",
+  "鎶ヤ环",
+  "鍚堝悓绛剧讲 / 鎷涙爣閲囪喘",
+  "绛瑰",
 ] as const;
 
 function optionalNumber(formData: FormData, key: string) {
@@ -1872,7 +1873,7 @@ export async function updateTrainingProfileAction(formData: FormData) {
     requestedPhase as (typeof TRAINING_PHASES)[number],
   )
     ? requestedPhase
-    : "课程大纲";
+    : "璇剧▼澶х翰";
   const text = (key: string) => getString(formData, key) || null;
   const prisma = getPrisma();
   const project = await prisma.project.findUnique({
@@ -1917,7 +1918,7 @@ export async function updateTrainingProfileAction(formData: FormData) {
       entityType: "TrainingProfile",
       entityId: projectId,
       action: "培训台账更新",
-      message: "培训项目字段已更新，当前阶段为“" + selectedPhase + "”。",
+      message: `培训项目字段已更新，当前阶段为「${selectedPhase}」。`,
     },
   });
 
@@ -2058,7 +2059,7 @@ export async function deleteStageTemplateItemAction(formData: FormData) {
   redirect("/settings?saved=stage");
 }
 
-// ── 会议纪要：新建流程 / 新增一轮 / 定稿入库 ─────────────
+// 鈹€鈹€ 浼氳绾锛氭柊寤烘祦绋?/ 鏂板涓€杞?/ 瀹氱鍏ュ簱 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function createMeetingReviewAction(formData: FormData) {
   requireDatabase("/meeting-reviews");
@@ -2124,13 +2125,13 @@ export async function finalizeReviewAction(formData: FormData) {
   });
   if (!review) redirect("/meeting-reviews");
 
-  // 定稿：生成一条文件库记录并把纪要标记为已定稿
-  const fileType = await ensureFileType("会议纪要");
+  // 瀹氱锛氱敓鎴愪竴鏉℃枃浠跺簱璁板綍骞舵妸绾鏍囪涓哄凡瀹氱
+  const fileType = await ensureFileType("浼氳绾");
   const file = await getPrisma().projectFile.create({
     data: {
       projectId: review!.projectId,
       stageId: review!.stageId,
-      name: `${review!.title}（定稿）`,
+      name: `${review!.title}锛堝畾绋匡級`,
       fileTypeId: fileType.id,
       status: FileStatus.APPROVED,
       version: "final",
@@ -2147,7 +2148,7 @@ export async function finalizeReviewAction(formData: FormData) {
       projectId: review!.projectId,
       entityType: "MeetingReview",
       entityId: reviewId,
-      action: "纪要定稿入库",
+      action: "绾瀹氱鍏ュ簱",
       message: `会议纪要「${review!.title}」已定稿并存入文件库。`,
     },
   });
@@ -2157,7 +2158,7 @@ export async function finalizeReviewAction(formData: FormData) {
   redirect("/meeting-reviews?created=finalized");
 }
 
-// ── 浮动 AI 小助手：把口述的一天批量落库 ─────────────────
+// 鈹€鈹€ 娴姩 AI 灏忓姪鎵嬶細鎶婂彛杩扮殑涓€澶╂壒閲忚惤搴?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export type DailyDraft = {
   type: "task" | "growth" | "question" | "knowledge";
@@ -2170,11 +2171,11 @@ export type DailyDraft = {
 };
 
 const GROWTH_LABEL_TO_ENUM: Record<string, GrowthCategory> = {
-  成果亮点: GrowthCategory.ACHIEVEMENT,
-  技能积累: GrowthCategory.SKILL,
-  复盘教训: GrowthCategory.LESSON,
-  证书培训: GrowthCategory.CERTIFICATE,
-  人脉资源: GrowthCategory.NETWORK,
+  "成果亮点": GrowthCategory.ACHIEVEMENT,
+  "技能积累": GrowthCategory.SKILL,
+  "复盘教训": GrowthCategory.LESSON,
+  "证书培训": GrowthCategory.CERTIFICATE,
+  "人脉资源": GrowthCategory.NETWORK,
 };
 
 export async function createDailyItemsAction(items: DailyDraft[]) {
@@ -2213,19 +2214,19 @@ export async function createDailyItemsAction(items: DailyDraft[]) {
           },
         });
       } else if (item.type === "question") {
-        if (!projectId) continue; // 问题必须挂项目
+        if (!projectId) continue; // 闂蹇呴』鎸傞」鐩?
         await prisma.feedbackQuestion.create({
           data: {
             projectId,
             question: title,
-            source: item.source || "甲方",
+            source: item.source || "鐢叉柟",
             note: item.detail || null,
           },
         });
       } else if (item.type === "knowledge") {
         await prisma.knowledgeNote.create({
           data: {
-            topic: item.category || "其他",
+            topic: item.category || "鍏朵粬",
             title,
             content: item.detail || title,
             projectId,
@@ -2245,7 +2246,7 @@ export async function createDailyItemsAction(items: DailyDraft[]) {
       }
       created += 1;
     } catch {
-      // 单条失败不影响其他
+      // 鍗曟潯澶辫触涓嶅奖鍝嶅叾浠?
     }
   }
 
@@ -2259,7 +2260,7 @@ export async function createDailyItemsAction(items: DailyDraft[]) {
   return { created };
 }
 
-// ── 成长档案：为跳槽/职业发展积累素材 ─────────────────────
+// 鈹€鈹€ 鎴愰暱妗ｆ锛氫负璺虫Ы/鑱屼笟鍙戝睍绉疮绱犳潗 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 function parseGrowthCategory(value: string): GrowthCategory {
   return (Object.values(GrowthCategory) as string[]).includes(value)
@@ -2363,7 +2364,7 @@ export async function deleteResumePointAction(formData: FormData) {
 
   revalidatePath("/growth");
 }
-// ── 数据导入（恢复联系人 / 资料库这类独立记录）──────────
+// 鈹€鈹€ 鏁版嵁瀵煎叆锛堟仮澶嶈仈绯讳汉 / 璧勬枡搴撹繖绫荤嫭绔嬭褰曪級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function importDataAction(formData: FormData) {
   requireDatabase("/settings");
@@ -2404,7 +2405,7 @@ export async function importDataAction(formData: FormData) {
     await prisma.resource.create({
       data: {
         name: r.name,
-        category: r.category || "其他",
+        category: r.category || "鍏朵粬",
         url: r.url || null,
         note: r.note || null,
         important: Boolean(r.important),

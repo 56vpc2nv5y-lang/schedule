@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import {
   BadgeCheck,
@@ -44,10 +45,9 @@ export default async function MoneyPage({
       .filter((r) => r.kind === kind && r.currency === "CNY")
       .reduce((acc, r) => acc + r.amount, 0);
   const salary = sum("SALARY");
-  const advance = sum("ADVANCE"); // 未回款垫付
+  const advance = sum("ADVANCE");
   const reimbursed = sum("REIMBURSED");
 
-  // 量化：本月工资、垫付回款率、按币种垫付汇总
   const thisMonth = new Date().toISOString().slice(0, 7);
   const salaryThisMonth = records
     .filter(
@@ -57,10 +57,10 @@ export default async function MoneyPage({
         r.happenedAt.startsWith(thisMonth),
     )
     .reduce((acc, r) => acc + r.amount, 0);
-  const advanceTotalEver = advance + reimbursed; // 曾垫付总额
+  const advanceTotalEver = advance + reimbursed;
   const reimbursedRate =
     advanceTotalEver > 0 ? Math.round((reimbursed / advanceTotalEver) * 100) : 100;
-  // 未回款垫付按币种分组（出差可能是外币）
+
   const advanceByCurrency = Object.entries(
     records
       .filter((r) => r.kind === "ADVANCE")
@@ -93,7 +93,7 @@ export default async function MoneyPage({
           ? advanceByCurrency
               .filter(([c]) => c !== "CNY")
               .map(([c, v]) => fmtMoney(v, c))
-              .join(" · ")
+              .join(" 路 ")
           : advance > 0
             ? t.money.statAdvancePending
             : t.money.statAdvanceClear,
@@ -167,6 +167,25 @@ export default async function MoneyPage({
           </Card>
         ))}
       </div>
+
+      <section className="money-bars mb-5">
+        <div className="money-meter">
+          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+            <span className="font-medium">垫付回款率</span>
+            <span className="tnum">{reimbursedRate}%</span>
+          </div>
+          <div className="money-meter-track" style={{ "--pct": `${reimbursedRate}%` } as CSSProperties}><i /></div>
+          <p className="mt-2 text-xs text-muted-foreground">垫付总额 = 未回款垫付 + 已回款；用于判断当前现金压力。</p>
+        </div>
+        <div className="money-meter">
+          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+            <span className="font-medium">未回款垫付</span>
+            <span className="tnum">{fmtMoney(advance, "CNY")}</span>
+          </div>
+          <div className="money-meter-track" style={{ "--pct": `${Math.min(100, Math.max(0, 100 - reimbursedRate))}%` } as CSSProperties}><i /></div>
+          <p className="mt-2 text-xs text-muted-foreground">数值越高，越需要优先处理报销/回款。</p>
+        </div>
+      </section>
 
       <Card>
         <CardHeader className="border-b border-border">
@@ -344,7 +363,7 @@ export default async function MoneyPage({
             <span className="flabel">{t.money.fNote}</span>
             <input
               name="note"
-              placeholder="例如：合肥接待打车+餐费"
+              placeholder="渚嬪锛氬悎鑲ユ帴寰呮墦杞?椁愯垂"
               className="field"
             />
           </label>
