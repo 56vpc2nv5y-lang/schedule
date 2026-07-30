@@ -178,6 +178,10 @@ export const getTasksForView = cache(async () => {
       description: "",
       source: "MANUAL",
       sourceLabel: "手动新建",
+      waitingOn: "",
+      sendChannel: "",
+      originalStatusNote: "",
+      updatedAt: "",
     }));
   }
 
@@ -199,6 +203,10 @@ export const getTasksForView = cache(async () => {
     sourceLabel: task.sourceLabel ?? "手动新建",
     dueDate: toDateText(task.dueDate),
     assigneeId: task.assigneeId ?? "",
+    waitingOn: task.waitingOn ?? "",
+    sendChannel: task.sendChannel ?? "",
+    originalStatusNote: task.originalStatusNote ?? "",
+    updatedAt: toDateText(task.updatedAt),
   }));
 });
 export const getTaskPageData = cache(async () => {
@@ -215,6 +223,10 @@ export const getTaskPageData = cache(async () => {
         description: "",
         source: "MANUAL",
         sourceLabel: "手动新建",
+        waitingOn: "",
+        sendChannel: "",
+        originalStatusNote: "",
+        updatedAt: "",
       })),
       contacts: seedContacts.map(({ id, name, organization }) => ({
         id,
@@ -242,6 +254,10 @@ export const getTaskPageData = cache(async () => {
         sourceLabel: true,
         dueDate: true,
         assigneeId: true,
+        waitingOn: true,
+        sendChannel: true,
+        originalStatusNote: true,
+        updatedAt: true,
         typeTag: { select: { name: true } },
       },
       orderBy: [{ dueDate: "asc" }, { updatedAt: "desc" }],
@@ -272,6 +288,10 @@ export const getTaskPageData = cache(async () => {
       sourceLabel: task.sourceLabel ?? "手动新建",
       dueDate: toDateText(task.dueDate),
       assigneeId: task.assigneeId ?? "",
+      waitingOn: task.waitingOn ?? "",
+      sendChannel: task.sendChannel ?? "",
+      originalStatusNote: task.originalStatusNote ?? "",
+      updatedAt: toDateText(task.updatedAt),
     })),
     contacts,
   };
@@ -420,6 +440,22 @@ export async function getReceptionDetailForView(id: string) {
   });
   if (!reception) return null;
 
+  const checklistIds = reception.checklistItems.map((item) => item.id);
+  const checklistTasks = checklistIds.length
+    ? await getPrisma().task.findMany({
+        where: {
+          source: "RECEPTION_CHECKLIST",
+          sourceRefId: { in: checklistIds },
+        },
+        select: { sourceRefId: true, status: true },
+      })
+    : [];
+  const taskStatusByChecklist = new Map(
+    checklistTasks
+      .filter((task) => task.sourceRefId)
+      .map((task) => [task.sourceRefId!, task.status]),
+  );
+
   return {
     id: reception.id,
     projectId: reception.projectId ?? "",
@@ -431,21 +467,23 @@ export async function getReceptionDetailForView(id: string) {
     endAt: toDateTimeText(reception.endAt),
     status: reception.status,
     visitorIds: reception.visitors.map((visitor) => visitor.contactId),
-    items: reception.checklistItems.map((item) => ({
-      id: item.id,
-      receptionId: item.receptionId,
-      phase: item.phase,
-      title: item.title,
-      done: item.done,
-      ownerId: item.ownerId ?? "",
-      dueDate: item.dueDate ?? "",
-      note: item.note ?? "",
-      isMine: item.isMine,
-      sortOrder: item.sortOrder,
-    })),
+    items: reception.checklistItems.map((item) => {
+      const taskStatus = taskStatusByChecklist.get(item.id);
+      return {
+        id: item.id,
+        receptionId: item.receptionId,
+        phase: item.phase,
+        title: item.title,
+        done: taskStatus ? taskStatus === "DONE" : item.done,
+        ownerId: item.ownerId ?? "",
+        dueDate: item.dueDate ?? "",
+        note: item.note ?? "",
+        isMine: item.isMine,
+        sortOrder: item.sortOrder,
+      };
+    }),
   };
 }
-
 export const getKnowledgeNotesForView = cache(async () => {
   if (!isDatabaseConfigured()) {
     return seedKnowledgeNotes.map((note) => ({
@@ -474,9 +512,34 @@ export const getKnowledgeNotesForView = cache(async () => {
 });
 
 export const getFeedbackQuestionsForView = cache(async () => {
+  const emptyExtras = {
+    background: "",
+    supplierQuestion: "",
+    supplierReply: "",
+    sunnyJudgment: "",
+    followUpLog: "",
+    finalReplyZh: "",
+    finalReplyEn: "",
+    internalNote: "",
+    ownerContactId: "",
+    sendChannel: "",
+    dueAt: "",
+    questionAt: "",
+    plannedSupplierSendAt: "",
+    supplierSentAt: "",
+    expectedReplyAt: "",
+    actualReplyAt: "",
+    leaderReviewedAt: "",
+    translatedAt: "",
+    clientSentAt: "",
+    archivedAt: "",
+    updatedAt: "",
+  };
+
   if (!isDatabaseConfigured()) {
     return seedFeedbackQuestions.map((q) => ({
       ...q,
+      ...emptyExtras,
       answer: q.answer ?? "",
       note: q.note ?? "",
       followUpTaskId: "",
@@ -491,7 +554,7 @@ export const getFeedbackQuestionsForView = cache(async () => {
         select: { id: true, title: true, status: true },
       },
     },
-    orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+    orderBy: [{ archivedAt: "asc" }, { updatedAt: "desc" }],
   });
   return questions.map((q) => ({
     id: q.id,
@@ -501,6 +564,27 @@ export const getFeedbackQuestionsForView = cache(async () => {
     answer: q.answer ?? "",
     note: q.note ?? "",
     status: q.status as string,
+    background: q.background ?? "",
+    supplierQuestion: q.supplierQuestion ?? "",
+    supplierReply: q.supplierReply ?? "",
+    sunnyJudgment: q.sunnyJudgment ?? "",
+    followUpLog: q.followUpLog ?? "",
+    finalReplyZh: q.finalReplyZh ?? "",
+    finalReplyEn: q.finalReplyEn ?? "",
+    internalNote: q.internalNote ?? "",
+    ownerContactId: q.ownerContactId ?? "",
+    sendChannel: q.sendChannel ?? "",
+    dueAt: toDateTimeText(q.dueAt),
+    questionAt: toDateTimeText(q.questionAt),
+    plannedSupplierSendAt: toDateTimeText(q.plannedSupplierSendAt),
+    supplierSentAt: toDateTimeText(q.supplierSentAt),
+    expectedReplyAt: toDateTimeText(q.expectedReplyAt),
+    actualReplyAt: toDateTimeText(q.actualReplyAt),
+    leaderReviewedAt: toDateTimeText(q.leaderReviewedAt),
+    translatedAt: toDateTimeText(q.translatedAt),
+    clientSentAt: toDateTimeText(q.clientSentAt),
+    archivedAt: toDateTimeText(q.archivedAt),
+    updatedAt: toDateTimeText(q.updatedAt),
     followUpTaskId: q.followUpTaskId ?? "",
     followUpTaskTitle: q.followUpTask?.title ?? "",
     followUpTaskStatus: q.followUpTask?.status ?? "",

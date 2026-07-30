@@ -5,8 +5,8 @@ export type Locale = "zh" | "en";
 
 const zh = {
   nav: {
-    appName: "项目跟踪看板",
-    appSub: "个人工作台",
+    appName: "Sunny 工作系统",
+    appSub: "国际业务工作台",
     groupWork: "推进",
     groupSchedule: "日程",
     groupLibrary: "资料",
@@ -14,11 +14,11 @@ const zh = {
     today: "今日",
     dashboard: "工作台",
     projects: "项目看板",
-    tasks: "任务列表",
+    tasks: "任务台账",
     calendar: "日历",
     week: "周计划",
     receptions: "出差/接待",
-    meetings: "纪要与问题",
+    meetings: "问题闭环",
     contacts: "联系人库",
     resources: "资料库",
     knowledge: "知识库",
@@ -65,10 +65,15 @@ const zh = {
   },
   statuses: {
     task: {
-      TODO: "待处理",
+      NOT_STARTED: "未开始",
       IN_PROGRESS: "进行中",
-      WAITING: "等待反馈",
+      SELF_CHECK: "待自查",
+      LEADER_REVIEW: "待 Leader 审核",
+      WAITING_EXTERNAL: "待外部回复",
+      READY_TO_SEND: "待对外发送",
       DONE: "已完成",
+      TODO: "未开始",
+      WAITING: "待外部回复",
       OVERDUE: "已逾期",
     },
     stage: {

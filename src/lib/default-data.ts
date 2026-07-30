@@ -95,12 +95,20 @@ export const workflowTemplates = [
 
 // 问题反馈清单的状态文案
 export const questionStatusMeta = {
-  OPEN: { label: "待发出", tone: "neutral" as const },
-  SENT: { label: "已发供应商", tone: "waiting" as const },
-  ANSWERED: { label: "已回复待判断", tone: "info" as const },
-  UNCLEAR: { label: "不清楚需追问", tone: "risk" as const },
-  NEED_MEETING: { label: "需开会讲解", tone: "risk" as const },
-  CONFIRMED: { label: "已确认", tone: "done" as const },
+  ORGANIZING: { label: "待整理", tone: "neutral" as const },
+  TO_SUPPLIER: { label: "待发供应商", tone: "active" as const },
+  WAITING_SUPPLIER: { label: "等待供应商回复", tone: "waiting" as const },
+  EDITING_REVIEW: { label: "修改纪要中", tone: "waiting" as const },
+  LEADER_REVIEW: { label: "待 Leader 审核", tone: "risk" as const },
+  TRANSLATION: { label: "待翻译", tone: "waiting" as const },
+  TO_CLIENT: { label: "待发客户", tone: "active" as const },
+  SENT_CLIENT: { label: "已发客户", tone: "done" as const },
+  OPEN: { label: "待整理", tone: "neutral" as const },
+  SENT: { label: "等待供应商回复", tone: "waiting" as const },
+  ANSWERED: { label: "修改纪要中", tone: "waiting" as const },
+  UNCLEAR: { label: "等待供应商回复", tone: "risk" as const },
+  NEED_MEETING: { label: "待 Leader 审核", tone: "risk" as const },
+  CONFIRMED: { label: "已发客户", tone: "done" as const },
 };
 export type QuestionStatusKey = keyof typeof questionStatusMeta;
 

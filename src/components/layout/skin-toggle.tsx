@@ -1,53 +1,57 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Skin = "sunny-a" | "sunny-c";
-const SKINS: Skin[] = ["sunny-a", "sunny-c"];
-const SKIN_CHANGE_EVENT = "schedule-skin-change";
+type Theme = "sunny-a" | "sunny-c" | "sunny-third";
+const THEMES: Theme[] = ["sunny-a", "sunny-c", "sunny-third"];
+const THEME_CHANGE_EVENT = "schedule-theme-change";
 
-const SKIN_META: Record<Skin, { label: string; dot: string; text: string }> = {
+const THEME_META: Record<Theme, { label: string; dot: string; text: string }> = {
   "sunny-a": { label: "默认暖白", dot: "#F6F3EC", text: "A" },
   "sunny-c": { label: "古风公文", dot: "#EDE3D2", text: "C" },
+  "sunny-third": { label: "Executive Cobalt", dot: "#2F5BFF", text: "3" },
 };
 
-function normalizeSkin(value: string | null): Skin {
-  return value === "sunny-c" ? "sunny-c" : "sunny-a";
+function normalizeTheme(value: string | null): Theme {
+  if (value === "sunny-a" || value === "sunny-c" || value === "sunny-third") return value;
+  return "sunny-third";
 }
 
-function readSkin(): Skin {
-  return normalizeSkin(document.documentElement.getAttribute("data-skin"));
+function readTheme(): Theme {
+  return normalizeTheme(document.documentElement.dataset.theme ?? null);
 }
 
-function subscribeToSkin(onStoreChange: () => void) {
-  window.addEventListener(SKIN_CHANGE_EVENT, onStoreChange);
-  return () => window.removeEventListener(SKIN_CHANGE_EVENT, onStoreChange);
+function subscribeToTheme(onStoreChange: () => void) {
+  window.addEventListener(THEME_CHANGE_EVENT, onStoreChange);
+  return () => window.removeEventListener(THEME_CHANGE_EVENT, onStoreChange);
 }
 
-function getServerSkin(): Skin {
-  return "sunny-a";
+function getServerTheme(): Theme {
+  return "sunny-third";
 }
 
 export function SkinToggle() {
-  const skin = useSyncExternalStore(subscribeToSkin, readSkin, getServerSkin);
+  const theme = useSyncExternalStore(subscribeToTheme, readTheme, getServerTheme);
 
-  function apply(next: Skin) {
-    document.documentElement.setAttribute("data-skin", next);
+  function apply(next: Theme) {
+    document.documentElement.dataset.theme = next;
+    document.documentElement.dataset.density = "comfortable";
+    document.documentElement.setAttribute("data-skin", next === "sunny-c" ? "sunny-c" : "sunny-a");
     try {
-      localStorage.setItem("skin", next);
+      localStorage.setItem("sunny-theme", next);
+      localStorage.setItem("skin", next === "sunny-c" ? "sunny-c" : "sunny-a");
     } catch {
-      // Ignore private-mode storage failures; the current DOM still updates.
+      // DOM update is enough when storage is unavailable.
     }
-    window.dispatchEvent(new Event(SKIN_CHANGE_EVENT));
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   }
 
   return (
-    <div className="skin-toggle inline-flex items-center rounded-lg border border-border bg-card p-2.5">
+    <div className="skin-toggle inline-flex items-center rounded-lg border border-border bg-card p-2">
       <div className="flex items-center gap-2">
-        {SKINS.map((option) => {
-          const meta = SKIN_META[option];
+        {THEMES.map((option) => {
+          const meta = THEME_META[option];
           return (
             <button
               key={option}
@@ -56,9 +60,9 @@ export function SkinToggle() {
               aria-label={meta.label}
               className={cn(
                 "skin-dot grid h-8 w-8 place-items-center rounded-full border text-[10px] font-semibold transition-colors",
-                skin === option ? "is-active border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground",
+                theme === option ? "is-active border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground",
               )}
-              style={{ background: meta.dot }}
+              style={{ background: meta.dot, color: option === "sunny-third" ? "#fff" : undefined }}
             >
               {meta.text}
             </button>

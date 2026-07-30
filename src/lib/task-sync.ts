@@ -51,9 +51,9 @@ function checklistTaskStatus(
   isCurrent: boolean,
   existing: TaskStatus | undefined,
 ) {
-  if (done) return TaskStatus.DONE;
-  if (!isCurrent) return TaskStatus.WAITING;
-  return existing === TaskStatus.IN_PROGRESS ? TaskStatus.IN_PROGRESS : TaskStatus.TODO;
+  if (done || existing === TaskStatus.DONE) return TaskStatus.DONE;
+  if (!isCurrent) return TaskStatus.WAITING_EXTERNAL;
+  return existing === TaskStatus.IN_PROGRESS ? TaskStatus.IN_PROGRESS : TaskStatus.NOT_STARTED;
 }
 
 /**

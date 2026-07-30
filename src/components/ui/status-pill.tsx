@@ -2,6 +2,7 @@
 
 import type { ComponentProps } from "react";
 import { useDict } from "@/components/layout/locale-provider";
+import { taskStatusMeta } from "@/lib/workflow-meta";
 import { cn } from "@/lib/utils";
 
 export type StatusStampTone =
@@ -16,23 +17,12 @@ type StatusStampProps = ComponentProps<"span"> & {
   tone: StatusStampTone;
 };
 
-const stageTones = {
+const stageTones: Record<string, StatusStampTone> = {
   NOT_STARTED: "pause",
   IN_PROGRESS: "active",
   COMPLETED: "done",
   DELAYED: "danger",
-} as const;
-
-const taskTones = {
-  TODO: "waiting",
-  IN_PROGRESS: "active",
-  WAITING: "waiting",
-  DONE: "done",
-  OVERDUE: "danger",
-} as const;
-
-type StageStatus = keyof typeof stageTones;
-type TaskStatus = keyof typeof taskTones;
+};
 
 export function StatusStamp({ tone, className, ...props }: StatusStampProps) {
   return (
@@ -44,22 +34,14 @@ export function StatusStamp({ tone, className, ...props }: StatusStampProps) {
   );
 }
 
-export function StageStatusPill({ status }: { status: StageStatus }) {
+export function StageStatusPill({ status }: { status: string }) {
   const t = useDict();
+  const label = (t.statuses.stage as Record<string, string>)[status] ?? status;
 
-  return (
-    <StatusStamp tone={stageTones[status]}>
-      {t.statuses.stage[status]}
-    </StatusStamp>
-  );
+  return <StatusStamp tone={stageTones[status] ?? "neutral"}>{label}</StatusStamp>;
 }
 
-export function TaskStatusPill({ status }: { status: TaskStatus }) {
-  const t = useDict();
-
-  return (
-    <StatusStamp tone={taskTones[status]}>
-      {t.statuses.task[status]}
-    </StatusStamp>
-  );
+export function TaskStatusPill({ status }: { status: string }) {
+  const meta = taskStatusMeta(status);
+  return <StatusStamp tone={meta.tone as StatusStampTone}>{meta.label}</StatusStamp>;
 }
