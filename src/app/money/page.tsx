@@ -23,6 +23,7 @@ import { CollapseCard } from "@/components/ui/collapse-card";
 import { RecordDisclosure } from "@/components/ui/record-disclosure";
 import { getT } from "@/lib/locale";
 import { getMoneyRecordsForView } from "@/lib/database-data";
+import { requireOwnerAccount } from "@/lib/current-account";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function MoneyPage({
 }: {
   searchParams: Promise<{ setup?: string; created?: string; error?: string; new?: string }>;
 }) {
+  await requireOwnerAccount();
   const [{ setup, created, error, new: openForm }, { t }, records] =
     await Promise.all([searchParams, getT(), getMoneyRecordsForView()]);
 

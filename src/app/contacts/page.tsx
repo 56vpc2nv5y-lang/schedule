@@ -7,6 +7,7 @@ import { CollapseCard } from "@/components/ui/collapse-card";
 import { contactRoles, regions } from "@/lib/default-data";
 import { InlineEdit } from "@/components/ui/inline-edit";
 import { getContactsForView, getProjectsForView, getTasksForView } from "@/lib/database-data";
+import { isDatabaseConfigured } from "@/lib/db-status";
 import { normalizeTaskStatus } from "@/lib/workflow-meta";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,10 @@ function relatedProjects(contact: Contact, projects: readonly Project[]) {
 }
 
 function normalizeName(name: string) {
-  return name.toLowerCase().replace(/[\s·•()（）_-]/g, "");
+  return name
+    .replace(/^[a-z]+-\d+\s*/i, "")
+    .toLowerCase()
+    .replace(/[\s·•()（）_-]/g, "");
 }
 
 function similarName(a: string, b: string) {
@@ -81,6 +85,7 @@ export default async function ContactsPage({
   ]);
 
   const hint = duplicateHint(contacts, projects);
+  const canEdit = isDatabaseConfigured();
   const allRoles = Array.from(new Set(contacts.flatMap((contact) => contact.roles as readonly string[]))).filter(Boolean);
   const allRegions = Array.from(new Set(contacts.map((contact) => contact.region).filter(Boolean)));
 
@@ -110,10 +115,19 @@ export default async function ContactsPage({
             <h1 className="page-title mt-2">联系人库</h1>
             <p className="os-page-sub">联系人、今日需要联系的人、待回复事项和项目关系放在同一屏，不再只是默认卡片列表。</p>
           </div>
-          <Link href="/contacts?new=1#new" className="os-link-button primary"><Plus className="h-4 w-4" />新建联系人</Link>
+          {canEdit ? (
+            <Link href="/contacts?new=1#new" className="os-link-button primary"><Plus className="h-4 w-4" />新建联系人</Link>
+          ) : (
+            <span className="os-pill orange">只读演示数据</span>
+          )}
         </header>
 
-        {setup === "database-required" ? <Banner>还没连接数据库，当前是演示数据。</Banner> : null}
+        {!canEdit ? (
+          <Banner tone="warning">
+            当前联系人来自只读演示数据，修改不会保存。请先在设置页恢复 Supabase 数据库连接，再编辑联系人。
+          </Banner>
+        ) : null}
+        {setup === "database-required" ? <Banner tone="danger">本次修改未写入：数据库当前不可用。</Banner> : null}
         {created === "contact" ? <Banner>联系人已保存。</Banner> : null}
         {error === "missing-required" ? <Banner tone="danger">姓名和机构不能为空。</Banner> : null}
         {error === "contact-in-use" ? <Banner tone="danger">该联系人已被项目或任务引用，不能直接删除。</Banner> : null}
@@ -260,7 +274,7 @@ export default async function ContactsPage({
                 {selectedRelated.length === 0 ? <div className="os-tiny os-muted mt-2">暂未关联项目。</div> : null}
 
                 <div className="os-divider" />
-                <InlineEdit label="编辑联系人">
+                {canEdit ? <InlineEdit label="编辑联系人">
                   <div className="mt-3">
                     <form action={updateContactAction} className="grid gap-3 sm:grid-cols-2">
                       <input type="hidden" name="id" value={selectedContact.id} />
@@ -279,13 +293,15 @@ export default async function ContactsPage({
                       <Button type="submit" variant="ghost" size="sm"><Trash2 className="h-3.5 w-3.5" />删除联系人</Button>
                     </form>
                   </div>
-                </InlineEdit>
+                </InlineEdit> : (
+                  <div className="os-tiny os-muted">数据库恢复连接后可编辑联系人。</div>
+                )}
               </>
             ) : <div className="empty">请选择联系人。</div>}
           </aside>
         </div>
 
-        <CollapseCard className="mt-5" title="新建联系人" open={openForm === "1" || Boolean(error)}>
+        {canEdit ? <CollapseCard className="mt-5" title="新建联系人" open={openForm === "1" || Boolean(error)}>
           <form action={createContactAction} className="grid gap-4 lg:grid-cols-6">
             <label><span className="flabel">姓名</span><input name="name" className="field" /></label>
             <label className="lg:col-span-2"><span className="flabel">机构</span><input name="organization" className="field" /></label>
@@ -296,12 +312,17 @@ export default async function ContactsPage({
             <label className="lg:col-span-2"><span className="flabel">微信</span><input name="wechat" className="field" /></label>
             <div className="flex items-end lg:col-span-2"><Button className="w-full" type="submit"><Plus className="h-4 w-4" />保存联系人</Button></div>
           </form>
-        </CollapseCard>
+        </CollapseCard> : null}
       </div>
     </AppShell>
   );
 }
 
-function Banner({ children, tone = "ok" }: { children: React.ReactNode; tone?: "ok" | "danger" }) {
-  return <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${tone === "danger" ? "border-red-200 bg-red-50 text-red-900" : "border-border bg-card text-muted-foreground"}`}>{children}</div>;
+function Banner({ children, tone = "ok" }: { children: React.ReactNode; tone?: "ok" | "warning" | "danger" }) {
+  const toneClass = tone === "danger"
+    ? "border-red-200 bg-red-50 text-red-900"
+    : tone === "warning"
+      ? "border-amber-200 bg-amber-50 text-amber-900"
+      : "border-border bg-card text-muted-foreground";
+  return <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${toneClass}`}>{children}</div>;
 }

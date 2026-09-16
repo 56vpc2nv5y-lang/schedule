@@ -15,6 +15,7 @@ import { isAiConfigured } from "@/lib/ai";
 import { getT } from "@/lib/locale";
 import { projectDisplayName } from "@/lib/i18n";
 import { getGrowthLogsForView, getProjectsForView, getResumePointsForView } from "@/lib/database-data";
+import { requireOwnerAccount } from "@/lib/current-account";
 import { ResumeCoach } from "./resume-coach";
 import { ResumeBaseline } from "./resume-baseline";
 import { CopyButton } from "./copy-button";
@@ -97,6 +98,7 @@ export default async function GrowthPage({
     tab?: string;
   }>;
 }) {
+  await requireOwnerAccount();
   const [{ setup, created, error, new: openForm, resumePoint, tab }, { locale, t }, logs, projects, resumePoints, aiReady] =
     await Promise.all([
       searchParams,
