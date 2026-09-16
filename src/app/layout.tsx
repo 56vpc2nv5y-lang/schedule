@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { LocaleProvider } from "@/components/layout/locale-provider";
 import { PwaRegister } from "@/components/pwa-register";
+import { AccountProvider } from "@/components/layout/account-provider";
+import { getCurrentAccount } from "@/lib/current-account";
 import "./globals.css";
 import "./sunny-design-system.css";
 
@@ -19,12 +21,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const account = await getCurrentAccount();
+
   return (
     <html lang="zh-CN" data-layout="executive" data-theme="sunny-third" data-density="comfortable" data-skin="sunny-a" suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <PwaRegister />
-        <LocaleProvider locale="zh">{children}</LocaleProvider>
+        <LocaleProvider locale="zh"><AccountProvider account={account}>{children}</AccountProvider></LocaleProvider>
       </body>
     </html>
   );

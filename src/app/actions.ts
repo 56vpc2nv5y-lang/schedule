@@ -27,6 +27,16 @@ import {
 import { getPrisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-status";
 import { AUTH_COOKIE } from "@/lib/auth";
+import {
+  ACCOUNT_SESSION_COOKIE,
+  ACCOUNT_SESSION_MAX_AGE,
+  createAccountSession,
+  displayNameFromEmail,
+  getBuiltinAccount,
+  hashAccountPassword,
+  normalizeEmail,
+  verifyAccountPassword,
+} from "@/lib/account-auth";
 import { parseDateKey, parseDateTimeInput } from "@/lib/date-time";
 import {
   SETTING_KEYS,
@@ -1677,8 +1687,12 @@ export async function updateGrowthLogAction(formData: FormData) {
 }
 
 export async function updateContactAction(formData: FormData) {
-  requireDatabase("/contacts");
   const id = getString(formData, "id");
+  if (!isDatabaseConfigured()) {
+    const params = new URLSearchParams({ setup: "database-required" });
+    if (id) params.set("selected", id);
+    redirect(`/contacts?${params.toString()}`);
+  }
   const name = getString(formData, "name");
   const organization = getString(formData, "organization");
   if (!id || !name || !organization) {
@@ -1701,7 +1715,7 @@ export async function updateContactAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/today");
   revalidatePath("/tasks");
-  redirect("/contacts?created=contact");
+  redirect(`/contacts?created=contact&selected=${encodeURIComponent(id)}`);
 }
 
 export async function deleteContactAction(formData: FormData) {
@@ -1786,24 +1800,82 @@ export async function deletePromptTemplateAction(formData: FormData) {
 // 鈹€鈹€ 鐧诲綍 / 閫€鍑?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 export async function loginAction(formData: FormData) {
-  const expected = await getEffectivePassword();
-  // 娌¤瀵嗙爜锛氫笉鍚敤淇濇姢锛岀洿鎺ヨ繘
-  if (!expected) {
-    redirect("/");
-  }
-
+  const email = normalizeEmail(getString(formData, "email"));
   const password = getString(formData, "password");
-  if (password !== expected) {
-    redirect("/login?error=bad-password");
+  if (!email || !password) redirect("/login?error=bad-credentials");
+
+  let account = getBuiltinAccount(email, password);
+  if (!account && isDatabaseConfigured()) {
+    const row = await getPrisma().account.findUnique({ where: { email } }).catch(() => null);
+    if (row && await verifyAccountPassword(password, row.passwordHash)) {
+      account = {
+        id: row.id,
+        email: row.email,
+        displayName: row.displayName,
+        kind: row.kind === "OWNER" ? "owner" : row.kind === "DEMO" ? "demo" : "user",
+      };
+    }
   }
 
+  if (!account) redirect("/login?error=bad-credentials");
   const store = await cookies();
-  // cookie 閲屽瓨瀵嗙爜鍝堝笇鑰岄潪鏄庢枃锛涙敼瀵嗙爜鍚庢墍鏈夋棫 cookie 绔嬪嵆澶辨晥
-  store.set(AUTH_COOKIE, passwordCookieValue(expected), {
+  store.set(ACCOUNT_SESSION_COOKIE, createAccountSession(account), {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 365,
+    maxAge: ACCOUNT_SESSION_MAX_AGE,
+  });
+  store.delete(AUTH_COOKIE);
+  redirect("/");
+}
+
+export async function loginDemoAction() {
+  const email = normalizeEmail(process.env.DEMO_EMAIL ?? "demo@gsafety.com");
+  const password = process.env.DEMO_PASSWORD ?? "";
+  const account = getBuiltinAccount(email, password);
+  if (!account || account.kind !== "demo") redirect("/login?error=demo-unavailable");
+
+  const store = await cookies();
+  store.set(ACCOUNT_SESSION_COOKIE, createAccountSession(account), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: ACCOUNT_SESSION_MAX_AGE,
+  });
+  store.delete(AUTH_COOKIE);
+  redirect("/");
+}
+
+export async function registerAccountAction(formData: FormData) {
+  const displayName = getString(formData, "displayName");
+  const email = normalizeEmail(getString(formData, "email"));
+  const password = getString(formData, "password");
+  const confirmPassword = getString(formData, "confirmPassword");
+  if (!displayName || !email || !password) redirect("/register?error=missing-fields");
+  if (password !== confirmPassword) redirect("/register?error=password-mismatch");
+  if (password.length < 10 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) redirect("/register?error=weak-password");
+  if (!isDatabaseConfigured()) redirect("/register?error=database-required");
+
+  const existing = await getPrisma().account.findUnique({ where: { email } });
+  if (existing) redirect("/register?error=account-exists");
+  const row = await getPrisma().account.create({
+    data: {
+      email,
+      displayName: displayName || displayNameFromEmail(email),
+      passwordHash: await hashAccountPassword(password),
+      kind: "USER",
+    },
+  });
+  const account = { id: row.id, email: row.email, displayName: row.displayName, kind: "user" as const };
+  const store = await cookies();
+  store.set(ACCOUNT_SESSION_COOKIE, createAccountSession(account), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: ACCOUNT_SESSION_MAX_AGE,
   });
   redirect("/");
 }
@@ -1840,6 +1912,7 @@ export async function saveDeepseekKeyAction(formData: FormData) {
 
 export async function logoutAction() {
   const store = await cookies();
+  store.delete(ACCOUNT_SESSION_COOKIE);
   store.delete(AUTH_COOKIE);
   redirect("/login");
 }
