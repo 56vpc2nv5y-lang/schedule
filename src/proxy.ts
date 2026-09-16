@@ -4,6 +4,11 @@ import { ACCOUNT_SESSION_COOKIE, verifyAccountSession } from "@/lib/account-auth
 
 const publicPaths = new Set(["/login", "/register"]);
 const ownerOnlyPaths = ["/growth", "/money"];
+const nonOwnerWriteAllowlist = new Set([
+  "/api/ai",
+  "/api/ai/resume-chat",
+  "/api/ai/task-intake",
+]);
 
 function isOwnerOnlyPath(pathname: string) {
   return ownerOnlyPaths.some((path) => pathname === path || pathname.startsWith(path + "/"));
@@ -28,6 +33,13 @@ export async function proxy(req: NextRequest) {
       url.pathname = "/";
       url.search = "";
       return NextResponse.redirect(url);
+    }
+    const isWriteRequest = !["GET", "HEAD", "OPTIONS"].includes(req.method);
+    if (account.kind !== "owner" && isWriteRequest && !nonOwnerWriteAllowlist.has(pathname)) {
+      const url = req.nextUrl.clone();
+      url.pathname = pathname.startsWith("/api/") ? "/" : pathname;
+      url.searchParams.set("demo", "readonly");
+      return NextResponse.redirect(url, 303);
     }
     return NextResponse.next();
   }

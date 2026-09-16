@@ -13,9 +13,7 @@ import {
   knowledgeNotes as seedKnowledgeNotes,
   moneyRecords as seedMoneyRecords,
   scheduleBlocks as seedScheduleBlocks,
-  getProjectFiles as getSeedProjectFiles,
   getProjectTasks as getSeedProjectTasks,
-  getProjectTimeline as getSeedProjectTimeline,
   meetingReviews as seedMeetingReviews,
   projects as seedProjects,
   receptions as seedReceptions,
@@ -49,7 +47,7 @@ import { getCurrentAccount } from "@/lib/current-account";
 
 async function getOfflineWorkspaceData() {
   const account = await getCurrentAccount();
-  if (account?.kind === "demo") {
+  if (account && account.kind !== "owner") {
     return {
       contacts: competitionContacts,
       feedbackQuestions: competitionFeedbackQuestions,
@@ -89,6 +87,12 @@ async function getOfflineWorkspaceData() {
     tasks: seedTasks,
     timelineEvents: seedTimelineEvents,
   };
+}
+
+async function shouldUseOfflineWorkspaceData() {
+  if (!isDatabaseConfigured()) return true;
+  const account = await getCurrentAccount();
+  return Boolean(account && account.kind !== "owner");
 }
 
 function toDateText(value: Date | null | undefined) {
@@ -157,7 +161,7 @@ async function getDbProjectsRaw() {
 }
 
 export const getContactsForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     return (await getOfflineWorkspaceData()).contacts;
   }
 
@@ -176,7 +180,7 @@ export const getContactsForView = cache(async () => {
 });
 
 export const getProjectsForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.projects.map((project) => ({
       ...project,
@@ -214,7 +218,7 @@ export const getProjectsForView = cache(async () => {
 });
 
 export const getStagesForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     return (await getOfflineWorkspaceData()).stages;
   }
 
@@ -236,7 +240,7 @@ export const getStagesForView = cache(async () => {
 });
 
 export const getTasksForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.tasks.map((task) => ({
       ...task,
@@ -275,7 +279,7 @@ export const getTasksForView = cache(async () => {
   }));
 });
 export const getTaskPageData = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return {
       projects: data.projects.map(({ id, nameZh, nameEn, status }) => ({
@@ -363,7 +367,7 @@ export const getTaskPageData = cache(async () => {
   };
 });
 export const getFilesForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     return (await getOfflineWorkspaceData()).files;
   }
 
@@ -386,7 +390,7 @@ export const getFilesForView = cache(async () => {
 });
 
 export const getTimelineForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     return (await getOfflineWorkspaceData()).timelineEvents;
   }
 
@@ -405,7 +409,7 @@ export const getTimelineForView = cache(async () => {
 });
 
 export const getReceptionsForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.receptions.map((reception) => {
       const items = data.receptionChecklist.filter(
@@ -477,7 +481,7 @@ export const getReceptionsForView = cache(async () => {
 });
 /** 单场接待详情 + 分阶段清单（演示模式读种子数据，只读） */
 export async function getReceptionDetailForView(id: string) {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     const reception = data.receptions.find((item) => item.id === id);
     if (!reception) return null;
@@ -553,7 +557,7 @@ export async function getReceptionDetailForView(id: string) {
   };
 }
 export const getKnowledgeNotesForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.knowledgeNotes.map((note) => ({
       id: note.id,
@@ -605,7 +609,7 @@ export const getFeedbackQuestionsForView = cache(async () => {
     updatedAt: "",
   };
 
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.feedbackQuestions.map((q) => ({
       ...q,
@@ -662,7 +666,7 @@ export const getFeedbackQuestionsForView = cache(async () => {
 });
 // 周计划时间块：date 为空字符串 = 每天例行
 export const getScheduleBlocksForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.scheduleBlocks.map((block) => ({
       ...block,
@@ -691,7 +695,7 @@ export const getScheduleBlocksForView = cache(async () => {
 });
 
 export const getMoneyRecordsForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.moneyRecords.map((record) => ({ ...record, note: record.note ?? "" }));
   }
@@ -711,7 +715,7 @@ export const getMoneyRecordsForView = cache(async () => {
 
 // AI 助手的自定义提示词模板（存 TextTemplate 表）
 export const getPromptTemplatesForView = cache(async () => {
-  if (!isDatabaseConfigured()) return (await getOfflineWorkspaceData()).promptTemplates;
+  if (await shouldUseOfflineWorkspaceData()) return (await getOfflineWorkspaceData()).promptTemplates;
   const templates = await getPrisma().textTemplate.findMany({
     where: { type: "EMAIL", enabled: true },
     orderBy: { createdAt: "desc" },
@@ -724,7 +728,7 @@ export const getPromptTemplatesForView = cache(async () => {
 });
 
 export const getGrowthLogsForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.growthLogs.map((log) => ({
       id: log.id,
@@ -751,7 +755,7 @@ export const getGrowthLogsForView = cache(async () => {
 });
 
 export const getResumePointsForView = cache(async () => {
-  if (!isDatabaseConfigured()) return (await getOfflineWorkspaceData()).resumePoints;
+  if (await shouldUseOfflineWorkspaceData()) return (await getOfflineWorkspaceData()).resumePoints;
 
   const points = await getPrisma().resumePoint.findMany({
     orderBy: { updatedAt: "desc" },
@@ -768,7 +772,7 @@ export const getResumePointsForView = cache(async () => {
   }));
 });
 export const getResourcesForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     return (await getOfflineWorkspaceData()).resources;
   }
 
@@ -790,7 +794,7 @@ export const getResourcesForView = cache(async () => {
 // ── 设置页：标签/文件类型/角色/阶段模板（带 id，供增删改）──
 
 export const getTagsForView = cache(async () => {
-  if (!isDatabaseConfigured()) return [];
+  if (await shouldUseOfflineWorkspaceData()) return [];
   const tags = await getPrisma().tag.findMany({
     orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
   });
@@ -798,7 +802,7 @@ export const getTagsForView = cache(async () => {
 });
 
 export const getFileTypesForView = cache(async () => {
-  if (!isDatabaseConfigured()) return [];
+  if (await shouldUseOfflineWorkspaceData()) return [];
   const types = await getPrisma().fileType.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
@@ -806,7 +810,7 @@ export const getFileTypesForView = cache(async () => {
 });
 
 export const getContactRolesForView = cache(async () => {
-  if (!isDatabaseConfigured()) return [];
+  if (await shouldUseOfflineWorkspaceData()) return [];
   const roles = await getPrisma().contactRole.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
@@ -814,7 +818,7 @@ export const getContactRolesForView = cache(async () => {
 });
 
 export const getStageTemplateItemsForView = cache(async () => {
-  if (!isDatabaseConfigured()) return [];
+  if (await shouldUseOfflineWorkspaceData()) return [];
   const items = await getPrisma().stageTemplateItem.findMany({
     orderBy: { sortOrder: "asc" },
   });
@@ -827,7 +831,7 @@ export const getStageTemplateItemsForView = cache(async () => {
 });
 
 export const getMeetingReviewsForView = cache(async () => {
-  if (!isDatabaseConfigured()) {
+  if (await shouldUseOfflineWorkspaceData()) {
     const data = await getOfflineWorkspaceData();
     return data.meetingReviews.map((review) => ({
       id: review.id,
@@ -879,7 +883,7 @@ export async function getProjectForView(id: string) {
 }
 
 export async function getTrainingProfileForView(projectId: string) {
-  if (!isDatabaseConfigured()) return null;
+  if (await shouldUseOfflineWorkspaceData()) return null;
 
   const profile = await getPrisma().trainingProfile.findUnique({
     where: { projectId },
@@ -937,8 +941,8 @@ export async function getProjectTasksForView(projectId: string) {
 }
 
 export async function getProjectFilesForView(projectId: string) {
-  if (!isDatabaseConfigured()) {
-    return getSeedProjectFiles(projectId);
+  if (await shouldUseOfflineWorkspaceData()) {
+    return (await getOfflineWorkspaceData()).files.filter((file) => file.projectId === projectId);
   }
 
   const files = await getFilesForView();
@@ -946,8 +950,8 @@ export async function getProjectFilesForView(projectId: string) {
 }
 
 export async function getProjectTimelineForView(projectId: string) {
-  if (!isDatabaseConfigured()) {
-    return getSeedProjectTimeline(projectId);
+  if (await shouldUseOfflineWorkspaceData()) {
+    return (await getOfflineWorkspaceData()).timelineEvents.filter((event) => event.projectId === projectId);
   }
 
   const timeline = await getTimelineForView();

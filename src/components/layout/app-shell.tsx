@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { SkinToggle } from "@/components/layout/skin-toggle";
 import { useAccount } from "@/components/layout/account-provider";
-import { logoutAction } from "@/app/actions";
 import { useDict } from "@/components/layout/locale-provider";
 import type { Dict } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -114,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="app-account-chip mt-3 flex items-center gap-2 rounded-lg border border-border bg-background/70 px-2.5 py-2">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><UserRound className="h-4 w-4" /></span>
                 <div className="min-w-0 flex-1"><div className="truncate text-xs font-semibold text-foreground">{account.displayName}</div><div className="truncate text-[10px] text-muted-foreground">{account.email}</div></div>
-                <form action={logoutAction}><button type="submit" title="退出登录" className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button></form>
+                <Link href="/logout" title="退出登录" className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></Link>
               </div>
             ) : null}
           </div>
