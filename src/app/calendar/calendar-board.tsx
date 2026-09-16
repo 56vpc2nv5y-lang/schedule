@@ -119,11 +119,11 @@ export function CalendarBoard({ days, events, currentMonth, todayIso, dbConnecte
             const inMonth = parseISO(iso).getMonth() === currentMonth;
             const isToday = iso === todayIso;
             const dayEvents = eventsForDate(visibleItems, iso);
-            const visibleDayEvents = dayEvents.slice(0, 2);
+            const visibleDayEvents = dayEvents.slice(0, 3);
             const hiddenCount = Math.max(0, dayEvents.length - visibleDayEvents.length);
             const isOver = overIso === iso;
             return (
-              <div key={iso} onClick={() => openDay(iso)} onDragOver={(e) => { e.preventDefault(); if (overIso !== iso) setOverIso(iso); }} onDrop={() => handleDrop(iso)} className={`calendar-day min-h-[132px] border-b border-r border-border p-2 transition-colors ${inMonth ? "bg-card" : "calendar-day-outside bg-secondary/30"} ${isOver ? "ring-2 ring-inset ring-primary/60" : ""}`}>
+              <div key={iso} onClick={() => openDay(iso)} onDragOver={(e) => { e.preventDefault(); if (overIso !== iso) setOverIso(iso); }} onDrop={() => handleDrop(iso)} className={`calendar-day min-h-[156px] border-b border-r border-border p-2 transition-colors ${inMonth ? "bg-card" : "calendar-day-outside bg-secondary/30"} ${isOver ? "ring-2 ring-inset ring-primary/60" : ""}`}>
                 <div className="mb-1 flex items-center justify-between"><span className={`tnum text-xs ${inMonth ? "text-foreground" : "text-muted-foreground/60"} ${isToday ? "calendar-day-today flex h-6 w-6 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground" : ""}`}>{parseISO(iso).getDate()}</span></div>
                 <div className="space-y-1">
                   {visibleDayEvents.map((event) => {
