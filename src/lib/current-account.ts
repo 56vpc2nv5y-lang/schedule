@@ -1,11 +1,13 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ACCOUNT_SESSION_COOKIE, verifyAccountSession } from "@/lib/account-auth";
+import { ACCOUNT_SESSION_COOKIE, verifyAnyAccountSession } from "@/lib/account-auth";
 
 export async function getCurrentAccount() {
   const store = await cookies();
-  return verifyAccountSession(store.get(ACCOUNT_SESSION_COOKIE)?.value);
+  return verifyAnyAccountSession(
+    store.getAll(ACCOUNT_SESSION_COOKIE).map((cookie) => cookie.value),
+  );
 }
 
 export async function requireOwnerAccount() {

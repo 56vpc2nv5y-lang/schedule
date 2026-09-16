@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ACCOUNT_SESSION_COOKIE, verifyAccountSession } from "@/lib/account-auth";
+import { ACCOUNT_SESSION_COOKIE, verifyAnyAccountSession } from "@/lib/account-auth";
 
 const publicPaths = new Set(["/login", "/register"]);
 const ownerOnlyPaths = ["/growth", "/money"];
@@ -14,13 +14,19 @@ function isOwnerOnlyPath(pathname: string) {
   return ownerOnlyPaths.some((path) => pathname === path || pathname.startsWith(path + "/"));
 }
 
+function getRequestAccount(req: NextRequest) {
+  return verifyAnyAccountSession(
+    req.cookies.getAll(ACCOUNT_SESSION_COOKIE).map((cookie) => cookie.value),
+  );
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (pathname === "/logout") {
     return NextResponse.next();
   }
   if (publicPaths.has(pathname)) {
-    const account = verifyAccountSession(req.cookies.get(ACCOUNT_SESSION_COOKIE)?.value);
+    const account = getRequestAccount(req);
     if (account) {
       const url = req.nextUrl.clone();
       url.pathname = "/";
@@ -29,7 +35,7 @@ export async function proxy(req: NextRequest) {
     }
     return NextResponse.next();
   }
-  const account = verifyAccountSession(req.cookies.get(ACCOUNT_SESSION_COOKIE)?.value);
+  const account = getRequestAccount(req);
   if (account) {
     if (account.kind !== "owner" && isOwnerOnlyPath(pathname)) {
       const url = req.nextUrl.clone();

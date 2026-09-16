@@ -3,7 +3,8 @@ import { promisify } from "node:util";
 
 const scrypt = promisify(scryptCallback);
 
-export const ACCOUNT_SESSION_COOKIE = "sunny_account_session";
+export const ACCOUNT_SESSION_COOKIE = "sunny_account_session_v2";
+export const LEGACY_ACCOUNT_SESSION_COOKIES = ["sunny_account_session"] as const;
 export const ACCOUNT_SESSION_MAX_AGE = 60 * 60 * 24 * 14;
 
 export type SessionAccount = {
@@ -70,6 +71,14 @@ export function verifyAccountSession(token: string | undefined | null): SessionA
   } catch {
     return null;
   }
+}
+
+export function verifyAnyAccountSession(tokens: Array<string | undefined | null>): SessionAccount | null {
+  for (const token of tokens) {
+    const account = verifyAccountSession(token);
+    if (account) return account;
+  }
+  return null;
 }
 
 export async function hashAccountPassword(password: string) {
