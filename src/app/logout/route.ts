@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AUTH_COOKIE } from "@/lib/auth";
-import { ACCOUNT_SESSION_COOKIE } from "@/lib/account-auth";
+import { ACCOUNT_SESSION_COOKIE, LEGACY_ACCOUNT_SESSION_COOKIES } from "@/lib/account-auth";
 
 export function GET(request: NextRequest) {
   const response = NextResponse.redirect(new URL("/login", request.url));
@@ -11,6 +11,10 @@ export function GET(request: NextRequest) {
     "/tasks",
     "/resources",
     "/projects",
+    "/guide",
+    "/week",
+    "/today",
+    "/receptions",
     "/contacts",
     "/knowledge",
     "/meeting-reviews",
@@ -18,7 +22,7 @@ export function GET(request: NextRequest) {
     "/settings",
   ];
   for (const path of legacyPaths) {
-    for (const name of [ACCOUNT_SESSION_COOKIE, AUTH_COOKIE]) {
+    for (const name of [ACCOUNT_SESSION_COOKIE, ...LEGACY_ACCOUNT_SESSION_COOKIES, AUTH_COOKIE]) {
       response.cookies.set(name, "", {
         expires: new Date(0),
         httpOnly: true,
