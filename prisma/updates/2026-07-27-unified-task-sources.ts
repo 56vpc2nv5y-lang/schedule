@@ -158,7 +158,8 @@ async function syncFeedbackFollowUps() {
 
 async function normalizeTrainingPausePhase() {
   return prisma.trainingProfile.updateMany({
-    where: { currentPhase: { in: ['暂停 / 重启复核', '鏆傚仠 / 閲嶅惎澶嶆牳'] } },
+    // 第二项用 Unicode 转义匹配历史误编码值，避免源码继续显示乱码。
+    where: { currentPhase: { in: ['暂停 / 重启复核', '\u93c6\u509a\u4ee0 / \u95b2\u5d85\u60ce\u6fb6\u5d86\u7273'] } },
     data: { currentPhase: '筹备', postponed: true },
   });
 }
