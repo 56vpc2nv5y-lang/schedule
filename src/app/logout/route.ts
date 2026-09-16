@@ -5,7 +5,29 @@ import { ACCOUNT_SESSION_COOKIE } from "@/lib/account-auth";
 
 export function GET(request: NextRequest) {
   const response = NextResponse.redirect(new URL("/login", request.url));
-  response.cookies.delete(ACCOUNT_SESSION_COOKIE);
-  response.cookies.delete(AUTH_COOKIE);
+  const legacyPaths = [
+    "/",
+    "/calendar",
+    "/tasks",
+    "/resources",
+    "/projects",
+    "/contacts",
+    "/knowledge",
+    "/meeting-reviews",
+    "/assistant",
+    "/settings",
+  ];
+  for (const path of legacyPaths) {
+    for (const name of [ACCOUNT_SESSION_COOKIE, AUTH_COOKIE]) {
+      response.cookies.set(name, "", {
+        expires: new Date(0),
+        httpOnly: true,
+        maxAge: 0,
+        path,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+    }
+  }
   return response;
 }
