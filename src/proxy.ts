@@ -16,6 +16,9 @@ function isOwnerOnlyPath(pathname: string) {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  if (pathname === "/logout") {
+    return NextResponse.next();
+  }
   if (publicPaths.has(pathname)) {
     const account = verifyAccountSession(req.cookies.get(ACCOUNT_SESSION_COOKIE)?.value);
     if (account) {
