@@ -97,21 +97,21 @@ export async function TripMap() {
     });
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-[#1b2450] bg-[#070c22] shadow-lg">
+    <div className="trip-map-shell relative overflow-hidden rounded-xl border shadow-lg">
       {/* 背景光斑 */}
-      <div className="hero-blob pointer-events-none absolute -left-24 -top-32 h-72 w-72 rounded-full bg-fuchsia-500/25 blur-3xl" />
-      <div className="hero-blob pointer-events-none absolute -right-16 top-10 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl [animation-delay:-4s]" />
-      <div className="hero-blob pointer-events-none absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-violet-500/20 blur-3xl [animation-delay:-8s]" />
+      <div className="trip-map-glow-secondary hero-blob pointer-events-none absolute -left-24 -top-32 h-72 w-72 rounded-full blur-3xl" />
+      <div className="trip-map-glow-primary hero-blob pointer-events-none absolute -right-16 top-10 h-80 w-80 rounded-full blur-3xl [animation-delay:-4s]" />
+      <div className="trip-map-glow-tertiary hero-blob pointer-events-none absolute bottom-0 left-1/3 h-64 w-64 rounded-full blur-3xl [animation-delay:-8s]" />
 
       <div className="relative flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-5 py-3.5">
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-white">
-            <MapPinned className="h-4 w-4 text-cyan-300" />
+            <MapPinned className="trip-map-primary h-4 w-4" />
             {t.tripMap.title}
           </div>
-          <p className="mt-0.5 text-xs text-slate-400">{t.tripMap.hint}</p>
+          <p className="trip-map-muted mt-0.5 text-xs">{t.tripMap.hint}</p>
         </div>
-        <span className="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">
+        <span className="trip-map-chip rounded-full border px-3 py-1 text-xs font-medium">
           ✨ {t.tripMap.lit(visited.length)}
         </span>
       </div>
@@ -125,19 +125,19 @@ export async function TripMap() {
         >
           <defs>
             <radialGradient id="cityGlowA" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.9" />
-              <stop offset="45%" stopColor="#818cf8" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#e879f9" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--map-primary)" stopOpacity="0.9" />
+              <stop offset="45%" stopColor="var(--map-secondary)" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="var(--map-tertiary)" stopOpacity="0" />
             </radialGradient>
             <radialGradient id="cityGlowB" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.9" />
-              <stop offset="50%" stopColor="#fb7185" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#fb7185" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--map-warning)" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="var(--map-danger)" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="var(--map-danger)" stopOpacity="0" />
             </radialGradient>
             <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#22d3ee" />
-              <stop offset="50%" stopColor="#a78bfa" />
-              <stop offset="100%" stopColor="#f472b6" />
+              <stop offset="0%" stopColor="var(--map-primary)" />
+              <stop offset="50%" stopColor="var(--map-secondary)" />
+              <stop offset="100%" stopColor="var(--map-tertiary)" />
             </linearGradient>
           </defs>
 
@@ -176,7 +176,7 @@ export async function TripMap() {
                 className="arc-flow"
                 opacity="0.8"
               />
-              <circle r="2.6" fill="#ffffff">
+              <circle r="2.6" fill="var(--map-on-dark)">
                 <animateMotion
                   dur={`${3 + idx * 0.9}s`}
                   repeatCount="indefinite"
@@ -211,7 +211,7 @@ export async function TripMap() {
                       cy={pt.y}
                       r="7"
                       fill="none"
-                      stroke="#22d3ee"
+                      stroke="var(--map-primary)"
                       strokeWidth="1.4"
                       className="ring-pulse"
                     />
@@ -220,12 +220,12 @@ export async function TripMap() {
                       cy={pt.y}
                       r="7"
                       fill="none"
-                      stroke="#f472b6"
+                      stroke="var(--map-tertiary)"
                       strokeWidth="1.4"
                       className="ring-pulse"
                       style={{ animationDelay: "1.1s" }}
                     />
-                    <circle cx={pt.x} cy={pt.y} r="3" fill="#ffffff" />
+                    <circle cx={pt.x} cy={pt.y} r="3" fill="var(--map-on-dark)" />
                   </>
                 ) : (
                   <circle
@@ -233,7 +233,7 @@ export async function TripMap() {
                     cy={pt.y}
                     r="5.5"
                     fill="none"
-                    stroke="#fbbf24"
+                    stroke="var(--map-warning)"
                     strokeWidth="1.6"
                     strokeDasharray="3 3"
                     className="ring-pulse"
@@ -245,8 +245,8 @@ export async function TripMap() {
                   textAnchor="middle"
                   fontSize="11.5"
                   fontWeight={isVisited ? 600 : 400}
-                  fill={isVisited ? "#f0f9ff" : "#fcd34d"}
-                  stroke="#070c22"
+                  fill={isVisited ? "var(--map-on-dark)" : "var(--map-warning-soft)"}
+                  stroke="var(--map-bg)"
                   strokeWidth="3"
                   paintOrder="stroke"
                 >
@@ -260,14 +260,14 @@ export async function TripMap() {
       </div>
 
       <div className="relative flex flex-wrap items-center gap-2 border-t border-white/10 px-5 py-2.5 text-xs">
-        <span className="flex items-center gap-1.5 text-slate-300">
-          <span className="h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_8px_#22d3ee]" />
+        <span className="trip-map-text flex items-center gap-1.5">
+          <span className="trip-map-legend-dot h-2.5 w-2.5 rounded-full" />
           {t.tripMap.lit(visited.length)}
         </span>
         {planned.map((city) => (
           <span
             key={city.name}
-            className="rounded-full border border-amber-300/40 bg-amber-400/10 px-2.5 py-0.5 text-amber-200"
+            className="trip-map-planned rounded-full border px-2.5 py-0.5"
           >
             {city.name} · {t.statuses.reception.PLANNED}
           </span>

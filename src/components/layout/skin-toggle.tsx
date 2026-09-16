@@ -7,10 +7,10 @@ type Theme = "sunny-a" | "sunny-c" | "sunny-third";
 const THEMES: Theme[] = ["sunny-a", "sunny-c", "sunny-third"];
 const THEME_CHANGE_EVENT = "schedule-theme-change";
 
-const THEME_META: Record<Theme, { label: string; dot: string; text: string }> = {
-  "sunny-a": { label: "默认暖白", dot: "#F6F3EC", text: "A" },
-  "sunny-c": { label: "古风公文", dot: "#EDE3D2", text: "C" },
-  "sunny-third": { label: "Executive Cobalt", dot: "#2F5BFF", text: "3" },
+const THEME_META: Record<Theme, { label: string; text: string }> = {
+  "sunny-a": { label: "默认暖白", text: "A" },
+  "sunny-c": { label: "古风公文", text: "C" },
+  "sunny-third": { label: "Executive Cobalt", text: "3" },
 };
 
 function normalizeTheme(value: string | null): Theme {
@@ -35,8 +35,8 @@ export function SkinToggle() {
   const theme = useSyncExternalStore(subscribeToTheme, readTheme, getServerTheme);
 
   function apply(next: Theme) {
-    document.documentElement.dataset.theme = next;
-    document.documentElement.dataset.density = "comfortable";
+    document.documentElement.setAttribute("data-theme", next);
+    document.documentElement.setAttribute("data-density", "comfortable");
     document.documentElement.setAttribute("data-skin", next === "sunny-c" ? "sunny-c" : "sunny-a");
     try {
       localStorage.setItem("sunny-theme", next);
@@ -58,11 +58,11 @@ export function SkinToggle() {
               onClick={() => apply(option)}
               title={meta.label}
               aria-label={meta.label}
+              data-theme-option={option}
               className={cn(
                 "skin-dot grid h-8 w-8 place-items-center rounded-full border text-[10px] font-semibold transition-colors",
                 theme === option ? "is-active border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground",
               )}
-              style={{ background: meta.dot, color: option === "sunny-third" ? "#fff" : undefined }}
             >
               {meta.text}
             </button>
