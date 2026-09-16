@@ -364,7 +364,7 @@ export default async function MoneyPage({
             <span className="flabel">{t.money.fNote}</span>
             <input
               name="note"
-              placeholder="渚嬪锛氬悎鑲ユ帴寰呮墦杞?椁愯垂"
+              placeholder="例如：合肥接待打车/餐费"
               className="field"
             />
           </label>
