@@ -50,14 +50,14 @@ const DAY = 86_400_000;
 
 function barTone(status: string) {
   if (status === "COMPLETED") return "bg-emerald-600";
-  if (status === "IN_PROGRESS") return "bg-indigo-600";
+  if (status === "IN_PROGRESS") return "bg-primary";
   if (status === "DELAYED") return "bg-red-600";
   return "bg-slate-500";
 }
 
 function borderTone(status: string) {
   if (status === "COMPLETED") return "border-emerald-500";
-  if (status === "IN_PROGRESS") return "border-indigo-500";
+  if (status === "IN_PROGRESS") return "border-primary";
   if (status === "DELAYED") return "border-red-500";
   return "border-slate-400";
 }
@@ -287,7 +287,7 @@ export function GanttChart({
           </div>
           <div className="hidden items-center gap-2 text-xs lg:flex">
             <Legend color="bg-emerald-600" label={t.gantt.done} />
-            <Legend color="bg-indigo-600" label={t.gantt.active} />
+            <Legend color="bg-primary" label={t.gantt.active} />
             <Legend color="bg-red-600" label={t.gantt.delayed} />
             <Legend color="bg-slate-500" label={t.gantt.notStarted} />
           </div>

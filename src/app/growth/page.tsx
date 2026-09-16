@@ -6,7 +6,7 @@ import {
   deleteGrowthLogAction,
   updateGrowthLogAction,
 } from "@/app/actions";
-import { InlineEdit } from "@/components/ui/inline-edit";
+import { RecordDisclosure } from "@/components/ui/record-disclosure";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { CollapseCard } from "@/components/ui/collapse-card";
@@ -356,73 +356,72 @@ function LogList({
       {logs.map((log) => {
         const project = log.projectId ? projectMap.get(log.projectId) : undefined;
         return (
-          <details key={log.id} className="fold g-entry">
-            <summary>
-              <span className={`stamp ${categoryTone(log.category)}`}>{categoryLabel(log.category)}</span>
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold">{log.title}</h3>
-                {log.detail ? <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">{log.detail}</p> : null}
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {project ? <span className="chip">{pname(project)}</span> : <span className="chip">未关联项目</span>}
-                  <span className="chip">{log.happenedAt}</span>
-                </div>
+          <RecordDisclosure
+            key={log.id}
+            className="g-entry"
+            ariaLabel={`展开“${log.title}”的编辑表单`}
+            summary={
+              <div className="flex min-w-0 items-center gap-2">
+                <span className={`stamp ${categoryTone(log.category)}`}>{categoryLabel(log.category)}</span>
+                <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{log.title}</h3>
+                <span className="chip hidden sm:inline-flex">{project ? pname(project) : "未关联项目"}</span>
+                <span className="chip shrink-0">{log.happenedAt}</span>
               </div>
+            }
+          >
+            {log.detail ? <p className="mb-3 text-sm leading-6 text-muted-foreground">{log.detail}</p> : null}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <ResumeCoach
+                configured={aiReady}
+                projects={projectOptions}
+                source={{
+                  title: log.title,
+                  detail: log.detail,
+                  projectId: log.projectId,
+                  projectName: project ? pname(project) : "",
+                  happenedAt: log.happenedAt,
+                }}
+              />
               <form action={deleteGrowthLogAction}>
                 <input type="hidden" name="id" value={log.id} />
-                <Button variant="ghost" size="icon" type="submit" title="删除记录">
+                <Button variant="ghost" size="sm" type="submit">
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  删除记录
                 </Button>
               </form>
-            </summary>
-            <div className="fold-body">
-              <div className="flex flex-wrap items-center gap-4">
-                <ResumeCoach
-                  configured={aiReady}
-                  projects={projectOptions}
-                  source={{
-                    title: log.title,
-                    detail: log.detail,
-                    projectId: log.projectId,
-                    projectName: project ? pname(project) : "",
-                    happenedAt: log.happenedAt,
-                  }}
-                />
-                <InlineEdit label="编辑">
-                  <form action={updateGrowthLogAction} className="grid gap-2 sm:grid-cols-2">
-                    <input type="hidden" name="id" value={log.id} />
-                    <label className="sm:col-span-2">
-                      <span className="flabel">标题</span>
-                      <input name="title" defaultValue={log.title} className="field field-sm" />
-                    </label>
-                    <label>
-                      <span className="flabel">分类</span>
-                      <select name="category" defaultValue={log.category} className="field field-sm">
-                        {categoryOrder.map((category) => <option key={category} value={category}>{categoryLabel(category)}</option>)}
-                      </select>
-                    </label>
-                    <label>
-                      <span className="flabel">关联项目</span>
-                      <select name="projectId" defaultValue={log.projectId} className="field field-sm">
-                        <option value="">不关联项目</option>
-                        {projects.map((project) => <option key={project.id} value={project.id}>{pname(project)}</option>)}
-                      </select>
-                    </label>
-                    <label>
-                      <span className="flabel">日期</span>
-                      <input type="date" name="happenedAt" defaultValue={log.happenedAt} className="field field-sm" />
-                    </label>
-                    <label className="sm:col-span-2">
-                      <span className="flabel">详情</span>
-                      <input name="detail" defaultValue={log.detail} className="field field-sm" />
-                    </label>
-                    <div className="flex items-end justify-end sm:col-span-2">
-                      <Button type="submit" size="sm">保存</Button>
-                    </div>
-                  </form>
-                </InlineEdit>
-              </div>
             </div>
-          </details>
+            <form action={updateGrowthLogAction} className="grid gap-2 border-t border-border pt-3 sm:grid-cols-2">
+              <input type="hidden" name="id" value={log.id} />
+              <label className="sm:col-span-2">
+                <span className="flabel">标题</span>
+                <input name="title" defaultValue={log.title} className="field field-sm" />
+              </label>
+              <label>
+                <span className="flabel">分类</span>
+                <select name="category" defaultValue={log.category} className="field field-sm">
+                  {categoryOrder.map((category) => <option key={category} value={category}>{categoryLabel(category)}</option>)}
+                </select>
+              </label>
+              <label>
+                <span className="flabel">关联项目</span>
+                <select name="projectId" defaultValue={log.projectId} className="field field-sm">
+                  <option value="">不关联项目</option>
+                  {projects.map((project) => <option key={project.id} value={project.id}>{pname(project)}</option>)}
+                </select>
+              </label>
+              <label>
+                <span className="flabel">日期</span>
+                <input type="date" name="happenedAt" defaultValue={log.happenedAt} className="field field-sm" />
+              </label>
+              <label className="sm:col-span-2">
+                <span className="flabel">详情</span>
+                <input name="detail" defaultValue={log.detail} className="field field-sm" />
+              </label>
+              <div className="flex items-end justify-end sm:col-span-2">
+                <Button type="submit" size="sm">保存</Button>
+              </div>
+            </form>
+          </RecordDisclosure>
         );
       })}
     </section>

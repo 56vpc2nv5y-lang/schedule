@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react";
 import { deleteTaskAction } from "@/app/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { TaskStatusPill } from "@/components/ui/status-pill";
+// 状态展示和选择统一由 StatusSelect 提供。
 import { taskTypes } from "@/lib/default-data";
 import { getTaskPageData } from "@/lib/database-data";
 import { businessKindFromTask, businessKindMeta, normalizeTaskStatus, taskStatusOptions } from "@/lib/workflow-meta";
@@ -34,7 +34,6 @@ function sourceMeta(source: string) {
 function dueLabel(date: string) {
   if (!date) return "待确认";
   const today = new Date().toISOString().slice(0, 10);
-  if (date < today) return "已逾期 · " + date;
   if (date === today) return "今天";
   return date;
 }
@@ -159,11 +158,9 @@ export default async function TasksPage({
                 <thead>
                   <tr>
                     <th></th>
-                    <th>任务 / 下一步</th>
-                    <th>归属</th>
-                    <th>当前状态</th>
-                    <th>截止时间</th>
-                    <th>操作</th>
+                    <th>任务 / 关键标签</th>
+                    <th>状态</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -176,41 +173,28 @@ export default async function TasksPage({
                       <tr key={task.id}>
                         <td><span className="os-check">{normalizeTaskStatus(task.status) === "DONE" ? "✓" : ""}</span></td>
                         <td>
-                          <div className="os-task-title">
-                            {task.source === "MANUAL" ? <TaskEditButton trigger="title" task={task} projects={projectOptions} contacts={contacts} taskTypes={taskTypes} /> : task.title}
-                          </div>
-                          <div className="os-task-next">{task.description || task.sourceLabel || "下一步待补充"}</div>
-                          <div className="os-meta">
-                            <span className={`os-pill ${source.tone}`}>{source.label}</span>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <div className="os-task-title min-w-0 flex-1 truncate">
+                              {task.source === "MANUAL" ? <TaskEditButton trigger="title" task={task} projects={projectOptions} contacts={contacts} taskTypes={taskTypes} /> : task.title}
+                            </div>
+                            <span className={`os-pill ${source.tone} hidden lg:inline-flex`}>{source.label}</span>
                             <span className={`os-pill ${business.calendarClass}`}>{business.label}</span>
-                            <span className="os-pill gray">优先级：{priorityLabels[task.priority] ?? task.priority}</span>
+                            <span className="os-pill gray hidden xl:inline-flex">{project?.nameZh ?? "个人/行政"}</span>
+                            <span className="os-pill gray hidden xl:inline-flex">{assignee ? assignee.name : "未指定负责人"}</span>
+                            <span className="os-pill gray hidden 2xl:inline-flex">优先级：{priorityLabels[task.priority] ?? task.priority}</span>
+                            <span className="shrink-0 text-xs os-muted">{dueLabel(task.dueDate)}</span>
                           </div>
                         </td>
                         <td>
-                          <div className="os-small os-strong">{project?.nameZh ?? "个人/行政"}</div>
-                          <div className="os-tiny os-muted">{assignee ? assignee.name : "未指定负责人"}</div>
+                          <StatusSelect taskId={task.id} value={task.status} options={statusOptions} overdue={Boolean(overdue)} />
                         </td>
                         <td>
-                          <div className="os-stack">
-                            <TaskStatusPill status={task.status} />
-                            <StatusSelect taskId={task.id} value={task.status} options={statusOptions} />
-                          </div>
-                        </td>
-                        <td>
-                          <span className={overdue ? "os-overdue" : ""}>{dueLabel(task.dueDate)}</span>
-                          {task.waitingOn ? <div className="os-tiny os-muted mt-1">等待：{task.waitingOn}</div> : null}
-                          {task.sendChannel ? <div className="os-tiny os-muted mt-1">渠道：{task.sendChannel}</div> : null}
-                        </td>
-                        <td>
-                          <div className="os-actions">
-                            {task.source === "MANUAL" ? <TaskEditButton task={task} projects={projectOptions} contacts={contacts} taskTypes={taskTypes} /> : null}
-                            {task.source === "MANUAL" ? (
-                              <form action={deleteTaskAction}>
-                                <input type="hidden" name="taskId" value={task.id} />
-                                <Button variant="ghost" size="icon" type="submit" className="h-8 w-8" title="删除任务"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></Button>
-                              </form>
-                            ) : null}
-                          </div>
+                          {task.source === "MANUAL" ? (
+                            <form action={deleteTaskAction}>
+                              <input type="hidden" name="taskId" value={task.id} />
+                              <Button variant="ghost" size="icon" type="submit" className="h-8 w-8" title="删除任务"><Trash2 className="h-3.5 w-3.5 text-muted-foreground" /></Button>
+                            </form>
+                          ) : null}
                         </td>
                       </tr>
                     );

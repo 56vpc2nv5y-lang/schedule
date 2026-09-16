@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { createProjectAction } from "@/app/actions";
 import { AppShell } from "@/components/layout/app-shell";
+import { ProjectPhaseStepper } from "@/components/projects/project-phase-stepper";
 import { Button } from "@/components/ui/button";
 import { CollapseCard } from "@/components/ui/collapse-card";
 import { regions, receptionTypeMeta } from "@/lib/default-data";
@@ -42,7 +43,6 @@ const statusMeta: Record<string, { label: string; tone: string }> = {
   DONE: { label: "已完成", tone: "done" },
 };
 
-const trainFlow = ["大纲", "核算成本", "报价", "合同", "筹备", "暂停复核"];
 const restartChecklist = ["来华人员名单是否变更", "培训老师时间是否仍可行", "课件是否需要更新确认"];
 
 function isTrainingProject(project: { type?: string; nameZh: string; nameEn?: string }) {
@@ -187,7 +187,6 @@ function renderProjectRows(projects: ProjectItem[], context: { pname: (p: { name
         <div className="proj-body">
           {context.training ? renderTrainingFlow(project) : renderStageFlow(projectStages)}
           <div className="fields"><span>未完成任务 <b>{openTasks.length}</b></span><span>等待反馈 <b>{waitingTasks.length}</b></span></div>
-          <div className={"next-box " + (project.status === "PAUSED" ? "pause" : "")}>下一步：{nextTask?.title ?? (project.status === "PAUSED" ? "暂停中，没有下一步是有意的空白" : "暂无未完成任务")}</div>
         </div>
       </details>
     );
@@ -210,15 +209,9 @@ function renderStageFlow(stages: StageItem[]) {
 function renderTrainingFlow(project: ProjectItem) {
   const paused = project.status === "PAUSED";
   const currentName = project.currentStageName || "大纲";
-  const currentIndex = paused ? trainFlow.length - 1 : Math.max(0, trainFlow.findIndex((name) => currentName.includes(name)));
   return (
     <>
-      <div className="flow">
-        {trainFlow.map((name, index) => {
-          const state = paused ? (index === trainFlow.length - 1 ? "now pause" : "done") : index < currentIndex ? "done" : index === currentIndex ? "now" : "";
-          return <span key={name} className="step-wrap inline-flex items-center"><span className={"step " + state}><span className="label">{name}</span></span>{index < trainFlow.length - 1 ? <span className="arrow">→</span> : null}</span>;
-        })}
-      </div>
+      <ProjectPhaseStepper currentPhase={currentName} paused={paused} className="mb-3" />
       {paused ? <div className="next-box pause">重启前必查：{restartChecklist.join(" / ")}</div> : null}
     </>
   );

@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { CollapseCard } from "@/components/ui/collapse-card";
 import { contactRoles, regions } from "@/lib/default-data";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { getContactsForView, getProjectsForView, getTasksForView } from "@/lib/database-data";
 import { normalizeTaskStatus } from "@/lib/workflow-meta";
 
@@ -259,9 +260,8 @@ export default async function ContactsPage({
                 {selectedRelated.length === 0 ? <div className="os-tiny os-muted mt-2">暂未关联项目。</div> : null}
 
                 <div className="os-divider" />
-                <details className="fold">
-                  <summary><span className="os-small os-strong">编辑联系人</span></summary>
-                  <div className="fold-body">
+                <InlineEdit label="编辑联系人">
+                  <div className="mt-3">
                     <form action={updateContactAction} className="grid gap-3 sm:grid-cols-2">
                       <input type="hidden" name="id" value={selectedContact.id} />
                       <label><span className="flabel">姓名</span><input name="name" defaultValue={selectedContact.name} className="field" /></label>
@@ -279,7 +279,7 @@ export default async function ContactsPage({
                       <Button type="submit" variant="ghost" size="sm"><Trash2 className="h-3.5 w-3.5" />删除联系人</Button>
                     </form>
                   </div>
-                </details>
+                </InlineEdit>
               </>
             ) : <div className="empty">请选择联系人。</div>}
           </aside>

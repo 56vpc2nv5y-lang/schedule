@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { LocaleProvider } from "@/components/layout/locale-provider";
 import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
-import "./gantt-skin.css";
-import "./comfort-skin.css";
 import "./sunny-design-system.css";
 
 export const metadata: Metadata = {
@@ -14,7 +12,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Sunny 工作系统" },
 };
 
-const themeScript = `try{var theme=localStorage.getItem('sunny-theme')||'sunny-third';if(!['sunny-a','sunny-c','sunny-third'].includes(theme))theme='sunny-third';document.documentElement.dataset.theme=theme;document.documentElement.dataset.density=localStorage.getItem('sunny-density')||'comfortable';var skin=theme==='sunny-c'?'sunny-c':'sunny-a';document.documentElement.setAttribute('data-skin',skin)}catch(e){document.documentElement.dataset.theme='sunny-third';document.documentElement.dataset.density='comfortable';document.documentElement.setAttribute('data-skin','sunny-a')}`;
+const themeScript = `try{var theme=localStorage.getItem('sunny-theme')||'sunny-third';if(!['sunny-a','sunny-c','sunny-third'].includes(theme))theme='sunny-third';document.documentElement.dataset.theme=theme;document.documentElement.dataset.layout='executive';document.documentElement.dataset.density=localStorage.getItem('sunny-density')||'comfortable';var skin=theme==='sunny-c'?'sunny-c':'sunny-a';document.documentElement.setAttribute('data-skin',skin)}catch(e){document.documentElement.dataset.theme='sunny-third';document.documentElement.dataset.layout='executive';document.documentElement.dataset.density='comfortable';document.documentElement.setAttribute('data-skin','sunny-a')}`;
 
 export default async function RootLayout({
   children,
@@ -22,7 +20,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" data-theme="sunny-third" data-density="comfortable" data-skin="sunny-a" suppressHydrationWarning>
+    <html lang="zh-CN" data-layout="executive" data-theme="sunny-third" data-density="comfortable" data-skin="sunny-a" suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <PwaRegister />

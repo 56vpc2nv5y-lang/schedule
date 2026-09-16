@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollapseCard } from "@/components/ui/collapse-card";
-import { InlineEdit } from "@/components/ui/inline-edit";
+import { RecordDisclosure } from "@/components/ui/record-disclosure";
 import { getT } from "@/lib/locale";
 import { getMoneyRecordsForView } from "@/lib/database-data";
 
@@ -200,119 +200,118 @@ export default async function MoneyPage({
             records.map((record) => {
               const meta = kindMeta[record.kind] ?? kindMeta.OTHER;
               return (
-                <div key={record.id} className="rounded-lg border border-border p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <RecordDisclosure
+                  key={record.id}
+                  ariaLabel={`展开${meta.label}记录的编辑表单`}
+                  summary={
+                    <div className="flex min-w-0 items-center gap-2">
                       <Badge tone={meta.tone}>{meta.label}</Badge>
-                      <span className="tnum text-sm font-semibold">
+                      <span className="tnum shrink-0 text-sm font-semibold">
                         {fmtMoney(record.amount, record.currency)}
                       </span>
-                      <span className="tnum font-mono text-xs text-muted-foreground">
-                        {record.happenedAt}
-                      </span>
                       {record.note ? (
-                        <span className="truncate text-xs text-muted-foreground">
+                        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                           {record.note}
                         </span>
-                      ) : null}
+                      ) : <span className="min-w-0 flex-1" />}
+                      <span className="tnum shrink-0 font-mono text-xs text-muted-foreground">
+                        {record.happenedAt}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {record.kind === "ADVANCE" ? (
-                        <form action={markReimbursedAction}>
-                          <input type="hidden" name="id" value={record.id} />
-                          <Button variant="outline" size="sm" type="submit">
-                            <Undo2 className="h-3.5 w-3.5" />
-                            {t.money.markBack}
-                          </Button>
-                        </form>
-                      ) : null}
-                      <form action={deleteMoneyRecordAction}>
+                  }
+                >
+                  <div className="mb-3 flex items-center justify-end gap-1.5">
+                    {record.kind === "ADVANCE" ? (
+                      <form action={markReimbursedAction}>
                         <input type="hidden" name="id" value={record.id} />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          type="submit"
-                          className="h-8 w-8"
-                          title={t.common.delete}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Button variant="outline" size="sm" type="submit">
+                          <Undo2 className="h-3.5 w-3.5" />
+                          {t.money.markBack}
                         </Button>
                       </form>
-                    </div>
-                  </div>
-                  <div className="mt-2 border-t border-border/60 pt-2">
-                    <InlineEdit label={t.common.edit}>
-                      <form
-                        action={updateMoneyRecordAction}
-                        className="grid gap-2 sm:grid-cols-4"
+                    ) : null}
+                    <form action={deleteMoneyRecordAction}>
+                      <input type="hidden" name="id" value={record.id} />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        type="submit"
+                        className="h-8 w-8"
+                        title={t.common.delete}
                       >
-                        <input type="hidden" name="id" value={record.id} />
-                        <label>
-                          <span className="flabel">{t.money.fKind}</span>
-                          <select
-                            name="kind"
-                            defaultValue={record.kind}
-                            className="field field-sm"
-                          >
-                            <option value="ADVANCE">{t.money.kindAdvance}</option>
-                            <option value="SALARY">{t.money.kindSalary}</option>
-                            <option value="REIMBURSED">
-                              {t.money.kindReimbursed}
-                            </option>
-                            <option value="OTHER">{t.money.kindOther}</option>
-                          </select>
-                        </label>
-                        <label>
-                          <span className="flabel">{t.money.fAmount}</span>
-                          <input
-                            name="amount"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            defaultValue={record.amount}
-                            className="field field-sm"
-                          />
-                        </label>
-                        <label>
-                          <span className="flabel">{t.money.fCurrency}</span>
-                          <select
-                            name="currency"
-                            defaultValue={record.currency}
-                            className="field field-sm"
-                          >
-                            <option>CNY</option>
-                            <option>SGD</option>
-                            <option>MOP</option>
-                            <option>HKD</option>
-                            <option>USD</option>
-                          </select>
-                        </label>
-                        <label>
-                          <span className="flabel">{t.money.fDate}</span>
-                          <input
-                            type="date"
-                            name="happenedAt"
-                            defaultValue={record.happenedAt}
-                            className="field field-sm"
-                          />
-                        </label>
-                        <label className="sm:col-span-3">
-                          <span className="flabel">{t.money.fNote}</span>
-                          <input
-                            name="note"
-                            defaultValue={record.note}
-                            className="field field-sm"
-                          />
-                        </label>
-                        <div className="flex items-end justify-end">
-                          <Button type="submit" size="sm">
-                            {t.common.save}
-                          </Button>
-                        </div>
-                      </form>
-                    </InlineEdit>
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </form>
                   </div>
-                </div>
+                  <form
+                    action={updateMoneyRecordAction}
+                    className="grid gap-2 border-t border-border pt-3 sm:grid-cols-4"
+                  >
+                    <input type="hidden" name="id" value={record.id} />
+                    <label>
+                      <span className="flabel">{t.money.fKind}</span>
+                      <select
+                        name="kind"
+                        defaultValue={record.kind}
+                        className="field field-sm"
+                      >
+                        <option value="ADVANCE">{t.money.kindAdvance}</option>
+                        <option value="SALARY">{t.money.kindSalary}</option>
+                        <option value="REIMBURSED">
+                          {t.money.kindReimbursed}
+                        </option>
+                        <option value="OTHER">{t.money.kindOther}</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span className="flabel">{t.money.fAmount}</span>
+                      <input
+                        name="amount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        defaultValue={record.amount}
+                        className="field field-sm"
+                      />
+                    </label>
+                    <label>
+                      <span className="flabel">{t.money.fCurrency}</span>
+                      <select
+                        name="currency"
+                        defaultValue={record.currency}
+                        className="field field-sm"
+                      >
+                        <option>CNY</option>
+                        <option>SGD</option>
+                        <option>MOP</option>
+                        <option>HKD</option>
+                        <option>USD</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span className="flabel">{t.money.fDate}</span>
+                      <input
+                        type="date"
+                        name="happenedAt"
+                        defaultValue={record.happenedAt}
+                        className="field field-sm"
+                      />
+                    </label>
+                    <label className="sm:col-span-3">
+                      <span className="flabel">{t.money.fNote}</span>
+                      <input
+                        name="note"
+                        defaultValue={record.note}
+                        className="field field-sm"
+                      />
+                    </label>
+                    <div className="flex items-end justify-end">
+                      <Button type="submit" size="sm">
+                        {t.common.save}
+                      </Button>
+                    </div>
+                  </form>
+                </RecordDisclosure>
               );
             })
           )}

@@ -9,6 +9,7 @@ import {
   toggleTrainingChecklistAction,
   updateTrainingProfileAction,
 } from '@/app/actions';
+import { ProjectPhaseStepper } from '@/components/projects/project-phase-stepper';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -122,6 +123,7 @@ export function TrainingProfilePanel({
         </div>
       </CardHeader>
       <CardContent className='pt-5'>
+        <ProjectPhaseStepper currentPhase={currentPhase} paused={isPaused} />
         <form action={updateTrainingProfileAction} className='space-y-4'>
           <input type='hidden' name='projectId' value={profile.projectId} />
 

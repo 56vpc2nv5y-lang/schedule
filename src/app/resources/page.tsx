@@ -1,19 +1,19 @@
 import Link from "next/link";
 import { ExternalLink, FolderOpen, Plus, Star } from "lucide-react";
 import { deleteResourceAction, updateResourceAction } from "@/app/actions";
+import { ResourceCreatePanel } from "@/app/resources/resource-create-panel";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollapseCard } from "@/components/ui/collapse-card";
-import { InlineEdit } from "@/components/ui/inline-edit";
-import { resourceCategories } from "@/lib/default-data";
-import { getT } from "@/lib/locale";
-import type { Dict } from "@/lib/i18n";
+import { RecordDisclosure } from "@/components/ui/record-disclosure";
 import { getResourcesForView } from "@/lib/database-data";
+import { resourceCategories } from "@/lib/default-data";
+import type { Dict } from "@/lib/i18n";
+import { getT } from "@/lib/locale";
 import { isStorageConfigured } from "@/lib/storage";
-import { ResourceCreatePanel } from "@/app/resources/resource-create-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +26,14 @@ export default async function ResourcesPage({
     await Promise.all([searchParams, getT(), getResourcesForView()]);
   const storageReady = isStorageConfigured();
 
-  const important = resources.filter((r) => r.important);
+  const important = resources.filter((resource) => resource.important);
   const byCategory = resourceCategories
     .map((category) => ({
       category,
-      items: resources.filter((r) => r.category === category),
+      // Important resources are promoted above and should not be rendered twice.
+      items: resources.filter(
+        (resource) => resource.category === category && !resource.important,
+      ),
     }))
     .filter((group) => group.items.length > 0);
 
@@ -84,10 +87,15 @@ export default async function ResourcesPage({
       {important.length > 0 ? (
         <Card className="mb-5">
           <CardHeader className="border-b border-border">
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-amber-500" />
-              {t.resources.frequent}
-            </CardTitle>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-amber-500" />
+                {t.resources.frequent}
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                重要资料集中显示在这里，下方分类不再重复列出。
+              </p>
+            </div>
           </CardHeader>
           <CardContent className="grid gap-3 pt-4 sm:grid-cols-2">
             {important.map((resource) => (
@@ -108,8 +116,7 @@ export default async function ResourcesPage({
             <CardHeader className="border-b border-border">
               <CardTitle className="flex items-center gap-2">
                 <FolderOpen className="h-4 w-4 text-primary" />
-                {group.category}
-                <Badge tone="neutral">{group.items.length}</Badge>
+                <span>{`${group.category} (${group.items.length})`}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 pt-4 sm:grid-cols-2">
@@ -136,7 +143,10 @@ export default async function ResourcesPage({
         title={t.resources.newResource}
         open={openForm === "1" || Boolean(error)}
       >
-        <ResourceCreatePanel categories={resourceCategories} storageReady={storageReady} />
+        <ResourceCreatePanel
+          categories={resourceCategories}
+          storageReady={storageReady}
+        />
       </CollapseCard>
     </AppShell>
   );
@@ -160,27 +170,27 @@ function ResourceRow({
   categories: string[];
 }) {
   return (
-    <div className="rounded-lg border border-border p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-sm font-medium">
-            {resource.important ? (
-              <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-500" />
-            ) : null}
-            <span className="truncate">{resource.name}</span>
-          </div>
-          {resource.note ? (
-            <div className="mt-1 text-xs leading-5 text-muted-foreground">
-              {resource.note}
-            </div>
+    <RecordDisclosure
+      ariaLabel={`展开“${resource.name}”的编辑表单`}
+      summary={
+        <div className="flex min-w-0 items-center gap-2">
+          {resource.important ? (
+            <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-500" />
           ) : null}
-          <div className="mt-2 flex items-center gap-2">
-            <Badge tone="info">{resource.category}</Badge>
-            <span className="tnum font-mono text-xs text-muted-foreground">
-              {resource.updatedAt}
-            </span>
-          </div>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            {resource.name}
+          </span>
+          <Badge tone="info">{resource.category}</Badge>
+          <span className="tnum hidden shrink-0 font-mono text-xs text-muted-foreground sm:inline">
+            {resource.updatedAt}
+          </span>
         </div>
+      }
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <p className="text-xs leading-5 text-muted-foreground">
+          {resource.note || "暂无备注"}
+        </p>
         {resource.url ? (
           <a
             href={resource.url}
@@ -197,77 +207,72 @@ function ResourceRow({
           </span>
         )}
       </div>
-
-      <div className="mt-2 flex items-center gap-3 border-t border-border/60 pt-2">
-        <InlineEdit label={t.common.edit}>
-          <form
-            action={updateResourceAction}
-            className="grid gap-2 sm:grid-cols-2"
+      <form
+        action={updateResourceAction}
+        className="grid gap-2 border-t border-border pt-3 sm:grid-cols-2"
+      >
+        <input type="hidden" name="id" value={resource.id} />
+        <label className="sm:col-span-2">
+          <span className="flabel">{t.resources.fName}</span>
+          <input
+            name="name"
+            defaultValue={resource.name}
+            className="field field-sm"
+          />
+        </label>
+        <label>
+          <span className="flabel">{t.resources.fCategory}</span>
+          <select
+            name="category"
+            defaultValue={resource.category}
+            className="field field-sm"
           >
-            <input type="hidden" name="id" value={resource.id} />
-            <label className="sm:col-span-2">
-              <span className="flabel">{t.resources.fName}</span>
-              <input
-                name="name"
-                defaultValue={resource.name}
-                className="field field-sm"
-              />
-            </label>
-            <label>
-              <span className="flabel">{t.resources.fCategory}</span>
-              <select
-                name="category"
-                defaultValue={resource.category}
-                className="field field-sm"
-              >
-                {categories.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="flabel">{t.resources.fUrl}</span>
-              <input
-                name="url"
-                defaultValue={resource.url}
-                placeholder="https://"
-                className="field field-sm"
-              />
-            </label>
-            <label className="sm:col-span-2">
-              <span className="flabel">{t.resources.fNote}</span>
-              <input
-                name="note"
-                defaultValue={resource.note}
-                className="field field-sm"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="important"
-                defaultChecked={resource.important}
-                className="h-4 w-4"
-              />
-              {t.resources.fImportant}
-            </label>
-            <div className="flex items-end justify-end">
-              <Button type="submit" size="sm">
-                {t.common.save}
-              </Button>
-            </div>
-          </form>
-        </InlineEdit>
-        <form action={deleteResourceAction}>
-          <input type="hidden" name="id" value={resource.id} />
-          <button
-            type="submit"
-            className="text-xs font-medium text-muted-foreground hover:text-red-600"
-          >
-            {t.common.delete}
-          </button>
-        </form>
-      </div>
-    </div>
+            {categories.map((category) => (
+              <option key={category}>{category}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="flabel">{t.resources.fUrl}</span>
+          <input
+            name="url"
+            defaultValue={resource.url}
+            placeholder="https://"
+            className="field field-sm"
+          />
+        </label>
+        <label className="sm:col-span-2">
+          <span className="flabel">{t.resources.fNote}</span>
+          <input
+            name="note"
+            defaultValue={resource.note}
+            className="field field-sm"
+          />
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="important"
+            defaultChecked={resource.important}
+            className="h-4 w-4"
+          />
+          {t.resources.fImportant}
+        </label>
+        <div className="flex items-end justify-end">
+          <Button type="submit" size="sm">
+            {t.common.save}
+          </Button>
+        </div>
+      </form>
+      <form action={deleteResourceAction} className="mt-2">
+        <input type="hidden" name="id" value={resource.id} />
+        <button
+          type="submit"
+          className="text-xs font-medium text-muted-foreground hover:text-red-600"
+        >
+          {t.common.delete}
+        </button>
+      </form>
+    </RecordDisclosure>
   );
 }

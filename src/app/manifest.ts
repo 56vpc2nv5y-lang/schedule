@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "项目、任务、日程、接待和工作成长档案",
     start_url: "/today",
     display: "standalone",
-    background_color: "#f8fafc",
-    theme_color: "#4f46e5",
+    background_color: "#f4f6f8",
+    theme_color: "#2f5bff",
     icons: [
       {
         src: "/icon.svg",

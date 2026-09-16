@@ -1,0 +1,588 @@
+/*
+ * Canonical color contract.
+ * Layout components consume these semantic variables instead of naming a hue.
+ */
+:root {
+  --accent: #2f5bff;
+  --accent-hover: #2449d8;
+  --accent-soft: #edf1ff;
+  --accent-text: #2144bd;
+  --accent-foreground: #ffffff;
+}
+
+html[data-theme="sunny-a"] {
+  --accent: #3e6e71;
+  --accent-hover: #315b5e;
+  --accent-soft: #e6eeec;
+  --accent-text: #315b5e;
+  --accent-foreground: #ffffff;
+}
+
+html[data-theme="sunny-c"] {
+  --accent: #b33a2e;
+  --accent-hover: #8e2b22;
+  --accent-soft: #f1dad2;
+  --accent-text: #8e2b22;
+  --accent-foreground: #ffffff;
+}
+
+html[data-theme="sunny-third"] {
+  --accent: #2f5bff;
+  --accent-hover: #2449d8;
+  --accent-soft: #edf1ff;
+  --accent-text: #2144bd;
+  --accent-foreground: #ffffff;
+}
+
+:root,
+html[data-theme] {
+  --status-active: var(--accent);
+  --status-active-bg: var(--accent-soft);
+
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--accent-text);
+  --color-ring: var(--accent);
+  --color-status-active: var(--accent);
+  --color-status-planned: var(--status-pause);
+  --color-status-waiting: var(--status-wait);
+  --color-status-done: var(--status-done);
+  --color-status-risk: var(--status-danger);
+
+  /* Compatibility names for existing feature layouts. */
+  --os-blue: var(--accent);
+  --os-blue-soft: var(--accent-soft);
+  --os-blue-text: var(--accent-text);
+}
+
+a {
+  color: inherit;
+}
+
+a:not([class]),
+.accent-link {
+  color: var(--accent-text);
+  text-decoration-color: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+html[data-theme] .ui-button[data-variant="default"],
+.os-link-button.primary {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+html[data-theme] .ui-button[data-variant="default"]:hover,
+.os-link-button.primary:hover {
+  border-color: var(--accent-hover) !important;
+  background: var(--accent-hover) !important;
+}
+
+html[data-theme] .app-nav-link[data-active="true"] {
+  border-left-color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent-text) !important;
+}
+
+html[data-theme] .app-nav-link[data-active="true"] svg {
+  color: currentColor !important;
+}
+
+html[data-theme] .mobile-app-header .app-nav-link[data-active="true"] {
+  background: var(--accent-soft) !important;
+  color: var(--accent-text) !important;
+}
+
+[data-badge-tone="active"],
+[data-badge-tone="info"],
+.sunny-status-select[data-tone="active"] {
+  border-color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent-text) !important;
+}
+
+.sunny-status-stamp[data-tone="active"],
+.sunny-stamp[data-tone="active"] {
+  --stamp-color: var(--accent-text);
+  --stamp-bg: var(--accent-soft);
+}
+
+.os-status-card.active {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+.os-status-card:hover,
+.field:focus,
+:where(button, input, select, textarea):focus-visible {
+  border-color: var(--accent) !important;
+  outline-color: var(--accent) !important;
+}
+
+html[data-theme="sunny-third"] .app-sidebar {
+  border-right-color: color-mix(in srgb, var(--accent) 22%, var(--hairline)) !important;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface)) !important;
+  color: var(--ink) !important;
+}
+
+html[data-theme="sunny-third"] .app-brand-title {
+  color: var(--ink) !important;
+}
+
+html[data-theme="sunny-third"] .app-brand-sub,
+html[data-theme="sunny-third"] .app-nav-group {
+  color: var(--ink-soft) !important;
+}
+
+html[data-theme="sunny-third"] .app-brand-mark {
+  background: var(--accent-soft) !important;
+  color: var(--accent-text) !important;
+}
+
+html[data-theme="sunny-third"] .app-nav-link {
+  color: var(--ink-soft) !important;
+}
+
+html[data-theme="sunny-third"] .app-nav-link:hover {
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface)) !important;
+  color: var(--accent-text) !important;
+}
+
+.skin-dot[data-theme-option="sunny-a"] {
+  background: #f6f3ec;
+  color: #2b2e33;
+}
+
+.skin-dot[data-theme-option="sunny-c"] {
+  background: #ede3d2;
+  color: #2a2118;
+}
+
+.skin-dot[data-theme-option="sunny-third"] {
+  background: #2f5bff;
+  color: #ffffff;
+}
+
+.skin-dot.is-active {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Theme-aware palette for the decorative trip map. */
+:root,
+html[data-theme="sunny-third"] {
+  --map-bg: #070c22;
+  --map-border: #1b2450;
+  --map-primary: #5f7cff;
+  --map-secondary: #9a7bea;
+  --map-tertiary: #df72ba;
+  --map-warning: #f4b942;
+  --map-warning-soft: #f8cf65;
+  --map-danger: #ef7185;
+  --map-on-dark: #f5f7ff;
+  --map-muted: #98a2b3;
+}
+
+html[data-theme="sunny-a"] {
+  --map-bg: #152729;
+  --map-border: #315b5e;
+  --map-primary: #70c1c3;
+  --map-secondary: #83a9a3;
+  --map-tertiary: #c48b91;
+  --map-warning: #d1a95e;
+  --map-warning-soft: #efd497;
+  --map-danger: #c67568;
+  --map-on-dark: #f6f3ec;
+  --map-muted: #a8b9b6;
+}
+
+html[data-theme="sunny-c"] {
+  --map-bg: #2a2118;
+  --map-border: #6b5d4a;
+  --map-primary: #d17668;
+  --map-secondary: #bd8b62;
+  --map-tertiary: #b33a2e;
+  --map-warning: #c6a04c;
+  --map-warning-soft: #e4c773;
+  --map-danger: #a94a42;
+  --map-on-dark: #f7f1e4;
+  --map-muted: #c1b39d;
+}
+
+.trip-map-shell { border-color: var(--map-border); background: var(--map-bg); }
+.trip-map-glow-primary { background: color-mix(in srgb, var(--map-primary) 22%, transparent); }
+.trip-map-glow-secondary { background: color-mix(in srgb, var(--map-secondary) 24%, transparent); }
+.trip-map-glow-tertiary { background: color-mix(in srgb, var(--map-tertiary) 20%, transparent); }
+.trip-map-primary { color: var(--map-primary); }
+.trip-map-muted { color: var(--map-muted); }
+.trip-map-text { color: var(--map-on-dark); }
+.trip-map-chip { border-color: color-mix(in srgb, var(--map-primary) 38%, transparent); background: color-mix(in srgb, var(--map-primary) 12%, transparent); color: var(--map-on-dark); }
+.trip-map-legend-dot { background: var(--map-primary); box-shadow: 0 0 8px var(--map-primary); }
+.trip-map-planned { border-color: color-mix(in srgb, var(--map-warning) 45%, transparent); background: color-mix(in srgb, var(--map-warning) 12%, transparent); color: var(--map-warning-soft); }
+
+/* The app shell keeps one geometry and type system across all skins. */
+:root {
+  --shell-sidebar-width: 240px;
+  --shell-font: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  --shell-nav-height: 36px;
+  --shell-nav-radius: 8px;
+}
+
+.app-sidebar {
+  width: var(--shell-sidebar-width) !important;
+  box-sizing: border-box;
+  font-family: var(--shell-font) !important;
+}
+
+.app-brand {
+  min-height: 72px;
+  padding: 20px 16px 12px !important;
+}
+
+.app-brand > a { gap: 12px !important; }
+
+.app-brand-mark {
+  width: 36px !important;
+  height: 36px !important;
+  flex: 0 0 36px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--hairline)) !important;
+  border-radius: 10px !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent-text) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.app-brand-mark svg { width: 20px !important; height: 20px !important; }
+
+.app-brand-title {
+  font-family: var(--shell-font) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 18px !important;
+  letter-spacing: 0 !important;
+}
+
+.app-brand-sub {
+  font-family: var(--shell-font) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  line-height: 15px !important;
+}
+
+.app-sidebar nav { padding: 12px !important; }
+
+.app-nav-group {
+  margin: 16px 0 6px !important;
+  padding: 0 12px !important;
+  font-family: var(--shell-font) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 14px !important;
+  letter-spacing: .08em !important;
+}
+
+.app-sidebar .app-nav-link {
+  width: 100%;
+  min-height: var(--shell-nav-height) !important;
+  height: var(--shell-nav-height) !important;
+  margin: 2px 0 !important;
+  padding: 0 12px !important;
+  gap: 12px !important;
+  border-left-width: 3px !important;
+  border-left-style: solid !important;
+  border-left-color: transparent !important;
+  border-radius: var(--shell-nav-radius) !important;
+  font-family: var(--shell-font) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  letter-spacing: 0 !important;
+}
+
+.app-sidebar .app-nav-link svg {
+  width: 16px !important;
+  height: 16px !important;
+  flex: 0 0 16px;
+}
+
+html[data-theme] .app-sidebar .app-nav-link[data-active="true"] {
+  border-left-color: var(--accent) !important;
+  font-weight: 600 !important;
+}
+
+.app-sidebar .skin-toggle {
+  width: 100%;
+  min-height: 50px;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .app-frame.md\:pl-60,
+  html[data-theme="sunny-third"] .app-frame.md\:pl-60 {
+    padding-left: var(--shell-sidebar-width) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-frame.md\:pl-60,
+  html[data-theme="sunny-third"] .app-frame.md\:pl-60 {
+    padding-left: 0 !important;
+  }
+}
+
+/* High-specificity shell lock: neutralizes older per-theme geometry rules. */
+html[data-theme] .app-sidebar {
+  width: var(--shell-sidebar-width) !important;
+  font-family: var(--shell-font) !important;
+}
+
+html[data-theme] .app-brand {
+  min-height: 72px !important;
+  padding: 20px 16px 12px !important;
+}
+
+html[data-theme] .app-brand > a { gap: 12px !important; }
+
+html[data-theme] .app-brand-mark {
+  width: 36px !important;
+  height: 36px !important;
+  flex-basis: 36px !important;
+  border-radius: 10px !important;
+  transform: none !important;
+}
+
+html[data-theme] .app-brand-title {
+  font-family: var(--shell-font) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 18px !important;
+  letter-spacing: 0 !important;
+}
+
+html[data-theme] .app-brand-sub {
+  font-family: var(--shell-font) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  line-height: 15px !important;
+}
+
+html[data-theme] .app-sidebar nav { padding: 12px !important; }
+
+html[data-theme] .app-nav-group {
+  margin: 16px 0 6px !important;
+  padding: 0 12px !important;
+  font-family: var(--shell-font) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 14px !important;
+  letter-spacing: .08em !important;
+}
+
+html[data-theme] .app-sidebar .app-nav-link {
+  width: 100% !important;
+  min-height: var(--shell-nav-height) !important;
+  height: var(--shell-nav-height) !important;
+  margin: 2px 0 !important;
+  padding: 0 12px !important;
+  gap: 12px !important;
+  border-left-width: 3px !important;
+  border-radius: var(--shell-nav-radius) !important;
+  font-family: var(--shell-font) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  letter-spacing: 0 !important;
+}
+
+html[data-theme] .app-sidebar .app-nav-link[data-active="true"] {
+  border-left-color: var(--accent) !important;
+  font-weight: 600 !important;
+}
+
+/* One Executive layout, three palettes. Structural rules no longer depend on skin. */
+html[data-theme="sunny-a"] {
+  --palette-bg: #f6f3ec;
+  --palette-surface: #ffffff;
+  --palette-surface-soft: #fbf8f2;
+  --palette-surface-strong: #f0ece3;
+  --palette-text: #2b2e33;
+  --palette-text-soft: #6c7178;
+  --palette-faint: #9a9d9f;
+  --palette-border: #e3decf;
+  --palette-border-strong: #cec7b7;
+  --palette-wait: #b07c3f;
+  --palette-wait-soft: #f3e8d6;
+  --palette-pause: #7c8590;
+  --palette-pause-soft: #e9eaea;
+  --palette-danger: #a24a3c;
+  --palette-danger-soft: #f3e1dc;
+  --palette-done: #5c7a56;
+  --palette-done-soft: #e6ece1;
+}
+
+html[data-theme="sunny-c"] {
+  --palette-bg: #ede3d2;
+  --palette-surface: #f7f1e4;
+  --palette-surface-soft: #f1e8d6;
+  --palette-surface-strong: #e7dcc8;
+  --palette-text: #2a2118;
+  --palette-text-soft: #6b5d4a;
+  --palette-faint: #8f8069;
+  --palette-border: #c9b896;
+  --palette-border-strong: #ae9a75;
+  --palette-wait: #9c7a34;
+  --palette-wait-soft: #ecdfc0;
+  --palette-pause: #746b5a;
+  --palette-pause-soft: #e2d9c3;
+  --palette-danger: #6b1f16;
+  --palette-danger-soft: #e4cec5;
+  --palette-done: #4b6b4a;
+  --palette-done-soft: #dce5d6;
+}
+
+html[data-theme="sunny-third"] {
+  --palette-bg: #f4f6f8;
+  --palette-surface: #ffffff;
+  --palette-surface-soft: #f9fafb;
+  --palette-surface-strong: #eef2f6;
+  --palette-text: #172033;
+  --palette-text-soft: #435066;
+  --palette-faint: #98a2b3;
+  --palette-border: #dde3ea;
+  --palette-border-strong: #cbd4df;
+  --palette-wait: #b77908;
+  --palette-wait-soft: #fff6df;
+  --palette-pause: #667085;
+  --palette-pause-soft: #eef2f6;
+  --palette-danger: #c43d4c;
+  --palette-danger-soft: #fff0f2;
+  --palette-done: #15803d;
+  --palette-done-soft: #eaf7ee;
+}
+
+html[data-layout="executive"] {
+  --bg: var(--palette-bg);
+  --surface: var(--palette-surface);
+  --surface-alt: var(--palette-surface-soft);
+  --ink: var(--palette-text);
+  --ink-soft: var(--palette-text-soft);
+  --ink-faint: var(--palette-faint);
+  --hairline: var(--palette-border);
+  --hairline-cool: var(--palette-border);
+
+  --status-active: var(--accent);
+  --status-active-bg: var(--accent-soft);
+  --status-wait: var(--palette-wait);
+  --status-wait-bg: var(--palette-wait-soft);
+  --status-pause: var(--palette-pause);
+  --status-pause-bg: var(--palette-pause-soft);
+  --status-danger: var(--palette-danger);
+  --status-danger-bg: var(--palette-danger-soft);
+  --status-done: var(--palette-done);
+  --status-done-bg: var(--palette-done-soft);
+
+  --s3-bg: var(--palette-bg);
+  --s3-surface: var(--palette-surface);
+  --s3-surface-soft: var(--palette-surface-soft);
+  --s3-surface-strong: var(--palette-surface-strong);
+  --s3-text: var(--palette-text);
+  --s3-text-soft: var(--palette-text-soft);
+  --s3-muted: var(--palette-text-soft);
+  --s3-faint: var(--palette-faint);
+  --s3-border: var(--palette-border);
+  --s3-border-strong: var(--palette-border-strong);
+  --s3-primary: var(--accent);
+  --s3-primary-hover: var(--accent-hover);
+  --s3-primary-soft: var(--accent-soft);
+  --s3-primary-border: color-mix(in srgb, var(--accent) 24%, var(--palette-border));
+  --s3-project: var(--accent);
+  --s3-project-soft: var(--accent-soft);
+  --s3-project-text: var(--accent-text);
+  --s3-status-idle: var(--palette-pause);
+  --s3-status-progress: var(--accent);
+  --s3-status-check: var(--palette-wait);
+  --s3-status-leader: var(--palette-danger);
+  --s3-status-waiting: var(--palette-wait);
+  --s3-status-send: var(--accent-text);
+  --s3-status-done: var(--palette-done);
+  --s3-status-danger: var(--palette-danger);
+  --s3-danger-soft: var(--palette-danger-soft);
+  --s3-warning-soft: var(--palette-wait-soft);
+  --s3-success-soft: var(--palette-done-soft);
+  --s3-info-soft: var(--accent-soft);
+
+  --color-background: var(--palette-bg);
+  --color-foreground: var(--palette-text);
+  --color-card: var(--palette-surface);
+  --color-card-foreground: var(--palette-text);
+  --color-popover: var(--palette-surface);
+  --color-popover-foreground: var(--palette-text);
+  --color-secondary: var(--palette-surface-soft);
+  --color-secondary-foreground: var(--palette-text-soft);
+  --color-muted: var(--palette-surface-soft);
+  --color-muted-foreground: var(--palette-text-soft);
+  --color-border: var(--palette-border);
+  --color-input: var(--palette-border);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--accent-text);
+  --color-ring: var(--accent);
+
+  --font-heading: var(--s3-font);
+  --font-body: var(--s3-font);
+  --card-radius: var(--s3-radius-lg);
+  --control-radius: var(--s3-radius-sm);
+  --stamp-rotate: 0deg;
+
+  --os-blue: var(--accent);
+  --os-blue-soft: var(--accent-soft);
+  --os-blue-text: var(--accent-text);
+  --os-green: var(--palette-done);
+  --os-green-soft: var(--palette-done-soft);
+  --os-green-text: var(--palette-done);
+  --os-orange: var(--palette-wait);
+  --os-orange-soft: var(--palette-wait-soft);
+  --os-orange-text: var(--palette-wait);
+  --os-red: var(--palette-danger);
+  --os-red-soft: var(--palette-danger-soft);
+  --os-red-text: var(--palette-danger);
+  --os-gray: var(--palette-pause);
+  --os-gray-soft: var(--palette-pause-soft);
+  --os-gray-text: var(--palette-pause);
+  --os-shadow: var(--s3-shadow-sm);
+}
+
+html[data-layout="executive"] .app-sidebar {
+  width: var(--shell-sidebar-width) !important;
+  border-right: 1px solid color-mix(in srgb, var(--accent) 20%, var(--palette-border)) !important;
+  background: color-mix(in srgb, var(--accent) 7%, var(--palette-surface)) !important;
+  color: var(--palette-text) !important;
+}
+
+html[data-layout="executive"] .app-brand-title { color: var(--palette-text) !important; }
+html[data-layout="executive"] .app-brand-sub,
+html[data-layout="executive"] .app-nav-group { color: var(--palette-text-soft) !important; }
+html[data-layout="executive"] .app-brand-mark {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--palette-border)) !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent-text) !important;
+}
+html[data-layout="executive"] .app-nav-link { color: var(--palette-text-soft) !important; }
+html[data-layout="executive"] .app-nav-link:hover {
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--palette-surface)) !important;
+  color: var(--accent-text) !important;
+}
+html[data-layout="executive"] .app-nav-link[data-active="true"] {
+  border-left-color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent-text) !important;
+}

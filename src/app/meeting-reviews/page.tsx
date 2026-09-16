@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, FilePlus2, Plus, Send, Trash2 } from "lucide-react";
+import { CheckCircle2, FilePlus2, History, Plus, Send, Trash2, X } from "lucide-react";
 import {
   addReviewRoundAction,
   createFeedbackFollowUpTaskAction,
@@ -13,6 +13,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { CollapseCard } from "@/components/ui/collapse-card";
 import { StatusStamp, type StatusStampTone } from "@/components/ui/status-pill";
+import { RecordDisclosure } from "@/components/ui/record-disclosure";
+import { RecordDrawer } from "@/components/ui/record-drawer";
 import { getContactsForView, getFeedbackQuestionsForView, getMeetingReviewsForView, getProjectsForView } from "@/lib/database-data";
 import { projectDisplayName } from "@/lib/i18n";
 import { getT } from "@/lib/locale";
@@ -50,9 +52,9 @@ function qs(params: Record<string, string | undefined>) {
 export default async function MeetingReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string; error?: string; new?: string; reviewNew?: string; confirm?: string; status?: string; projectId?: string; q?: string }>;
+  searchParams: Promise<{ created?: string; error?: string; new?: string; reviewNew?: string; rounds?: string; confirm?: string; status?: string; projectId?: string; q?: string }>;
 }) {
-  const [{ created, error, new: openQuestionForm, reviewNew, confirm, status = "active", projectId = "", q = "" }, { locale }, reviews, projects, contacts, questions] = await Promise.all([
+  const [{ created, error, new: openQuestionForm, reviewNew, rounds, confirm, status = "active", projectId = "", q = "" }, { locale }, reviews, projects, contacts, questions] = await Promise.all([
     searchParams,
     getT(),
     getMeetingReviewsForView(),
@@ -105,11 +107,12 @@ export default async function MeetingReviewsPage({
           <div>
             <div className="page-eyebrow">Issue Closure</div>
             <h1 className="page-title mt-2">问题闭环</h1>
-            <p className="os-page-sub">上半区处理纪要审阅轮次，下半区处理客户/供应商问题闭环，两个流程不再上下重复堆叠。</p>
+            <p className="os-page-sub">主页面只保留客户/供应商问题闭环；独立的纪要审阅历史按需打开，不再纵向重复堆叠。</p>
           </div>
           <div className="os-row">
             <Link href="/meeting-reviews?new=1#new-question" className="os-link-button primary"><FilePlus2 className="h-4 w-4" />新建问题</Link>
             <Link href="/meeting-reviews?reviewNew=1#new-review" className="os-link-button"><Plus className="h-4 w-4" />新建纪要</Link>
+            <Link href={`/meeting-reviews${qs({ status, projectId, q, rounds: "1" })}`} className="os-link-button"><History className="h-4 w-4" />纪要流程 <span className="os-pill gray">{reviews.length}</span></Link>
           </div>
         </header>
 
@@ -144,7 +147,7 @@ export default async function MeetingReviewsPage({
             <div className="os-card-head os-filterbar">
               <div>
                 <div className="os-card-title">问题闭环列表</div>
-                <div className="os-card-sub">点击任一行展开完整编辑表单</div>
+                <div className="os-card-sub">点击任一行，在右侧抽屉中编辑完整信息</div>
               </div>
               <form action="/meeting-reviews" className="os-filters">
                 <input type="hidden" name="status" value={status} />
@@ -163,27 +166,27 @@ export default async function MeetingReviewsPage({
                 const supplierReply = question.supplierReply || question.answer || "还没有记录供应商回复。";
                 const judgment = question.sunnyJudgment || question.note || "还没有写 Sunny 判断。";
                 return (
-                  <details key={question.id} className="os-fold-clean">
-                    <summary>
-                      <div className="os-issue-row">
-                        <div className="min-w-0">
-                          <div className="os-row flex-wrap">
-                            {project ? <span className="os-pill project">{pname(project)}</span> : null}
-                            <span className="os-strong">{question.question}</span>
-                          </div>
-                          <div className="os-issue-preview">{supplierReply}</div>
-                        </div>
-                        <div>
-                          <StatusStamp tone={questionTone(question.status)}>{meta.label}</StatusStamp>
-                          <div className="os-tiny os-muted mt-2">更新：{question.updatedAt || "未记录"}</div>
-                        </div>
-                        <div>
-                          <div className="os-small os-strong">{owner?.name || question.source || "未指定"}</div>
-                          <div className="os-tiny os-muted">{owner?.organization || "对接方"}</div>
-                        </div>
-                        <div className="os-small os-muted">{question.dueAt || question.expectedReplyAt || "待排期"}</div>
+                  <RecordDrawer
+                    key={question.id}
+                    className="rounded-none border-x-0 border-b-0 first:border-t-0"
+                    bodyClassName="p-0"
+                    title={question.question}
+                    subtitle={project ? pname(project) : "问题闭环"}
+                    ariaLabel={`编辑“${question.question}”`}
+                    summary={
+                      <div className="flex min-w-0 items-center gap-2">
+                        {project ? <span className="os-pill project shrink-0">{pname(project)}</span> : null}
+                        <span className="min-w-0 flex-1 truncate os-strong">{question.question}</span>
+                        <span className="hidden shrink-0 os-tiny os-muted lg:inline">
+                          {owner?.name || question.source || "未指定"}
+                        </span>
+                        <span className="hidden shrink-0 os-tiny os-muted md:inline">
+                          {question.dueAt || question.expectedReplyAt || "待排期"}
+                        </span>
+                        <StatusStamp tone={questionTone(question.status)}>{meta.label}</StatusStamp>
                       </div>
-                    </summary>
+                    }
+                  >
                     <div className="os-issue-body">
                       <div className="os-row justify-end os-mt">
                         {actionable ? question.followUpTaskId ? (
@@ -230,14 +233,32 @@ export default async function MeetingReviewsPage({
                         <div className="os-row justify-end self-end"><Button type="submit" size="sm">保存问题</Button></div>
                       </form>
                     </div>
-                  </details>
+                  </RecordDrawer>
                 );
               })}
             </div>
           </section>
         </div>
 
-        <section className="os-card os-review-panel">
+        {rounds === "1" ? (
+          <div className="s3-drawer is-open" role="dialog" aria-modal="true" aria-label="纪要流程">
+            <Link
+              href={`/meeting-reviews${qs({ status, projectId, q })}`}
+              className="s3-backdrop"
+              aria-label="关闭纪要流程"
+            />
+            <aside className="s3-drawer-panel">
+              <div className="s3-drawer-head">
+                <div className="min-w-0">
+                  <div className="os-card-title">纪要流程</div>
+                  <div className="os-card-sub">{reviews.length} 条流程 · 包含历史轮次与定稿入库</div>
+                </div>
+                <Link href={`/meeting-reviews${qs({ status, projectId, q })}`} className="s3-close" aria-label="关闭纪要流程">
+                  <X className="mx-auto h-4 w-4" />
+                </Link>
+              </div>
+              <div className="s3-drawer-body">
+                <section className="os-card os-review-panel">
           <div className="os-card-head">
             <div>
               <div className="os-card-title os-review-title">纪要审阅轮次</div>
@@ -251,16 +272,21 @@ export default async function MeetingReviewsPage({
               const finalized = review.status === "FINALIZED";
               const confirming = confirm === review.id;
               return (
-                <details key={review.id} className="os-review-fold">
-                  <summary>
-                    <div className="os-review-summary">
-                      <div className="min-w-0">
-                        <h2>{review.title}</h2>
-                        <div>{project ? pname(project) : "未关联项目"} · {review.rounds.length} 轮</div>
-                      </div>
+                <RecordDisclosure
+                  key={review.id}
+                  className="os-review-fold"
+                  bodyClassName="p-0"
+                  ariaLabel={`展开“${review.title}”的审阅记录`}
+                  summary={
+                    <div className="flex min-w-0 items-center gap-2">
+                      <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{review.title}</h2>
+                      <span className="hidden shrink-0 os-tiny os-muted sm:inline">
+                        {project ? pname(project) : "未关联项目"} · {review.rounds.length} 轮
+                      </span>
                       <StatusStamp tone={finalized ? "done" : "danger"}>{finalized ? "已定稿" : "进行中"}</StatusStamp>
                     </div>
-                  </summary>
+                  }
+                >
                   <div className="os-review-body">
                     {review.rounds.map((round) => {
                       const sender = round.senderId ? contactMap.get(round.senderId) : undefined;
@@ -289,17 +315,21 @@ export default async function MeetingReviewsPage({
                         {confirming ? (
                           <div className="mt-3 flex gap-2">
                             <form action={finalizeReviewAction}><input type="hidden" name="reviewId" value={review.id} /><Button type="submit" size="sm"><CheckCircle2 className="h-4 w-4" />确认定稿</Button></form>
-                            <Link href="/meeting-reviews"><Button size="sm" variant="outline">取消</Button></Link>
+                            <Link href={`/meeting-reviews${qs({ status, projectId, q, rounds: "1" })}`}><Button size="sm" variant="outline">取消</Button></Link>
                           </div>
-                        ) : <div className="mt-3"><Link href={`/meeting-reviews?confirm=${review.id}`}><Button size="sm" variant="outline"><CheckCircle2 className="h-4 w-4" />定稿</Button></Link></div>}
+                        ) : <div className="mt-3"><Link href={`/meeting-reviews${qs({ status, projectId, q, rounds: "1", confirm: review.id })}`}><Button size="sm" variant="outline"><CheckCircle2 className="h-4 w-4" />定稿</Button></Link></div>}
                       </div>
                     ) : null}
                   </div>
-                </details>
+                </RecordDisclosure>
               );
             })}
           </div>
-        </section>
+                </section>
+              </div>
+            </aside>
+          </div>
+        ) : null}
 
         <CollapseCard id="new-review" className="mt-5" title="新建纪要审阅流程" open={reviewNew === "1"}>
           <form action={createMeetingReviewAction} className="grid gap-3 sm:grid-cols-[1fr_2fr_auto]">

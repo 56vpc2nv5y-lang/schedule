@@ -21,6 +21,7 @@ import { InlineEdit } from "@/components/ui/inline-edit";
 import { TrainingProfilePanel } from "@/app/projects/[projectId]/training-profile";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { ProjectPhaseStepper } from "@/components/projects/project-phase-stepper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +104,9 @@ export default async function ProjectDetailPage({
     .map((id) => contactMap.get(id))
     .filter(isContact);
   const projectIsPaused = project.status === 'PAUSED';
+  const projectIsTraining =
+    project.type === '培训项目' ||
+    /培训|training/i.test(`${project.nameZh} ${project.nameEn ?? ''}`);
   const activeStages = projectIsPaused
     ? []
     : stages.filter(
@@ -206,6 +210,20 @@ export default async function ProjectDetailPage({
         <div className='mb-5 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900'>
           项目状态已更新，任务来源和培训暂停清单已同步。
         </div>
+      ) : null}
+      {!trainingProfile && projectIsTraining ? (
+        <Card className='mb-5'>
+          <CardHeader className='border-b border-border'>
+            <CardTitle>培训阶段流程</CardTitle>
+          </CardHeader>
+          <CardContent className='pt-5'>
+            <ProjectPhaseStepper
+              currentPhase={currentPhase || '大纲'}
+              paused={projectIsPaused}
+              className='mb-0'
+            />
+          </CardContent>
+        </Card>
       ) : null}
       {trainingProfile ? (
         <TrainingProfilePanel

@@ -41,7 +41,7 @@ export function TaskEditButton({
   return (
     <>
       {trigger === "title" ? (
-        <button type="button" className="block w-full text-left font-medium hover:text-primary hover:underline" title="编辑任务" onClick={() => setOpen(true)}>
+        <button type="button" className="inline text-left font-medium hover:text-primary hover:underline" title="编辑任务" onClick={() => setOpen(true)}>
           {task.title}
         </button>
       ) : (
@@ -50,7 +50,7 @@ export function TaskEditButton({
         </Button>
       )}
 
-      <div className={`s3-drawer ${open ? "is-open" : ""}`} role="dialog" aria-modal="true" aria-label="编辑任务">
+      {open ? <div className="s3-drawer is-open" role="dialog" aria-modal="true" aria-label="编辑任务">
         <button type="button" className="s3-backdrop" aria-label="关闭编辑任务" onClick={() => setOpen(false)} />
         <aside className="s3-drawer-panel">
           <div className="s3-drawer-head">
@@ -113,7 +113,7 @@ export function TaskEditButton({
             </form>
           </div>
         </aside>
-      </div>
+      </div> : null}
     </>
   );
 }

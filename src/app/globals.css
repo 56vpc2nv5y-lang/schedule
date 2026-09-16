@@ -11,23 +11,23 @@
   --color-card-foreground: oklch(0.21 0.015 252);
   --color-popover: oklch(1 0 0);
   --color-popover-foreground: oklch(0.21 0.015 252);
-  --color-primary: oklch(0.55 0.19 274);
-  --color-primary-foreground: oklch(0.99 0.01 274);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
   --color-secondary: oklch(0.958 0.01 286);
   --color-secondary-foreground: oklch(0.28 0.03 282);
   --color-muted: oklch(0.948 0.01 286);
   --color-muted-foreground: oklch(0.5 0.015 282);
-  --color-accent: oklch(0.94 0.035 286);
-  --color-accent-foreground: oklch(0.33 0.11 282);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--accent-text);
   --color-destructive: oklch(0.58 0.18 28);
   --color-destructive-foreground: oklch(0.99 0.01 28);
   --color-border: oklch(0.905 0.008 286);
   --color-input: oklch(0.885 0.01 286);
-  --color-ring: oklch(0.58 0.19 274);
+  --color-ring: var(--accent);
   --radius: 0.625rem;
 
   --color-status-planned: oklch(0.58 0.1 252);
-  --color-status-active: oklch(0.55 0.19 274);
+  --color-status-active: var(--accent);
   --color-status-waiting: oklch(0.66 0.14 72);
   --color-status-done: oklch(0.54 0.13 148);
   --color-status-risk: oklch(0.57 0.18 28);
@@ -45,16 +45,10 @@ html {
   background: var(--color-background);
 }
 
-/* 默认皮肤「活泼」：靛蓝紫主色 + 柔和光晕背景 */
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(1000px 520px at 100% -10%, oklch(0.9 0.09 300 / 0.55), transparent 60%),
-    radial-gradient(820px 480px at -5% 0%, oklch(0.92 0.07 250 / 0.5), transparent 55%),
-    linear-gradient(180deg, oklch(0.99 0.006 285), oklch(0.965 0.014 282)),
-    var(--color-background);
-  background-attachment: fixed;
+  background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -199,41 +193,6 @@ textarea.field {
   animation: hero-blob 14s ease-in-out infinite;
 }
 
-/* ── 皮肤「落日」：暖橙珊瑚 + 蜜桃底 ──────────────────── */
-html[data-skin="sunset"] {
-  --color-background: oklch(0.975 0.012 65);
-  --color-foreground: oklch(0.25 0.03 40);
-  --color-card: oklch(0.995 0.005 75);
-  --color-card-foreground: oklch(0.25 0.03 40);
-  --color-popover: oklch(0.995 0.005 75);
-  --color-popover-foreground: oklch(0.25 0.03 40);
-  --color-primary: oklch(0.62 0.19 35);
-  --color-primary-foreground: oklch(0.99 0.012 35);
-  --color-secondary: oklch(0.952 0.022 65);
-  --color-secondary-foreground: oklch(0.32 0.05 40);
-  --color-muted: oklch(0.945 0.018 65);
-  --color-muted-foreground: oklch(0.51 0.04 45);
-  --color-accent: oklch(0.93 0.05 55);
-  --color-accent-foreground: oklch(0.4 0.12 35);
-  --color-border: oklch(0.9 0.024 60);
-  --color-input: oklch(0.88 0.03 60);
-  --color-ring: oklch(0.65 0.19 35);
-  --color-status-active: oklch(0.62 0.19 35);
-  --color-status-waiting: oklch(0.62 0.15 60);
-}
-html[data-skin="sunset"] body {
-  background:
-    radial-gradient(1100px 540px at 90% -12%, oklch(0.9 0.07 40 / 0.55), transparent 60%),
-    radial-gradient(820px 500px at -8% 8%, oklch(0.93 0.06 80 / 0.5), transparent 55%),
-    linear-gradient(180deg, oklch(0.99 0.008 70), oklch(0.965 0.02 60)),
-    var(--color-background);
-  background-attachment: fixed;
-}
-html[data-skin="sunset"] ::selection {
-  background: oklch(0.85 0.08 45);
-  color: oklch(0.3 0.08 35);
-}
-
 /* 折叠表单的 summary 去掉默认三角 */
 summary.no-marker {
   list-style: none;
@@ -257,13 +216,4 @@ summary.no-marker::-webkit-details-marker {
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
-}
-html[data-skin="sunset"] .skeleton {
-  background: linear-gradient(
-    90deg,
-    oklch(0.93 0.02 60) 25%,
-    oklch(0.96 0.015 60) 37%,
-    oklch(0.93 0.02 60) 63%
-  );
-  background-size: 200% 100%;
 }
