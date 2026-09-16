@@ -6,7 +6,19 @@ const placeholderFragments = [
   "user:password",
 ];
 
+const enabledValues = new Set(["1", "true", "yes", "on"]);
+
+export function isDatabaseOfflineMode() {
+  return enabledValues.has(
+    (process.env.DATABASE_OFFLINE_MODE ?? "").trim().toLowerCase(),
+  );
+}
+
 export function isDatabaseConfigured() {
+  if (isDatabaseOfflineMode()) {
+    return false;
+  }
+
   const databaseUrl = process.env.DATABASE_URL ?? "";
   const directUrl = process.env.DIRECT_URL ?? "";
 
@@ -26,5 +38,9 @@ export function isDatabaseConfigured() {
 }
 
 export function getDatabaseModeLabel() {
-  return isDatabaseConfigured() ? "Supabase 已连接" : "演示数据模式";
+  if (isDatabaseOfflineMode()) {
+    return "离线演示模式";
+  }
+
+  return isDatabaseConfigured() ? "Supabase 已配置" : "演示数据模式";
 }

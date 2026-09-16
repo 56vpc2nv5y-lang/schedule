@@ -25,6 +25,71 @@ import {
   tasks as seedTasks,
   timelineEvents as seedTimelineEvents,
 } from "@/lib/default-data";
+import {
+  competitionContacts,
+  competitionFeedbackQuestions,
+  competitionFiles,
+  competitionGrowthLogs,
+  competitionKnowledgeNotes,
+  competitionMeetingReviews,
+  competitionMoneyRecords,
+  competitionProjects,
+  competitionPromptTemplates,
+  competitionReceptionChecklist,
+  competitionReceptions,
+  competitionResources,
+  competitionResumePoints,
+  competitionScheduleBlocks,
+  competitionStages,
+  competitionTasks,
+  competitionTimelineEvents,
+} from "@/lib/competition-demo-data";
+import { getCurrentAccount } from "@/lib/current-account";
+
+
+async function getOfflineWorkspaceData() {
+  const account = await getCurrentAccount();
+  if (account?.kind === "demo") {
+    return {
+      contacts: competitionContacts,
+      feedbackQuestions: competitionFeedbackQuestions,
+      files: competitionFiles,
+      growthLogs: competitionGrowthLogs,
+      knowledgeNotes: competitionKnowledgeNotes,
+      meetingReviews: competitionMeetingReviews,
+      moneyRecords: competitionMoneyRecords,
+      projects: competitionProjects,
+      promptTemplates: competitionPromptTemplates,
+      receptionChecklist: competitionReceptionChecklist,
+      receptions: competitionReceptions,
+      resources: competitionResources,
+      resumePoints: competitionResumePoints,
+      scheduleBlocks: competitionScheduleBlocks,
+      stages: competitionStages,
+      tasks: competitionTasks,
+      timelineEvents: competitionTimelineEvents,
+    };
+  }
+  return {
+    contacts: seedContacts,
+    feedbackQuestions: seedFeedbackQuestions,
+    files: seedFiles,
+    growthLogs: seedGrowthLogs,
+    knowledgeNotes: seedKnowledgeNotes,
+    meetingReviews: seedMeetingReviews,
+    moneyRecords: seedMoneyRecords,
+    projects: seedProjects,
+    promptTemplates: [],
+    receptionChecklist: seedReceptionChecklist,
+    receptions: seedReceptions,
+    resources: seedResources,
+    resumePoints: [],
+    scheduleBlocks: seedScheduleBlocks,
+    stages: seedStages,
+    tasks: seedTasks,
+    timelineEvents: seedTimelineEvents,
+  };
+}
 
 function toDateText(value: Date | null | undefined) {
   return toDateKey(value);
@@ -93,7 +158,7 @@ async function getDbProjectsRaw() {
 
 export const getContactsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedContacts;
+    return (await getOfflineWorkspaceData()).contacts;
   }
 
   const contacts = await getDbContactsRaw();
@@ -112,11 +177,10 @@ export const getContactsForView = cache(async () => {
 
 export const getProjectsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedProjects.map((project) => ({
+    const data = await getOfflineWorkspaceData();
+    return data.projects.map((project) => ({
       ...project,
-      ...summarizeStages(
-        seedStages.filter((stage) => stage.projectId === project.id),
-      ),
+      ...summarizeStages(data.stages.filter((stage) => stage.projectId === project.id)),
     }));
   }
 
@@ -151,7 +215,7 @@ export const getProjectsForView = cache(async () => {
 
 export const getStagesForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedStages;
+    return (await getOfflineWorkspaceData()).stages;
   }
 
   const stages = await getPrisma().projectStage.findMany({
@@ -173,7 +237,8 @@ export const getStagesForView = cache(async () => {
 
 export const getTasksForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedTasks.map((task) => ({
+    const data = await getOfflineWorkspaceData();
+    return data.tasks.map((task) => ({
       ...task,
       description: "",
       source: "MANUAL",
@@ -211,14 +276,15 @@ export const getTasksForView = cache(async () => {
 });
 export const getTaskPageData = cache(async () => {
   if (!isDatabaseConfigured()) {
+    const data = await getOfflineWorkspaceData();
     return {
-      projects: seedProjects.map(({ id, nameZh, nameEn, status }) => ({
+      projects: data.projects.map(({ id, nameZh, nameEn, status }) => ({
         id,
         nameZh,
         nameEn,
         status,
       })),
-      tasks: seedTasks.map((task) => ({
+      tasks: data.tasks.map((task) => ({
         ...task,
         description: "",
         source: "MANUAL",
@@ -228,7 +294,7 @@ export const getTaskPageData = cache(async () => {
         originalStatusNote: "",
         updatedAt: "",
       })),
-      contacts: seedContacts.map(({ id, name, organization }) => ({
+      contacts: data.contacts.map(({ id, name, organization }) => ({
         id,
         name,
         organization,
@@ -298,7 +364,7 @@ export const getTaskPageData = cache(async () => {
 });
 export const getFilesForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedFiles;
+    return (await getOfflineWorkspaceData()).files;
   }
 
   const files = await getPrisma().projectFile.findMany({
@@ -321,7 +387,7 @@ export const getFilesForView = cache(async () => {
 
 export const getTimelineForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedTimelineEvents;
+    return (await getOfflineWorkspaceData()).timelineEvents;
   }
 
   const events = await getPrisma().timelineEvent.findMany({
@@ -340,8 +406,9 @@ export const getTimelineForView = cache(async () => {
 
 export const getReceptionsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedReceptions.map((reception) => {
-      const items = seedReceptionChecklist.filter(
+    const data = await getOfflineWorkspaceData();
+    return data.receptions.map((reception) => {
+      const items = data.receptionChecklist.filter(
         (item) => item.receptionId === reception.id,
       );
       return {
@@ -411,9 +478,10 @@ export const getReceptionsForView = cache(async () => {
 /** 单场接待详情 + 分阶段清单（演示模式读种子数据，只读） */
 export async function getReceptionDetailForView(id: string) {
   if (!isDatabaseConfigured()) {
-    const reception = seedReceptions.find((item) => item.id === id);
+    const data = await getOfflineWorkspaceData();
+    const reception = data.receptions.find((item) => item.id === id);
     if (!reception) return null;
-    const items = seedReceptionChecklist
+    const items = data.receptionChecklist
       .filter((item) => item.receptionId === id)
       .map((item) => ({ ...item }));
     return {
@@ -486,7 +554,8 @@ export async function getReceptionDetailForView(id: string) {
 }
 export const getKnowledgeNotesForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedKnowledgeNotes.map((note) => ({
+    const data = await getOfflineWorkspaceData();
+    return data.knowledgeNotes.map((note) => ({
       id: note.id,
       topic: note.topic,
       title: note.title,
@@ -537,7 +606,8 @@ export const getFeedbackQuestionsForView = cache(async () => {
   };
 
   if (!isDatabaseConfigured()) {
-    return seedFeedbackQuestions.map((q) => ({
+    const data = await getOfflineWorkspaceData();
+    return data.feedbackQuestions.map((q) => ({
       ...q,
       ...emptyExtras,
       answer: q.answer ?? "",
@@ -593,7 +663,8 @@ export const getFeedbackQuestionsForView = cache(async () => {
 // 周计划时间块：date 为空字符串 = 每天例行
 export const getScheduleBlocksForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedScheduleBlocks.map((block) => ({
+    const data = await getOfflineWorkspaceData();
+    return data.scheduleBlocks.map((block) => ({
       ...block,
       location: "",
       participants: "",
@@ -621,7 +692,8 @@ export const getScheduleBlocksForView = cache(async () => {
 
 export const getMoneyRecordsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedMoneyRecords.map((record) => ({ ...record, note: record.note ?? "" }));
+    const data = await getOfflineWorkspaceData();
+    return data.moneyRecords.map((record) => ({ ...record, note: record.note ?? "" }));
   }
 
   const records = await getPrisma().moneyRecord.findMany({
@@ -639,7 +711,7 @@ export const getMoneyRecordsForView = cache(async () => {
 
 // AI 助手的自定义提示词模板（存 TextTemplate 表）
 export const getPromptTemplatesForView = cache(async () => {
-  if (!isDatabaseConfigured()) return [];
+  if (!isDatabaseConfigured()) return (await getOfflineWorkspaceData()).promptTemplates;
   const templates = await getPrisma().textTemplate.findMany({
     where: { type: "EMAIL", enabled: true },
     orderBy: { createdAt: "desc" },
@@ -653,7 +725,8 @@ export const getPromptTemplatesForView = cache(async () => {
 
 export const getGrowthLogsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedGrowthLogs.map((log) => ({
+    const data = await getOfflineWorkspaceData();
+    return data.growthLogs.map((log) => ({
       id: log.id,
       category: log.category,
       title: log.title,
@@ -678,7 +751,7 @@ export const getGrowthLogsForView = cache(async () => {
 });
 
 export const getResumePointsForView = cache(async () => {
-  if (!isDatabaseConfigured()) return [];
+  if (!isDatabaseConfigured()) return (await getOfflineWorkspaceData()).resumePoints;
 
   const points = await getPrisma().resumePoint.findMany({
     orderBy: { updatedAt: "desc" },
@@ -696,7 +769,7 @@ export const getResumePointsForView = cache(async () => {
 });
 export const getResourcesForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedResources;
+    return (await getOfflineWorkspaceData()).resources;
   }
 
   const resources = await getPrisma().resource.findMany({
@@ -755,7 +828,8 @@ export const getStageTemplateItemsForView = cache(async () => {
 
 export const getMeetingReviewsForView = cache(async () => {
   if (!isDatabaseConfigured()) {
-    return seedMeetingReviews.map((review) => ({
+    const data = await getOfflineWorkspaceData();
+    return data.meetingReviews.map((review) => ({
       id: review.id,
       projectId: review.projectId,
       title: review.title,
